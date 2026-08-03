@@ -6,7 +6,6 @@ import ConfirmDialog from "./ConfirmDialog";
 
 export default function PromocionesSection({
   casas,
-  onAgregarCasa,
   promociones,
   agregarPromocion,
   resolverPromocion,
@@ -22,11 +21,7 @@ export default function PromocionesSection({
 
   return (
     <>
-      <FormularioPromocion
-        onAgregar={agregarPromocion}
-        casas={casas}
-        onAgregarCasa={onAgregarCasa}
-      />
+      <FormularioPromocion onAgregar={agregarPromocion} casas={casas} />
 
       {promociones.length > 0 && (
         <div className="flex justify-end">
@@ -42,6 +37,7 @@ export default function PromocionesSection({
       )}
       <ListaPromociones
         promociones={promociones}
+        casas={casas}
         onResolver={resolverPromocion}
         onBorrar={borrarPromocion}
       />

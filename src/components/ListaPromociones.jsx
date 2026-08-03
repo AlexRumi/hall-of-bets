@@ -1,6 +1,6 @@
 import PromocionItem from "./PromocionItem";
 
-export default function ListaPromociones({ promociones, onResolver, onBorrar }) {
+export default function ListaPromociones({ promociones, casas, onResolver, onBorrar }) {
   if (promociones.length === 0) {
     return (
       <p className="text-center text-sm text-slate py-10">
@@ -15,6 +15,7 @@ export default function ListaPromociones({ promociones, onResolver, onBorrar }) 
         <PromocionItem
           key={promocion.id}
           promocion={promocion}
+          casas={casas}
           onResolver={onResolver}
           onBorrar={onBorrar}
         />

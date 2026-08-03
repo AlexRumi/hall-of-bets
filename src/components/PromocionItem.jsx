@@ -14,12 +14,13 @@ const ETIQUETAS_ESTADO = {
   perdida: "Perdida",
 };
 
-export default function PromocionItem({ promocion, onResolver, onBorrar }) {
+export default function PromocionItem({ promocion, casas, onResolver, onBorrar }) {
   // null = sin resolver todavía; "completada"/"perdida" = esperando que se confirme el beneficio neto.
   const [resolviendo, setResolviendo] = useState(null);
   const [beneficioNeto, setBeneficioNeto] = useState("");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const esPendiente = promocion.estado === "pendiente";
+  const logoCasa = casas.find((c) => c.nombre === promocion.casa)?.logo;
 
   function confirmarResolucion(e) {
     e.preventDefault();
@@ -30,12 +31,20 @@ export default function PromocionItem({ promocion, onResolver, onBorrar }) {
   }
 
   return (
-    <div className="bg-white border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+    <div className="bg-surface border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      {logoCasa && (
+        <img
+          src={logoCasa}
+          alt=""
+          className="w-12 h-12 rounded-lg object-contain shrink-0"
+        />
+      )}
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs text-slate">{promocion.fecha}</span>
           <span className="text-xs text-slate">·</span>
-          <span className="text-xs font-medium text-ink">{promocion.casa}</span>
+          <span className="text-base font-bold text-ink">{promocion.casa}</span>
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               ESTILOS_ESTADO[promocion.estado]
@@ -44,18 +53,18 @@ export default function PromocionItem({ promocion, onResolver, onBorrar }) {
             {ETIQUETAS_ESTADO[promocion.estado]}
           </span>
         </div>
-        <p className="text-sm text-ink mt-1 break-words">{promocion.tipo}</p>
+        <p className="text-sm italic text-ink mt-1 break-words">{promocion.tipo}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-xs text-slate">
           <span>Valor: {promocion.valor.toFixed(2)}€</span>
           {!esPendiente && (
             <span
-              className={
+              className={`font-bold ${
                 promocion.beneficioNeto > 0
                   ? "text-win"
                   : promocion.beneficioNeto < 0
                   ? "text-lose"
                   : "text-ink"
-              }
+              }`}
             >
               Beneficio neto: {promocion.beneficioNeto > 0 ? "+" : ""}
               {promocion.beneficioNeto.toFixed(2)}€

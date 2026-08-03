@@ -126,6 +126,41 @@ export function filtrarPorPeriodo(apuestas, periodo, referencia = new Date()) {
   });
 }
 
+// Agrupa las apuestas por mes ("YYYY-MM") y calcula las mismas estadísticas
+// que calcularEstadisticas para cada mes, del más reciente al más antiguo.
+export function calcularInformeMensual(apuestas) {
+  const grupos = new Map();
+  for (const apuesta of apuestas) {
+    const clave = apuesta.fecha.slice(0, 7);
+    if (!grupos.has(clave)) grupos.set(clave, []);
+    grupos.get(clave).push(apuesta);
+  }
+
+  return [...grupos.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([mes, apuestasDelMes]) => ({
+      mes,
+      ...calcularEstadisticas(apuestasDelMes),
+    }));
+}
+
+// Agrupa las apuestas por casa y calcula las mismas estadísticas que
+// calcularEstadisticas para cada una, de más a menos rentable.
+export function calcularDesglosePorCasa(apuestas) {
+  const grupos = new Map();
+  for (const apuesta of apuestas) {
+    if (!grupos.has(apuesta.casa)) grupos.set(apuesta.casa, []);
+    grupos.get(apuesta.casa).push(apuesta);
+  }
+
+  return [...grupos.entries()]
+    .map(([casa, apuestasDeCasa]) => ({
+      casa,
+      ...calcularEstadisticas(apuestasDeCasa),
+    }))
+    .sort((a, b) => b.beneficio - a.beneficio);
+}
+
 // Racha actual de victorias: cuenta desde la apuesta resuelta más reciente
 // hacia atrás mientras todas sean "ganada". Cualquier perdida o nula la corta.
 // Se calcula siempre sobre todo el bankroll, sin filtros de casa/fondos/periodo,

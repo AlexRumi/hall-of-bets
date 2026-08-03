@@ -9,7 +9,7 @@ const ETIQUETA_TIER = { bronce: "Bronce", plata: "Plata", oro: "Oro", platino: "
 function estilosFila(trofeo, esSecreto) {
   if (trofeo.conseguido) return "border-2 border-gold bg-gold/10 shadow-sm";
   if (esSecreto) return "border border-line bg-paperDim";
-  return "border border-line bg-white";
+  return "border border-line bg-surface";
 }
 
 export default function SalaTrofeos({ trofeos }) {

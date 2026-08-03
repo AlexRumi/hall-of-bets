@@ -11,12 +11,12 @@ export default function FiltrosApuestas({
         <select
           value={filtroCasa}
           onChange={(e) => onCambiarCasa(e.target.value)}
-          className="border border-line rounded-lg px-3 py-1.5 text-sm bg-white text-ink"
+          className="border border-line rounded-lg px-3 py-1.5 text-sm bg-surface text-ink"
         >
           <option value="todas">Todas las casas</option>
           {casas.map((casa) => (
-            <option key={casa} value={casa}>
-              {casa}
+            <option key={casa.nombre} value={casa.nombre}>
+              {casa.nombre}
             </option>
           ))}
         </select>
@@ -25,7 +25,7 @@ export default function FiltrosApuestas({
       <select
         value={filtroFondos}
         onChange={(e) => onCambiarFondos(e.target.value)}
-        className="border border-line rounded-lg px-3 py-1.5 text-sm bg-white text-ink"
+        className="border border-line rounded-lg px-3 py-1.5 text-sm bg-surface text-ink"
       >
         <option value="todas">Todos los fondos</option>
         <option value="real">Real</option>

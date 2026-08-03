@@ -6,10 +6,9 @@ import CampoCasa from "./CampoCasa";
 const hoy = () => new Date().toISOString().slice(0, 10);
 const seleccionVacia = () => ({ evento: "", cuota: "" });
 
-export default function FormularioApuesta({ onAgregar, casas, onAgregarCasa }) {
+export default function FormularioApuesta({ onAgregar, casas }) {
   const [fecha, setFecha] = useState(hoy());
   const [casa, setCasa] = useState("");
-  const [resetCasa, setResetCasa] = useState(0);
   const [stake, setStake] = useState("");
   const [tipoFondos, setTipoFondos] = useState("real");
   const [selecciones, setSelecciones] = useState([seleccionVacia()]);
@@ -60,7 +59,6 @@ export default function FormularioApuesta({ onAgregar, casas, onAgregarCasa }) {
     });
 
     setCasa("");
-    setResetCasa((k) => k + 1);
     setStake("");
     setTipoFondos("real");
     setSelecciones([seleccionVacia()]);
@@ -70,7 +68,7 @@ export default function FormularioApuesta({ onAgregar, casas, onAgregarCasa }) {
   return (
     <form
       onSubmit={manejarEnvio}
-      className="bg-white border border-line rounded-xl p-5 sm:p-6 space-y-4"
+      className="bg-surface border border-line rounded-xl p-5 sm:p-6 space-y-4"
     >
       <h2 className="font-display text-lg font-semibold text-ink">
         Nueva apuesta
@@ -88,13 +86,7 @@ export default function FormularioApuesta({ onAgregar, casas, onAgregarCasa }) {
           />
         </div>
 
-        <CampoCasa
-          key={resetCasa}
-          casas={casas}
-          valor={casa}
-          onCambiar={setCasa}
-          onAgregarCasa={onAgregarCasa}
-        />
+        <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
 
         <div>
           <label className="block text-xs text-slate mb-1">Stake (€)</label>

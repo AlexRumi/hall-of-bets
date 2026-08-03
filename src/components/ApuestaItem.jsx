@@ -17,20 +17,29 @@ const ETIQUETAS_RESULTADO = {
   nula: "Nula",
 };
 
-export default function ApuestaItem({ apuesta, onMarcarResultado, onBorrar }) {
+export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorrar }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
   const esCombinada = apuesta.selecciones.length > 1;
   const cuotaTotal = calcularCuotaTotal(apuesta.selecciones);
   const beneficio = calcularBeneficio(apuesta);
+  const logoCasa = casas.find((c) => c.nombre === apuesta.casa)?.logo;
 
   return (
-    <div className="bg-white border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+    <div className="bg-surface border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      {logoCasa && (
+        <img
+          src={logoCasa}
+          alt=""
+          className="w-12 h-12 rounded-lg object-contain shrink-0"
+        />
+      )}
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs text-slate">{apuesta.fecha}</span>
           <span className="text-xs text-slate">·</span>
-          <span className="text-xs font-medium text-ink">{apuesta.casa}</span>
+          <span className="text-base font-bold text-ink">{apuesta.casa}</span>
           {esCombinada && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
               Combinada · {apuesta.selecciones.length} selecciones
@@ -55,17 +64,17 @@ export default function ApuestaItem({ apuesta, onMarcarResultado, onBorrar }) {
             {apuesta.selecciones.map((seleccion) => (
               <li
                 key={seleccion.id}
-                className="text-sm text-ink break-words flex gap-2"
+                className="text-sm italic text-ink break-words flex gap-2"
               >
                 <span className="flex-1 min-w-0">{seleccion.evento}</span>
-                <span className="font-mono text-xs text-slate shrink-0">
+                <span className="font-mono text-xs not-italic text-slate shrink-0">
                   {seleccion.cuota.toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-ink mt-1 break-words">
+          <p className="text-sm italic text-ink mt-1 break-words">
             {apuesta.selecciones[0].evento}
           </p>
         )}
@@ -74,7 +83,7 @@ export default function ApuestaItem({ apuesta, onMarcarResultado, onBorrar }) {
           <span>Stake: {apuesta.stake.toFixed(2)}€</span>
           <span>Cuota total: {cuotaTotal.toFixed(2)}</span>
           {!esPendiente && (
-            <span className={beneficio > 0 ? "text-win" : beneficio < 0 ? "text-lose" : "text-void"}>
+            <span className={`font-bold ${beneficio > 0 ? "text-win" : beneficio < 0 ? "text-lose" : "text-void"}`}>
               {beneficio > 0 ? "+" : ""}
               {beneficio.toFixed(2)}€
             </span>

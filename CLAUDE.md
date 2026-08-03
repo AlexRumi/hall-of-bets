@@ -6,10 +6,11 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 - Frontend: React + Vite, JavaScript (no TypeScript por ahora)
 - Estilos: Tailwind CSS (paleta y fuentes ya configuradas en `tailwind.config.js` / `src/index.css`)
-- Backend: pendiente de fase 11 (bot de fotos) — Node.js/Express o funciones serverless
-- Base de datos: pendiente de fase 2 — SQLite al principio
+- Backend: no hay — la fase 11 (bot de fotos), que lo habría requerido, se omitió por el coste recurrente de la API de IA
+- Base de datos: localStorage del navegador (decidido en fase 2). SQLite real quedó ligado a la fase 11 (omitida); la sincronización con Supabase se valoró como alternativa y se aparcó — sin plan concreto de retomarla por ahora
 - Gráficas: recharts
 - Iconos: lucide-react
+- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`
 
 ## Identidad visual (no cambiar sin pedirlo explícitamente)
 
@@ -34,25 +35,32 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 - Estadísticas y gráfico por periodo: hoy / semana / mes / año
 - Gráfico de beneficio acumulado
 - Racha actual de apuestas ganadas
-- Sala de trofeos: logros desbloqueables sin efecto en el bankroll (ej. cuota ≥ 1,8 acertada, 5 victorias seguidas) — fase avanzada, no construir hasta tener histórico de datos
-- Bot de fotos: sube captura → IA rellena el formulario → el usuario confirma antes de guardar (fase avanzada, requiere backend con API key propia, nunca expuesta en el frontend)
+- Sala de trofeos: logros desbloqueables sin efecto en el bankroll (ej. cuota ≥ 1,8 acertada, 5 victorias seguidas), con niveles bronce/plata/oro/platino y notificación al desbloquear uno nuevo
+- Bot de fotos: sube captura → IA rellena el formulario → el usuario confirma antes de guardar (requiere backend con API key propia, nunca expuesta en el frontend) — **omitida por coste recurrente de la IA, ver fases**
 - Borrado individual y borrado total (con confirmación) por sección
 - Persistencia real de datos (no debe perderse al recargar)
 
 ## Fases de construcción (orden — no saltar fases sin que se pida)
 
 1. Setup del proyecto — ✅ hecho
-2. CRUD básico de apuestas (una lista, sin categorías, estado Pendiente por defecto)
-3. Selecciones y combinadas
-4. Categorías (Apuestas / Entretenimiento) como bankrolls independientes
-5. Casas de apuestas y filtros (incluyendo filtro de tipo de fondos)
-6. Estadísticas y gráfica de beneficio acumulado
-7. Estadísticas por periodo + racha de victorias
-8. Promociones
-9. Borrado individual y total con confirmación
-10. Sala de trofeos
-11. Bot de fotos (backend propio)
-12. Despliegue
+2. CRUD básico de apuestas (una lista, sin categorías, estado Pendiente por defecto) — ✅ hecho
+3. Selecciones y combinadas — ✅ hecho
+4. Categorías (Apuestas / Entretenimiento) como bankrolls independientes — ✅ hecho
+5. Casas de apuestas y filtros (incluyendo filtro de tipo de fondos) — ✅ hecho
+6. Estadísticas y gráfica de beneficio acumulado — ✅ hecho
+7. Estadísticas por periodo + racha de victorias — ✅ hecho
+8. Promociones — ✅ hecho
+9. Borrado individual y total con confirmación — ✅ hecho
+10. Sala de trofeos — ✅ hecho
+11. Bot de fotos (backend propio) — ❌ omitida por coste recurrente de la API de IA; no retomar salvo que se pida explícitamente
+12. Despliegue — ✅ hecho (GitHub + Vercel)
+
+## Backlog pendiente (orden — no saltar sin que se pida)
+
+1. Listado de registro de casas
+2. Informe mensual
+3. Desglose por casa de apuestas
+4. Modo oscuro/claro
 
 ## Convenciones de código
 

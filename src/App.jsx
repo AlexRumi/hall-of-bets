@@ -4,6 +4,7 @@ import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { usePromociones } from "./hooks/usePromociones";
 import { useTrofeos } from "./hooks/useTrofeos";
+import { useModoOscuro } from "./hooks/useModoOscuro";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
@@ -15,8 +16,12 @@ import EstadisticasApuestas from "./components/EstadisticasApuestas";
 import GraficoBeneficio from "./components/GraficoBeneficio";
 import PromocionesSection from "./components/PromocionesSection";
 import SalaTrofeos from "./components/SalaTrofeos";
+import ListadoCasas from "./components/ListadoCasas";
+import InformeMensual from "./components/InformeMensual";
+import DesgloseCasas from "./components/DesgloseCasas";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
+import SelectorModoOscuro from "./components/SelectorModoOscuro";
 
 const ETIQUETAS_SECCION = {
   apuestas: "Apuestas",
@@ -26,7 +31,7 @@ const ETIQUETAS_SECCION = {
 export default function App() {
   const { apuestas, agregarApuesta, marcarResultado, borrarApuesta, borrarTodoBankroll } =
     useApuestas();
-  const { casas, agregarCasa } = useCasas();
+  const { casas, agregarCasa, borrarCasa } = useCasas();
   const {
     promociones,
     agregarPromocion,
@@ -41,6 +46,7 @@ export default function App() {
     apuestas,
     promociones
   );
+  const { oscuro, alternar } = useModoOscuro();
   const [seccionActiva, setSeccionActiva] = useState("apuestas");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -52,7 +58,7 @@ export default function App() {
   useEffect(() => {
     if (casas.length > 0 || apuestas.length === 0) return;
     const nombresUnicos = [...new Set(apuestas.map((a) => a.casa))];
-    nombresUnicos.forEach(agregarCasa);
+    nombresUnicos.forEach((nombre) => agregarCasa({ nombre }));
   }, [apuestas, casas, agregarCasa]);
 
   // Cada bankroll (Apuestas/Entretenimiento) es independiente: solo se ven
@@ -85,8 +91,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-paper text-ink">
-      <div className="bg-felt px-5 sm:px-8 py-8 text-center">
+    <div className="min-h-screen bg-fondo text-ink">
+      <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
+        <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
+          <SelectorModoOscuro oscuro={oscuro} onAlternar={alternar} />
+        </div>
         <div className="flex items-center justify-center gap-2 mb-1">
           <Ticket size={20} className="text-gold" />
           <span className="uppercase tracking-[0.2em] text-xs font-medium text-gold">
@@ -103,11 +112,7 @@ export default function App() {
 
         {esBankroll ? (
           <>
-            <FormularioApuesta
-              onAgregar={manejarAgregar}
-              casas={casas}
-              onAgregarCasa={agregarCasa}
-            />
+            <FormularioApuesta onAgregar={manejarAgregar} casas={casas} />
             <FiltrosApuestas
               casas={casas}
               filtroCasa={filtroCasa}
@@ -118,7 +123,7 @@ export default function App() {
             <RachaActual racha={racha} />
             <SelectorPeriodo activo={periodo} onCambiar={setPeriodo} />
             <EstadisticasApuestas apuestas={apuestasPeriodo} />
-            <GraficoBeneficio apuestas={apuestasPeriodo} />
+            <GraficoBeneficio apuestas={apuestasPeriodo} oscuro={oscuro} />
 
             {apuestasDelBankroll.length > 0 && (
               <div className="flex justify-end">
@@ -134,6 +139,7 @@ export default function App() {
             )}
             <ListaApuestas
               apuestas={apuestasFiltradas}
+              casas={casas}
               onMarcarResultado={marcarResultado}
               onBorrar={borrarApuesta}
             />
@@ -149,15 +155,24 @@ export default function App() {
         ) : seccionActiva === "promociones" ? (
           <PromocionesSection
             casas={casas}
-            onAgregarCasa={agregarCasa}
             promociones={promociones}
             agregarPromocion={agregarPromocion}
             resolverPromocion={resolverPromocion}
             borrarPromocion={borrarPromocion}
             borrarTodasPromociones={borrarTodasPromociones}
           />
-        ) : (
+        ) : seccionActiva === "trofeos" ? (
           <SalaTrofeos trofeos={trofeos} />
+        ) : seccionActiva === "casas" ? (
+          <ListadoCasas
+            casas={casas}
+            onAgregarCasa={agregarCasa}
+            onBorrarCasa={borrarCasa}
+          />
+        ) : seccionActiva === "informe" ? (
+          <InformeMensual apuestas={apuestas} />
+        ) : (
+          <DesgloseCasas apuestas={apuestas} casas={casas} />
         )}
       </div>
 

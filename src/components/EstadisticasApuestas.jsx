@@ -32,7 +32,7 @@ export default function EstadisticasApuestas({ apuestas }) {
   ];
 
   return (
-    <div className="bg-white border border-line rounded-xl p-5 sm:p-6">
+    <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {tiles.map(({ etiqueta, valor, color }) => (
           <div key={etiqueta}>

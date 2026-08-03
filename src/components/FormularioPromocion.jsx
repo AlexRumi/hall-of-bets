@@ -4,10 +4,9 @@ import CampoCasa from "./CampoCasa";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
-export default function FormularioPromocion({ onAgregar, casas, onAgregarCasa }) {
+export default function FormularioPromocion({ onAgregar, casas }) {
   const [fecha, setFecha] = useState(hoy());
   const [casa, setCasa] = useState("");
-  const [resetCasa, setResetCasa] = useState(0);
   const [tipo, setTipo] = useState("");
   const [valor, setValor] = useState("");
 
@@ -19,7 +18,6 @@ export default function FormularioPromocion({ onAgregar, casas, onAgregarCasa })
     onAgregar({ fecha, casa: casaFinal, tipo: tipo.trim(), valor });
 
     setCasa("");
-    setResetCasa((k) => k + 1);
     setTipo("");
     setValor("");
     setFecha(hoy());
@@ -28,7 +26,7 @@ export default function FormularioPromocion({ onAgregar, casas, onAgregarCasa })
   return (
     <form
       onSubmit={manejarEnvio}
-      className="bg-white border border-line rounded-xl p-5 sm:p-6 space-y-4"
+      className="bg-surface border border-line rounded-xl p-5 sm:p-6 space-y-4"
     >
       <h2 className="font-display text-lg font-semibold text-ink">
         Nueva promoción
@@ -46,13 +44,7 @@ export default function FormularioPromocion({ onAgregar, casas, onAgregarCasa })
           />
         </div>
 
-        <CampoCasa
-          key={resetCasa}
-          casas={casas}
-          valor={casa}
-          onCambiar={setCasa}
-          onAgregarCasa={onAgregarCasa}
-        />
+        <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
 
         <div>
           <label className="block text-xs text-slate mb-1">Tipo</label>

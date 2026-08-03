@@ -1,6 +1,6 @@
 import ApuestaItem from "./ApuestaItem";
 
-export default function ListaApuestas({ apuestas, onMarcarResultado, onBorrar }) {
+export default function ListaApuestas({ apuestas, casas, onMarcarResultado, onBorrar }) {
   if (apuestas.length === 0) {
     return (
       <p className="text-center text-sm text-slate py-10">
@@ -15,6 +15,7 @@ export default function ListaApuestas({ apuestas, onMarcarResultado, onBorrar })
         <ApuestaItem
           key={apuesta.id}
           apuesta={apuesta}
+          casas={casas}
           onMarcarResultado={onMarcarResultado}
           onBorrar={onBorrar}
         />

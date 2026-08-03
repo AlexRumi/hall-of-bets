@@ -9,8 +9,8 @@ export default function ConfirmDialog({
   if (!abierto) return null;
 
   return (
-    <div className="fixed inset-0 bg-ink/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white border border-line rounded-xl p-6 max-w-sm w-full space-y-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-4">
         <h3 className="font-display text-lg font-semibold text-ink">{titulo}</h3>
         <p className="text-sm text-slate">{mensaje}</p>
         <div className="flex justify-end gap-2">
