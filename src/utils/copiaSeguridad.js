@@ -30,11 +30,13 @@ export function hayDatosLocalesSinMigrar() {
 }
 
 // Sube de una vez el historial que ya hubiera en este navegador (de antes de
-// tener sincronización) a las tablas de Supabase del usuario que ha iniciado sesión.
+// tener sincronización) a las tablas de Supabase del usuario que ha iniciado
+// sesión. Si algo falla a mitad no se borra nada de localStorage, para poder
+// reintentarlo sin haber perdido el original.
 export async function migrarLocalStorageASupabase(userId) {
   const apuestas = leerLocalStorage(CLAVES_LOCALSTORAGE.apuestas);
   if (apuestas.length > 0) {
-    await supabase.from("apuestas").insert(
+    const { error } = await supabase.from("apuestas").insert(
       apuestas.map((a) => ({
         user_id: userId,
         fecha: a.fecha,
@@ -46,18 +48,20 @@ export async function migrarLocalStorageASupabase(userId) {
         selecciones: a.selecciones,
       }))
     );
+    if (error) throw error;
   }
 
   const casas = leerLocalStorage(CLAVES_LOCALSTORAGE.casas);
   if (casas.length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("casas")
       .insert(casas.map((c) => ({ user_id: userId, nombre: c.nombre, logo: c.logo })));
+    if (error) throw error;
   }
 
   const promociones = leerLocalStorage(CLAVES_LOCALSTORAGE.promociones);
   if (promociones.length > 0) {
-    await supabase.from("promociones").insert(
+    const { error } = await supabase.from("promociones").insert(
       promociones.map((p) => ({
         user_id: userId,
         fecha: p.fecha,
@@ -68,11 +72,12 @@ export async function migrarLocalStorageASupabase(userId) {
         beneficio_neto: p.beneficioNeto,
       }))
     );
+    if (error) throw error;
   }
 
   const movimientos = leerLocalStorage(CLAVES_LOCALSTORAGE.movimientos);
   if (movimientos.length > 0) {
-    await supabase.from("movimientos").insert(
+    const { error } = await supabase.from("movimientos").insert(
       movimientos.map((m) => ({
         user_id: userId,
         fecha: m.fecha,
@@ -81,7 +86,12 @@ export async function migrarLocalStorageASupabase(userId) {
         cantidad: Number(m.cantidad),
       }))
     );
+    if (error) throw error;
   }
+
+  // Todo subido sin errores: borramos las claves antiguas para que el aviso
+  // de migración no vuelva a salir ni se puedan duplicar datos si se repite.
+  Object.values(CLAVES_LOCALSTORAGE).forEach((clave) => localStorage.removeItem(clave));
 }
 
 // Descarga una copia de seguridad en .json con todo lo que hay en Supabase
