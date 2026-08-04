@@ -14,7 +14,7 @@ const OPCIONES = [
   { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
   { id: "desglose", etiqueta: "Desglose", Icono: PieChart },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
-  { id: "ingresos", etiqueta: "Ingresos", Icono: Banknote },
+  { id: "ingresos", etiqueta: "Ingresos y retiradas", Icono: Banknote },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
   { id: "copia", etiqueta: "Copia de seguridad", Icono: DatabaseBackup },
 ];

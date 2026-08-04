@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Landmark, Trash2 } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
 import ConfirmDialog from "./ConfirmDialog";
-import GraficoBankroll from "./GraficoBankroll";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 
 const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, roiPct: 0 };
@@ -16,10 +15,20 @@ export default function ListadoCasas({
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
   const bankrolls = calcularBankrollPorCasa(movimientos, apuestas);
+  // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
+  // que "Bankroll actual" de cada tarjeta, sumado).
+  const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
 
   return (
     <div className="space-y-4">
-      <GraficoBankroll movimientos={movimientos} apuestas={apuestas} />
+      {bankrolls.length > 0 && (
+        <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 text-center">
+          <p className="text-xs text-slate">Bankroll total</p>
+          <p className="font-mono text-3xl font-bold text-goldDark">
+            {bankrollTotal.toFixed(2)}€
+          </p>
+        </div>
+      )}
       <FormularioCasa onAgregar={onAgregarCasa} />
 
       {casas.length === 0 ? (
