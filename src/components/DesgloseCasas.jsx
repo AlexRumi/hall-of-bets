@@ -69,7 +69,7 @@ export default function DesgloseCasas({ apuestas, casas }) {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate">Stake total</p>
+                    <p className="text-xs text-slate">Total apostado</p>
                     <p className="font-mono text-sm font-medium text-ink">
                       {fila.stakeTotalReal.toFixed(2)}€
                     </p>

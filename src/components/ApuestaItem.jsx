@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal } from "../utils/apuestas";
 import ConfirmDialog from "./ConfirmDialog";
+import FormularioApuesta from "./FormularioApuesta";
 
 const ESTILOS_RESULTADO = {
   pendiente: "bg-pending/10 text-pending",
@@ -17,13 +18,25 @@ const ETIQUETAS_RESULTADO = {
   nula: "Nula",
 };
 
-export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorrar }) {
+export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorrar, onEditar }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [editando, setEditando] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
   const esCombinada = apuesta.selecciones.length > 1;
   const cuotaTotal = calcularCuotaTotal(apuesta.selecciones);
   const beneficio = calcularBeneficio(apuesta);
   const logoCasa = casas.find((c) => c.nombre === apuesta.casa)?.logo;
+
+  if (editando) {
+    return (
+      <FormularioApuesta
+        casas={casas}
+        apuestaInicial={apuesta}
+        onGuardar={(datos) => onEditar(apuesta.id, datos)}
+        onCancelar={() => setEditando(false)}
+      />
+    );
+  }
 
   return (
     <div className="bg-surface border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -60,27 +73,39 @@ export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorra
         </div>
 
         {esCombinada ? (
-          <ul className="mt-1 space-y-0.5">
+          <ul className="mt-1 space-y-1">
             {apuesta.selecciones.map((seleccion) => (
               <li
                 key={seleccion.id}
-                className="text-sm italic text-ink break-words flex gap-2"
+                className="text-sm text-ink break-words flex gap-2"
               >
-                <span className="flex-1 min-w-0">{seleccion.evento}</span>
-                <span className="font-mono text-xs not-italic text-slate shrink-0">
+                <span className="flex-1 min-w-0">
+                  {seleccion.evento}
+                  {seleccion.apuesta && (
+                    <span className="italic text-slate"> — {seleccion.apuesta}</span>
+                  )}
+                </span>
+                <span className="font-mono text-xs text-slate shrink-0">
                   {seleccion.cuota.toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm italic text-ink mt-1 break-words">
-            {apuesta.selecciones[0].evento}
-          </p>
+          <div className="mt-1">
+            <p className="text-sm text-ink break-words">
+              {apuesta.selecciones[0].evento}
+            </p>
+            {apuesta.selecciones[0].apuesta && (
+              <p className="text-sm italic text-slate break-words">
+                {apuesta.selecciones[0].apuesta}
+              </p>
+            )}
+          </div>
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-xs text-slate">
-          <span>Stake: {apuesta.stake.toFixed(2)}€</span>
+          <span>Apostado: {apuesta.stake.toFixed(2)}€</span>
           <span>Cuota total: {cuotaTotal.toFixed(2)}</span>
           {!esPendiente && (
             <span className={`font-bold ${beneficio > 0 ? "text-win" : beneficio < 0 ? "text-lose" : "text-void"}`}>
@@ -114,6 +139,13 @@ export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorra
             </button>
           </>
         )}
+        <button
+          onClick={() => setEditando(true)}
+          aria-label="Editar apuesta"
+          className="text-slate hover:text-ink transition-colors p-1.5"
+        >
+          <Pencil size={16} />
+        </button>
         <button
           onClick={() => setConfirmandoBorrado(true)}
           aria-label="Borrar apuesta"

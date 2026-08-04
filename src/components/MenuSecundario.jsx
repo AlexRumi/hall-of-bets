@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, CalendarDays, PieChart, Landmark, Trophy } from "lucide-react";
+import {
+  Menu,
+  CalendarDays,
+  PieChart,
+  Landmark,
+  Trophy,
+  Banknote,
+  DatabaseBackup,
+} from "lucide-react";
 
 const OPCIONES = [
   { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
   { id: "desglose", etiqueta: "Desglose", Icono: PieChart },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
+  { id: "ingresos", etiqueta: "Ingresos", Icono: Banknote },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
+  { id: "copia", etiqueta: "Copia de seguridad", Icono: DatabaseBackup },
 ];
 
 // Secciones que no dependen del bankroll activo (Apuestas/Entretenimiento):

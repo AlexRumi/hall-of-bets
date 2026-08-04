@@ -5,9 +5,14 @@ export default function EstadisticasApuestas({ apuestas }) {
 
   const tiles = [
     { etiqueta: "Nº apuestas", valor: stats.numApuestas },
-    { etiqueta: "Stake medio", valor: `${stats.stakeMedio.toFixed(2)}€` },
+    { etiqueta: "Media apostada", valor: `${stats.stakeMedio.toFixed(2)}€` },
     { etiqueta: "Cuota media", valor: stats.cuotaMedia.toFixed(2) },
-    { etiqueta: "Stake total", valor: `${stats.stakeTotalReal.toFixed(2)}€` },
+    { etiqueta: "Total apostado", valor: `${stats.stakeTotalReal.toFixed(2)}€` },
+    {
+      etiqueta: "En juego",
+      valor: `${stats.stakePendienteReal.toFixed(2)}€`,
+      color: stats.stakePendienteReal > 0 ? "text-gold" : "text-ink",
+    },
     {
       etiqueta: "Beneficio",
       valor: `${stats.beneficio > 0 ? "+" : ""}${stats.beneficio.toFixed(2)}€`,

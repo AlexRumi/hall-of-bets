@@ -62,7 +62,7 @@ export default function InformeMensual({ apuestas }) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate">Stake total</p>
+                  <p className="text-xs text-slate">Total apostado</p>
                   <p className="font-mono text-sm font-medium text-ink">
                     {mes.stakeTotalReal.toFixed(2)}€
                   </p>

@@ -4,6 +4,7 @@ import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { usePromociones } from "./hooks/usePromociones";
 import { useTrofeos } from "./hooks/useTrofeos";
+import { useMovimientos } from "./hooks/useMovimientos";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
@@ -18,6 +19,8 @@ import SalaTrofeos from "./components/SalaTrofeos";
 import ListadoCasas from "./components/ListadoCasas";
 import InformeMensual from "./components/InformeMensual";
 import DesgloseCasas from "./components/DesgloseCasas";
+import IngresosSection from "./components/IngresosSection";
+import CopiaSeguridad from "./components/CopiaSeguridad";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
@@ -28,8 +31,14 @@ const ETIQUETAS_SECCION = {
 };
 
 export default function App() {
-  const { apuestas, agregarApuesta, marcarResultado, borrarApuesta, borrarTodoBankroll } =
-    useApuestas();
+  const {
+    apuestas,
+    agregarApuesta,
+    editarApuesta,
+    marcarResultado,
+    borrarApuesta,
+    borrarTodoBankroll,
+  } = useApuestas();
   const { casas, agregarCasa, borrarCasa } = useCasas();
   const {
     promociones,
@@ -45,6 +54,12 @@ export default function App() {
     apuestas,
     promociones
   );
+  const {
+    movimientos,
+    agregarMovimiento,
+    borrarMovimiento,
+    borrarTodosMovimientos,
+  } = useMovimientos();
   const [seccionActiva, setSeccionActiva] = useState("apuestas");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -110,7 +125,7 @@ export default function App() {
 
         {esBankroll ? (
           <>
-            <FormularioApuesta onAgregar={manejarAgregar} casas={casas} />
+            <FormularioApuesta onGuardar={manejarAgregar} casas={casas} />
             <FiltrosApuestas
               casas={casas}
               filtroCasa={filtroCasa}
@@ -140,6 +155,7 @@ export default function App() {
               casas={casas}
               onMarcarResultado={marcarResultado}
               onBorrar={borrarApuesta}
+              onEditar={editarApuesta}
             />
 
             <ConfirmDialog
@@ -166,9 +182,21 @@ export default function App() {
             casas={casas}
             onAgregarCasa={agregarCasa}
             onBorrarCasa={borrarCasa}
+            movimientos={movimientos}
+            apuestas={apuestas}
           />
         ) : seccionActiva === "informe" ? (
           <InformeMensual apuestas={apuestas} />
+        ) : seccionActiva === "ingresos" ? (
+          <IngresosSection
+            casas={casas}
+            movimientos={movimientos}
+            agregarMovimiento={agregarMovimiento}
+            borrarMovimiento={borrarMovimiento}
+            borrarTodosMovimientos={borrarTodosMovimientos}
+          />
+        ) : seccionActiva === "copia" ? (
+          <CopiaSeguridad />
         ) : (
           <DesgloseCasas apuestas={apuestas} casas={casas} />
         )}

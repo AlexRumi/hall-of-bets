@@ -28,6 +28,18 @@ function migrarApuesta(apuesta) {
     migrada = { ...migrada, tipoFondos: "real" };
   }
 
+  // Las selecciones guardadas antes de separar "evento" (el partido) de
+  // "apuesta" (la selección concreta) solo tenían un texto libre en "evento".
+  // No se puede separar automáticamente, así que "apuesta" queda vacío.
+  migrada = {
+    ...migrada,
+    selecciones: migrada.selecciones.map((seleccion) =>
+      seleccion.apuesta === undefined
+        ? { ...seleccion, apuesta: "" }
+        : seleccion
+    ),
+  };
+
   return migrada;
 }
 
@@ -64,6 +76,7 @@ export function useApuestas() {
       selecciones: selecciones.map((seleccion) => ({
         id: crypto.randomUUID(),
         evento: seleccion.evento,
+        apuesta: seleccion.apuesta,
         cuota: Number(seleccion.cuota),
       })),
       resultado: "pendiente",
@@ -71,6 +84,30 @@ export function useApuestas() {
       tipoFondos,
     };
     setApuestas((actuales) => [nueva, ...actuales]);
+  }
+
+  // Actualiza los datos de una apuesta ya creada (para corregir errores al
+  // escribirla), sin tocar su resultado ni el bankroll al que pertenece.
+  function editarApuesta(id, { fecha, casa, stake, selecciones, tipoFondos }) {
+    setApuestas((actuales) =>
+      actuales.map((apuesta) =>
+        apuesta.id === id
+          ? {
+              ...apuesta,
+              fecha,
+              casa,
+              stake: Number(stake),
+              tipoFondos,
+              selecciones: selecciones.map((seleccion) => ({
+                id: crypto.randomUUID(),
+                evento: seleccion.evento,
+                apuesta: seleccion.apuesta,
+                cuota: Number(seleccion.cuota),
+              })),
+            }
+          : apuesta
+      )
+    );
   }
 
   function marcarResultado(id, resultado) {
@@ -96,6 +133,7 @@ export function useApuestas() {
   return {
     apuestas,
     agregarApuesta,
+    editarApuesta,
     marcarResultado,
     borrarApuesta,
     borrarTodoBankroll,

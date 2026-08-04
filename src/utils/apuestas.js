@@ -22,6 +22,7 @@ export function calcularEstadisticas(apuestas) {
     (a) => a.resultado === "ganada" || a.resultado === "perdida"
   );
   const resueltas = apuestas.filter((a) => a.resultado !== "pendiente");
+  const pendientes = apuestas.filter((a) => a.resultado === "pendiente");
   const reales = apuestas.filter((a) => a.tipoFondos === "real");
   const freebets = apuestas.filter((a) => a.tipoFondos === "freebet");
 
@@ -42,6 +43,11 @@ export function calcularEstadisticas(apuestas) {
     cuotaMedia,
     stakeTotalReal,
     stakeTotalFreebet,
+    // Dinero que sigue "en juego": apuestas pendientes de resolver.
+    numPendientes: pendientes.length,
+    stakePendienteReal: pendientes
+      .filter((a) => a.tipoFondos === "real")
+      .reduce((suma, a) => suma + a.stake, 0),
     beneficio,
     yieldPct: stakeTotalReal ? (beneficio / stakeTotalReal) * 100 : 0,
     aciertoPct: decididas.length

@@ -16,6 +16,7 @@ export default {
         // Acentos con opacidad (bg-gold/10, bg-win/10...): "R G B" para que
         // Tailwind pueda aplicarles transparencia.
         gold: "rgb(184 147 77 / <alpha-value>)",
+        goldDark: "#7C6434",
         win: "rgb(30 142 90 / <alpha-value>)",
         lose: "rgb(192 57 43 / <alpha-value>)",
         pending: "rgb(184 147 77 / <alpha-value>)",
