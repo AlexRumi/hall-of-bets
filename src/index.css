@@ -4,43 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Colores del modo claro (los mismos de siempre). Los que llevan opacidad
-   (bg-gold/10, bg-win/10...) se guardan como "R G B" para que Tailwind pueda
-   aplicarles transparencia; el resto son un color normal. */
-:root {
-  color-scheme: light;
-  --color-fondo: #f7f4ea;
-  --color-surface: #ffffff;
-  --color-paper-dim: #ede8d9;
-  --color-ink: #1c1c1c;
-  --color-line: #d9d2bc;
-  --color-slate: 107 99 87;
-  --color-gold: 184 147 77;
-  --color-win: 30 142 90;
-  --color-lose: 192 57 43;
-  --color-pending: 184 147 77;
-  --color-void: 139 132 120;
-}
-
-/* Modo oscuro: misma paleta "cuaderno", pero invertida y con los acentos
-   (gold/win/lose) un poco más claros para que se lean bien sobre fondo oscuro. */
-.dark {
-  color-scheme: dark;
-  --color-fondo: #14120e;
-  --color-surface: #1f1b15;
-  --color-paper-dim: #24201a;
-  --color-ink: #ede8dc;
-  --color-line: #332d22;
-  --color-slate: 168 156 135;
-  --color-gold: 216 179 120;
-  --color-win: 52 199 126;
-  --color-lose: 225 104 90;
-  --color-pending: 216 179 120;
-  --color-void: 156 146 132;
-}
-
 body {
-  background: var(--color-fondo);
+  background: #f7f4ea;
   font-family: "Inter", sans-serif;
 }
 

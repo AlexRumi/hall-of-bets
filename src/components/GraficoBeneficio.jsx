@@ -10,12 +10,8 @@ import {
 } from "recharts";
 import { calcularSerieAcumulada } from "../utils/apuestas";
 
-// Recharts pinta con SVG, así que necesita colores hex reales (no puede
-// leer las clases de Tailwind): mantenemos aquí un juego para cada tema.
-const COLORES = {
-  claro: { linea: "#D9D2BC", texto: "#6B6357", acento: "#B8934D" },
-  oscuro: { linea: "#332D22", texto: "#A89C87", acento: "#D8B378" },
-};
+// Recharts pinta con SVG, así que necesita colores hex reales (no puede leer las clases de Tailwind).
+const COLORES = { linea: "#D9D2BC", texto: "#6B6357", acento: "#B8934D" };
 
 function formatearFecha(fecha) {
   const [, mes, dia] = fecha.split("-");
@@ -41,9 +37,8 @@ function TooltipPersonalizado({ active, payload }) {
   );
 }
 
-export default function GraficoBeneficio({ apuestas, oscuro }) {
+export default function GraficoBeneficio({ apuestas }) {
   const serie = calcularSerieAcumulada(apuestas);
-  const colores = oscuro ? COLORES.oscuro : COLORES.claro;
 
   return (
     <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
@@ -58,27 +53,27 @@ export default function GraficoBeneficio({ apuestas, oscuro }) {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={serie} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke={colores.linea} strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke={COLORES.linea} strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="fecha"
               tickFormatter={formatearFecha}
-              tick={{ fill: colores.texto, fontSize: 12 }}
-              axisLine={{ stroke: colores.linea }}
+              tick={{ fill: COLORES.texto, fontSize: 12 }}
+              axisLine={{ stroke: COLORES.linea }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v) => `${v}€`}
-              tick={{ fill: colores.texto, fontSize: 12 }}
-              axisLine={{ stroke: colores.linea }}
+              tick={{ fill: COLORES.texto, fontSize: 12 }}
+              axisLine={{ stroke: COLORES.linea }}
               tickLine={false}
               width={50}
             />
-            <ReferenceLine y={0} stroke={colores.texto} strokeDasharray="3 3" />
+            <ReferenceLine y={0} stroke={COLORES.texto} strokeDasharray="3 3" />
             <Tooltip content={<TooltipPersonalizado />} />
             <Line
               type="monotone"
               dataKey="acumulado"
-              stroke={colores.acento}
+              stroke={COLORES.acento}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}

@@ -4,7 +4,6 @@ import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { usePromociones } from "./hooks/usePromociones";
 import { useTrofeos } from "./hooks/useTrofeos";
-import { useModoOscuro } from "./hooks/useModoOscuro";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
@@ -21,7 +20,7 @@ import InformeMensual from "./components/InformeMensual";
 import DesgloseCasas from "./components/DesgloseCasas";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
-import SelectorModoOscuro from "./components/SelectorModoOscuro";
+import MenuSecundario from "./components/MenuSecundario";
 
 const ETIQUETAS_SECCION = {
   apuestas: "Apuestas",
@@ -46,7 +45,6 @@ export default function App() {
     apuestas,
     promociones
   );
-  const { oscuro, alternar } = useModoOscuro();
   const [seccionActiva, setSeccionActiva] = useState("apuestas");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -94,7 +92,7 @@ export default function App() {
     <div className="min-h-screen bg-fondo text-ink">
       <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
         <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
-          <SelectorModoOscuro oscuro={oscuro} onAlternar={alternar} />
+          <MenuSecundario activa={seccionActiva} onCambiar={setSeccionActiva} />
         </div>
         <div className="flex items-center justify-center gap-2 mb-1">
           <Ticket size={20} className="text-gold" />
@@ -123,7 +121,7 @@ export default function App() {
             <RachaActual racha={racha} />
             <SelectorPeriodo activo={periodo} onCambiar={setPeriodo} />
             <EstadisticasApuestas apuestas={apuestasPeriodo} />
-            <GraficoBeneficio apuestas={apuestasPeriodo} oscuro={oscuro} />
+            <GraficoBeneficio apuestas={apuestasPeriodo} />
 
             {apuestasDelBankroll.length > 0 && (
               <div className="flex justify-end">

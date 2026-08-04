@@ -3,12 +3,39 @@ import { Award, Medal, Trophy, Crown, Lock } from "lucide-react";
 const ICONO_TIER = { bronce: Award, plata: Medal, oro: Trophy, platino: Crown };
 const ETIQUETA_TIER = { bronce: "Bronce", plata: "Plata", oro: "Oro", platino: "Platino" };
 
+// Clases literales (no interpoladas) para que Tailwind las detecte al compilar.
+const ICONO_COLOR = {
+  bronce: { conseguido: "text-bronce", pendiente: "text-bronce/50" },
+  plata: { conseguido: "text-plata", pendiente: "text-plata/50" },
+  oro: { conseguido: "text-gold", pendiente: "text-gold/50" },
+  platino: { conseguido: "text-platino", pendiente: "text-platino/50" },
+};
+
+const BADGE_COLOR = {
+  bronce: {
+    conseguido: "bg-bronce/20 text-bronce",
+    pendiente: "border border-bronce/40 text-bronce",
+  },
+  plata: {
+    conseguido: "bg-plata/20 text-plata",
+    pendiente: "border border-plata/40 text-plata",
+  },
+  oro: {
+    conseguido: "bg-gold/20 text-gold",
+    pendiente: "border border-gold/40 text-gold",
+  },
+  platino: {
+    conseguido: "bg-platino/20 text-platino",
+    pendiente: "border border-platino/40 text-platino",
+  },
+};
+
 // Tres estados bien diferenciados: conseguido (dorado y resaltado), visible
-// pero pendiente (neutral) y secreto/bloqueado (fondo más oscuro para que
-// se note que está bloqueado).
+// pero pendiente (neutral) y secreto/bloqueado (tono "void" aparte, para no
+// delatar con qué color de nivel se corresponde antes de desbloquearlo).
 function estilosFila(trofeo, esSecreto) {
   if (trofeo.conseguido) return "border-2 border-gold bg-gold/10 shadow-sm";
-  if (esSecreto) return "border border-line bg-paperDim";
+  if (esSecreto) return "border border-dashed border-void/40 bg-paperDim";
   return "border border-line bg-surface";
 }
 
@@ -25,6 +52,7 @@ export default function SalaTrofeos({ trofeos }) {
         {trofeos.map((trofeo) => {
           const Icono = ICONO_TIER[trofeo.tier];
           const esSecreto = trofeo.oculto && !trofeo.conseguido;
+          const estado = trofeo.conseguido ? "conseguido" : "pendiente";
 
           return (
             <div
@@ -36,12 +64,9 @@ export default function SalaTrofeos({ trofeos }) {
             >
               <div className="shrink-0">
                 {esSecreto ? (
-                  <Lock size={20} className="text-slate" />
+                  <Lock size={20} className="text-void" />
                 ) : (
-                  <Icono
-                    size={20}
-                    className={trofeo.conseguido ? "text-gold" : "text-slate"}
-                  />
+                  <Icono size={20} className={ICONO_COLOR[trofeo.tier][estado]} />
                 )}
               </div>
 
@@ -62,12 +87,12 @@ export default function SalaTrofeos({ trofeos }) {
 
               <span
                 className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                  trofeo.conseguido
-                    ? "bg-gold/20 text-gold"
-                    : "border border-slate/30 text-slate"
+                  esSecreto
+                    ? "border border-void/40 text-void"
+                    : BADGE_COLOR[trofeo.tier][estado]
                 }`}
               >
-                {ETIQUETA_TIER[trofeo.tier]}
+                {esSecreto ? "???" : ETIQUETA_TIER[trofeo.tier]}
               </span>
             </div>
           );
