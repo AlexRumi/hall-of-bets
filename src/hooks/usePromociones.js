@@ -1,61 +1,110 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-const CLAVE_ALMACENAMIENTO = "hall-of-bets:promociones";
-
-// Las promociones guardadas antes de añadir el campo "casa" no lo tienen.
-function migrarPromocion(promocion) {
-  return promocion.casa ? promocion : { ...promocion, casa: "Sin especificar" };
+function desdeFila(fila) {
+  return {
+    id: fila.id,
+    fecha: fila.fecha,
+    casa: fila.casa,
+    tipo: fila.tipo,
+    valor: Number(fila.valor),
+    estado: fila.estado,
+    beneficioNeto: fila.beneficio_neto === null ? null : Number(fila.beneficio_neto),
+  };
 }
 
-function cargarPromociones() {
-  try {
-    const guardado = localStorage.getItem(CLAVE_ALMACENAMIENTO);
-    return guardado ? JSON.parse(guardado).map(migrarPromocion) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function usePromociones() {
-  const [promociones, setPromociones] = useState(cargarPromociones);
+export function usePromociones(userId) {
+  const [promociones, setPromociones] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(promociones));
-  }, [promociones]);
+    if (!userId) return;
 
-  function agregarPromocion({ fecha, casa, tipo, valor }) {
-    const nueva = {
-      id: crypto.randomUUID(),
-      fecha,
-      casa,
-      tipo,
-      valor: Number(valor),
-      estado: "pendiente",
-      beneficioNeto: null,
+    let vivo = true;
+    supabase
+      .from("promociones")
+      .select("*")
+      .order("creado_en", { ascending: false })
+      .then(({ data, error }) => {
+        if (vivo && !error) setPromociones(data.map(desdeFila));
+      });
+
+    const canal = supabase
+      .channel("cambios-promociones")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "promociones", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          setPromociones((actuales) => {
+            if (payload.eventType === "DELETE") {
+              return actuales.filter((p) => p.id !== payload.old.id);
+            }
+            const fila = desdeFila(payload.new);
+            const yaEstaba = actuales.some((p) => p.id === fila.id);
+            return yaEstaba
+              ? actuales.map((p) => (p.id === fila.id ? fila : p))
+              : [fila, ...actuales];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      vivo = false;
+      supabase.removeChannel(canal);
     };
-    setPromociones((actuales) => [nueva, ...actuales]);
+  }, [userId]);
+
+  async function agregarPromocion({ fecha, casa, tipo, valor }) {
+    const { data, error } = await supabase
+      .from("promociones")
+      .insert({
+        user_id: userId,
+        fecha,
+        casa,
+        tipo,
+        valor: Number(valor),
+        estado: "pendiente",
+        beneficio_neto: null,
+      })
+      .select()
+      .single();
+
+    if (!error) {
+      setPromociones((actuales) => [desdeFila(data), ...actuales]);
+    }
   }
 
   // El beneficio neto no se puede calcular solo (cada promoción funciona
   // distinto), así que lo introduce el usuario al resolverla.
-  function resolverPromocion(id, estado, beneficioNeto) {
-    setPromociones((actuales) =>
-      actuales.map((promocion) =>
-        promocion.id === id
-          ? { ...promocion, estado, beneficioNeto: Number(beneficioNeto) }
-          : promocion
-      )
-    );
+  async function resolverPromocion(id, estado, beneficioNeto) {
+    const { data, error } = await supabase
+      .from("promociones")
+      .update({ estado, beneficio_neto: Number(beneficioNeto) })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error) {
+      setPromociones((actuales) =>
+        actuales.map((p) => (p.id === id ? desdeFila(data) : p))
+      );
+    }
   }
 
-  function borrarPromocion(id) {
-    setPromociones((actuales) =>
-      actuales.filter((promocion) => promocion.id !== id)
-    );
+  async function borrarPromocion(id) {
+    const { error } = await supabase.from("promociones").delete().eq("id", id);
+    if (!error) {
+      setPromociones((actuales) => actuales.filter((p) => p.id !== id));
+    }
   }
 
-  function borrarTodasPromociones() {
-    setPromociones([]);
+  async function borrarTodasPromociones() {
+    const { error } = await supabase
+      .from("promociones")
+      .delete()
+      .eq("user_id", userId);
+
+    if (!error) setPromociones([]);
   }
 
   return {

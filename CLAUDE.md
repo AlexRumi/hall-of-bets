@@ -6,11 +6,12 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 - Frontend: React + Vite, JavaScript (no TypeScript por ahora)
 - Estilos: Tailwind CSS (paleta y fuentes ya configuradas en `tailwind.config.js` / `src/index.css`)
-- Backend: no hay — la fase 11 (bot de fotos), que lo habría requerido, se omitió por el coste recurrente de la API de IA
-- Base de datos: localStorage del navegador (decidido en fase 2). SQLite real quedó ligado a la fase 11 (omitida); la sincronización con Supabase se valoró como alternativa y se aparcó — sin plan concreto de retomarla por ahora
+- Backend: Supabase (plan gratuito) — solo como base de datos + autenticación, no hay servidor propio. La fase 11 (bot de fotos) seguiría sin backend propio (API key de IA), se omitió por el coste recurrente
+- Base de datos: Supabase (Postgres), con Row Level Security atada al usuario. Antes vivía en localStorage del navegador (decidido en fase 2); se migró para poder ver las mismas apuestas desde PC y móvil. Un solo usuario, creado a mano en el panel de Supabase (Authentication > Users), sin registro público. `trofeos-vistos` (qué notificaciones de trofeo ya se han visto) se queda en localStorage de cada dispositivo, no se sincroniza
+- Autenticación: Supabase Auth (email + contraseña), sesión persistida por dispositivo; pantalla de login propia en `src/components/PantallaLogin.jsx`
 - Gráficas: recharts
 - Iconos: lucide-react
-- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`
+- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`. Vercel necesita las variables de entorno `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (Project Settings > Environment Variables) para conectar con Supabase; en local van en `.env.local` (no se sube a git, ver `.env.example`)
 
 ## Identidad visual (no cambiar sin pedirlo explícitamente)
 

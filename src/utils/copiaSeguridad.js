@@ -1,25 +1,103 @@
-// Todos los datos de la app viven solo en localStorage (ver CLAUDE.md): si se
-// borra el historial del navegador o se cambia de dispositivo, se pierden sin
-// posibilidad de recuperarlos. Este archivo agrupa esas claves para poder
-// descargarlas como copia de seguridad y volver a cargarlas después.
-const CLAVES = [
-  "hall-of-bets:apuestas",
-  "hall-of-bets:casas",
-  "hall-of-bets:promociones",
-  "hall-of-bets:movimientos",
-  "hall-of-bets:trofeos-vistos",
-];
+import { supabase } from "../lib/supabaseClient";
 
-// Descarga un archivo .json con todo lo guardado en localStorage.
-export function exportarDatos() {
-  const datos = {};
-  CLAVES.forEach((clave) => {
+const TABLAS = ["apuestas", "casas", "promociones", "movimientos"];
+
+// Claves antiguas de localStorage, de antes de mover los datos a Supabase.
+// Se usan solo para poder subir una vez el historial que ya hubiera en este
+// navegador; la app ya no lee de aquí para nada más.
+const CLAVES_LOCALSTORAGE = {
+  apuestas: "hall-of-bets:apuestas",
+  casas: "hall-of-bets:casas",
+  promociones: "hall-of-bets:promociones",
+  movimientos: "hall-of-bets:movimientos",
+};
+
+function leerLocalStorage(clave) {
+  try {
     const guardado = localStorage.getItem(clave);
-    if (guardado !== null) datos[clave] = JSON.parse(guardado);
+    return guardado ? JSON.parse(guardado) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Hay datos de antes de tener Supabase en este navegador que todavía no se
+// han subido a la nube.
+export function hayDatosLocalesSinMigrar() {
+  return TABLAS.some(
+    (tabla) => leerLocalStorage(CLAVES_LOCALSTORAGE[tabla]).length > 0
+  );
+}
+
+// Sube de una vez el historial que ya hubiera en este navegador (de antes de
+// tener sincronización) a las tablas de Supabase del usuario que ha iniciado sesión.
+export async function migrarLocalStorageASupabase(userId) {
+  const apuestas = leerLocalStorage(CLAVES_LOCALSTORAGE.apuestas);
+  if (apuestas.length > 0) {
+    await supabase.from("apuestas").insert(
+      apuestas.map((a) => ({
+        user_id: userId,
+        fecha: a.fecha,
+        casa: a.casa,
+        stake: Number(a.stake),
+        tipo_fondos: a.tipoFondos,
+        categoria: a.categoria,
+        resultado: a.resultado,
+        selecciones: a.selecciones,
+      }))
+    );
+  }
+
+  const casas = leerLocalStorage(CLAVES_LOCALSTORAGE.casas);
+  if (casas.length > 0) {
+    await supabase
+      .from("casas")
+      .insert(casas.map((c) => ({ user_id: userId, nombre: c.nombre, logo: c.logo })));
+  }
+
+  const promociones = leerLocalStorage(CLAVES_LOCALSTORAGE.promociones);
+  if (promociones.length > 0) {
+    await supabase.from("promociones").insert(
+      promociones.map((p) => ({
+        user_id: userId,
+        fecha: p.fecha,
+        casa: p.casa,
+        tipo: p.tipo,
+        valor: Number(p.valor),
+        estado: p.estado,
+        beneficio_neto: p.beneficioNeto,
+      }))
+    );
+  }
+
+  const movimientos = leerLocalStorage(CLAVES_LOCALSTORAGE.movimientos);
+  if (movimientos.length > 0) {
+    await supabase.from("movimientos").insert(
+      movimientos.map((m) => ({
+        user_id: userId,
+        fecha: m.fecha,
+        casa: m.casa,
+        tipo: m.tipo,
+        cantidad: Number(m.cantidad),
+      }))
+    );
+  }
+}
+
+// Descarga una copia de seguridad en .json con todo lo que hay en Supabase
+// (gracias a RLS, cada usuario solo puede leer sus propias filas).
+export async function exportarDatos() {
+  const resultados = await Promise.all(
+    TABLAS.map((tabla) => supabase.from(tabla).select("*"))
+  );
+
+  const datos = {};
+  TABLAS.forEach((tabla, i) => {
+    datos[tabla] = resultados[i].data ?? [];
   });
 
   const contenido = JSON.stringify(
-    { version: 1, fecha: new Date().toISOString(), datos },
+    { version: 2, fecha: new Date().toISOString(), datos },
     null,
     2
   );
@@ -32,25 +110,32 @@ export function exportarDatos() {
   URL.revokeObjectURL(url);
 }
 
+function filasDe(datos, tabla) {
+  return datos[tabla] ?? datos[CLAVES_LOCALSTORAGE[tabla]] ?? [];
+}
+
 // Lee un archivo de copia de seguridad y sustituye los datos actuales en
-// localStorage por los del archivo. Quien la llame debe recargar la página
-// después, para que la app vuelva a leer todo desde localStorage.
-export function importarDatos(file) {
+// Supabase por los del archivo (se borra cada tabla antes de volver a
+// rellenarla, para no acabar con datos duplicados).
+export function importarDatos(file, userId) {
   return new Promise((resolve, reject) => {
     const lector = new FileReader();
-    lector.onload = () => {
+    lector.onload = async () => {
       try {
         const contenido = JSON.parse(lector.result);
         if (!contenido || typeof contenido.datos !== "object") {
-          throw new Error(
-            "El archivo no tiene el formato de una copia de Hall of Bets."
-          );
+          throw new Error("formato");
         }
-        CLAVES.forEach((clave) => {
-          if (clave in contenido.datos) {
-            localStorage.setItem(clave, JSON.stringify(contenido.datos[clave]));
+
+        for (const tabla of TABLAS) {
+          await supabase.from(tabla).delete().eq("user_id", userId);
+          const filas = filasDe(contenido.datos, tabla).map(
+            ({ id, creado_en, ...resto }) => ({ ...resto, user_id: userId })
+          );
+          if (filas.length > 0) {
+            await supabase.from(tabla).insert(filas);
           }
-        });
+        }
         resolve();
       } catch {
         reject(

@@ -1,45 +1,82 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-const CLAVE_ALMACENAMIENTO = "hall-of-bets:casas";
-
-// Las casas guardadas antes de tener logo eran solo el nombre en texto.
-function migrarCasa(casa) {
-  return typeof casa === "string" ? { nombre: casa, logo: null } : casa;
+function desdeFila(fila) {
+  return { nombre: fila.nombre, logo: fila.logo };
 }
 
-function cargarCasas() {
-  try {
-    const guardado = localStorage.getItem(CLAVE_ALMACENAMIENTO);
-    return guardado ? JSON.parse(guardado).map(migrarCasa) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function useCasas() {
-  const [casas, setCasas] = useState(cargarCasas);
+export function useCasas(userId) {
+  const [casas, setCasas] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(casas));
-  }, [casas]);
+    if (!userId) return;
+
+    let vivo = true;
+    supabase
+      .from("casas")
+      .select("*")
+      .then(({ data, error }) => {
+        if (vivo && !error) setCasas(data.map(desdeFila));
+      });
+
+    const canal = supabase
+      .channel("cambios-casas")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "casas", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          setCasas((actuales) => {
+            if (payload.eventType === "DELETE") {
+              return actuales.filter((c) => c.nombre !== payload.old.nombre);
+            }
+            const fila = desdeFila(payload.new);
+            const yaEstaba = actuales.some((c) => c.nombre === fila.nombre);
+            return yaEstaba
+              ? actuales.map((c) => (c.nombre === fila.nombre ? fila : c))
+              : [...actuales, fila];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      vivo = false;
+      supabase.removeChannel(canal);
+    };
+  }, [userId]);
 
   // "logo" es opcional: una imagen en base64, o null si no se ha subido ninguna.
-  function agregarCasa({ nombre, logo = null }) {
+  async function agregarCasa({ nombre, logo = null }) {
     const limpio = nombre.trim();
     if (!limpio) return;
+    if (casas.some((casa) => casa.nombre.toLowerCase() === limpio.toLowerCase())) {
+      return;
+    }
 
-    setCasas((actuales) =>
-      actuales.some((casa) => casa.nombre.toLowerCase() === limpio.toLowerCase())
-        ? actuales
-        : [...actuales, { nombre: limpio, logo }]
-    );
+    const { data, error } = await supabase
+      .from("casas")
+      .insert({ user_id: userId, nombre: limpio, logo })
+      .select()
+      .single();
+
+    if (!error) {
+      setCasas((actuales) => [...actuales, desdeFila(data)]);
+    }
   }
 
   // Borrar una casa del registro no toca las apuestas/promociones ya
   // guardadas (su campo "casa" es solo texto); si se vuelve a añadir con el
   // mismo nombre, esas apuestas antiguas recuperan el logo automáticamente.
-  function borrarCasa(nombre) {
-    setCasas((actuales) => actuales.filter((casa) => casa.nombre !== nombre));
+  async function borrarCasa(nombre) {
+    const { error } = await supabase
+      .from("casas")
+      .delete()
+      .eq("user_id", userId)
+      .eq("nombre", nombre);
+
+    if (!error) {
+      setCasas((actuales) => actuales.filter((casa) => casa.nombre !== nombre));
+    }
   }
 
   // Siempre en orden alfabético, así que cualquier casa nueva que se añada

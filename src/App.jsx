@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Ticket, Trash2 } from "lucide-react";
+import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { usePromociones } from "./hooks/usePromociones";
 import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
+import PantallaLogin from "./components/PantallaLogin";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
 import SelectorSeccion from "./components/SelectorSeccion";
@@ -31,6 +33,26 @@ const ETIQUETAS_SECCION = {
 };
 
 export default function App() {
+  const { sesion, comprobandoSesion, iniciarSesion, cerrarSesion } = useAuth();
+
+  if (comprobandoSesion) {
+    return (
+      <div className="min-h-screen bg-fondo flex items-center justify-center">
+        <p className="text-sm text-slate">Cargando…</p>
+      </div>
+    );
+  }
+
+  if (!sesion) {
+    return <PantallaLogin onIniciarSesion={iniciarSesion} />;
+  }
+
+  return (
+    <AppAutenticada userId={sesion.user.id} onCerrarSesion={cerrarSesion} />
+  );
+}
+
+function AppAutenticada({ userId, onCerrarSesion }) {
   const {
     apuestas,
     agregarApuesta,
@@ -38,15 +60,15 @@ export default function App() {
     marcarResultado,
     borrarApuesta,
     borrarTodoBankroll,
-  } = useApuestas();
-  const { casas, agregarCasa, borrarCasa } = useCasas();
+  } = useApuestas(userId);
+  const { casas, agregarCasa, borrarCasa } = useCasas(userId);
   const {
     promociones,
     agregarPromocion,
     resolverPromocion,
     borrarPromocion,
     borrarTodasPromociones,
-  } = usePromociones();
+  } = usePromociones(userId);
   // Los trofeos se calculan sobre todas las apuestas y promociones, sin
   // importar la sección que se esté viendo, para que la notificación de un
   // trofeo nuevo pueda saltar aunque no estés en la pestaña de Trofeos.
@@ -59,7 +81,7 @@ export default function App() {
     agregarMovimiento,
     borrarMovimiento,
     borrarTodosMovimientos,
-  } = useMovimientos();
+  } = useMovimientos(userId);
   const [seccionActiva, setSeccionActiva] = useState("apuestas");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -107,7 +129,11 @@ export default function App() {
     <div className="min-h-screen bg-fondo text-ink">
       <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
         <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
-          <MenuSecundario activa={seccionActiva} onCambiar={setSeccionActiva} />
+          <MenuSecundario
+            activa={seccionActiva}
+            onCambiar={setSeccionActiva}
+            onCerrarSesion={onCerrarSesion}
+          />
         </div>
         <div className="flex items-center justify-center gap-2 mb-1">
           <Ticket size={20} className="text-gold" />
@@ -196,7 +222,7 @@ export default function App() {
             borrarTodosMovimientos={borrarTodosMovimientos}
           />
         ) : seccionActiva === "copia" ? (
-          <CopiaSeguridad />
+          <CopiaSeguridad userId={userId} />
         ) : (
           <DesgloseCasas apuestas={apuestas} casas={casas} />
         )}

@@ -7,6 +7,7 @@ import {
   Trophy,
   Banknote,
   DatabaseBackup,
+  LogOut,
 } from "lucide-react";
 
 const OPCIONES = [
@@ -21,7 +22,7 @@ const OPCIONES = [
 // Secciones que no dependen del bankroll activo (Apuestas/Entretenimiento):
 // se agrupan aparte, en un menú propio, para que no parezcan sub-pestañas
 // de la que esté seleccionada arriba.
-export default function MenuSecundario({ activa, onCambiar }) {
+export default function MenuSecundario({ activa, onCambiar, onCerrarSesion }) {
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
   const seccionActivaEsGlobal = OPCIONES.some((o) => o.id === activa);
@@ -71,6 +72,17 @@ export default function MenuSecundario({ activa, onCambiar }) {
               {etiqueta}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              onCerrarSesion();
+              setAbierto(false);
+            }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-lose hover:bg-lose/10 transition-colors"
+          >
+            <LogOut size={16} />
+            Cerrar sesión
+          </button>
         </div>
       )}
     </div>
