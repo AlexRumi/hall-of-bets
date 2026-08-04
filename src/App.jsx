@@ -26,6 +26,8 @@ import CopiaSeguridad from "./components/CopiaSeguridad";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
+import SelectorModoOscuro from "./components/SelectorModoOscuro";
+import { useModoOscuro } from "./hooks/useModoOscuro";
 
 const ETIQUETAS_SECCION = {
   apuestas: "Apuestas",
@@ -33,6 +35,9 @@ const ETIQUETAS_SECCION = {
 };
 
 export default function App() {
+  // Se lee aquí arriba (y no dentro de AppAutenticada) para que el tema
+  // también se aplique en la pantalla de login, antes de identificarse.
+  const { oscuro, alternar } = useModoOscuro();
   const { sesion, comprobandoSesion, iniciarSesion, cerrarSesion } = useAuth();
 
   if (comprobandoSesion) {
@@ -44,15 +49,26 @@ export default function App() {
   }
 
   if (!sesion) {
-    return <PantallaLogin onIniciarSesion={iniciarSesion} />;
+    return (
+      <PantallaLogin
+        onIniciarSesion={iniciarSesion}
+        oscuro={oscuro}
+        onAlternarModoOscuro={alternar}
+      />
+    );
   }
 
   return (
-    <AppAutenticada userId={sesion.user.id} onCerrarSesion={cerrarSesion} />
+    <AppAutenticada
+      userId={sesion.user.id}
+      onCerrarSesion={cerrarSesion}
+      oscuro={oscuro}
+      onAlternarModoOscuro={alternar}
+    />
   );
 }
 
-function AppAutenticada({ userId, onCerrarSesion }) {
+function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }) {
   const {
     apuestas,
     agregarApuesta,
@@ -128,7 +144,8 @@ function AppAutenticada({ userId, onCerrarSesion }) {
   return (
     <div className="min-h-screen bg-fondo text-ink">
       <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
-        <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
+        <div className="absolute top-4 right-4 sm:top-5 sm:right-6 flex items-center gap-1">
+          <SelectorModoOscuro oscuro={oscuro} onAlternar={onAlternarModoOscuro} />
           <MenuSecundario
             activa={seccionActiva}
             onCambiar={setSeccionActiva}

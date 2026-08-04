@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Ticket, LogIn } from "lucide-react";
+import SelectorModoOscuro from "./SelectorModoOscuro";
 
-export default function PantallaLogin({ onIniciarSesion }) {
+export default function PantallaLogin({
+  onIniciarSesion,
+  oscuro,
+  onAlternarModoOscuro,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +28,10 @@ export default function PantallaLogin({ onIniciarSesion }) {
 
   return (
     <div className="min-h-screen bg-fondo flex flex-col">
-      <div className="bg-felt px-5 sm:px-8 py-8 text-center">
+      <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
+        <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
+          <SelectorModoOscuro oscuro={oscuro} onAlternar={onAlternarModoOscuro} />
+        </div>
         <div className="flex items-center justify-center gap-2 mb-1">
           <Ticket size={20} className="text-gold" />
           <span className="uppercase tracking-[0.2em] text-xs font-medium text-gold">

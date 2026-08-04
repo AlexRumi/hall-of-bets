@@ -58,10 +58,12 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 ## Backlog pendiente (orden — no saltar sin que se pida)
 
-1. Listado de registro de casas
-2. Informe mensual
-3. Desglose por casa de apuestas
-4. Modo oscuro/claro
+1. Listado de registro de casas — ✅ hecho
+2. Informe mensual — ✅ hecho
+3. Desglose por casa de apuestas — ✅ hecho
+4. Modo oscuro/claro — ✅ hecho (segundo intento; el primero se descartó por
+   los inputs con gris nativo del navegador, arreglado esta vez fijando su
+   fondo/color explícitamente en `src/index.css`)
 
 ## Convenciones de código
 
