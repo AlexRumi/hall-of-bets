@@ -32,3 +32,27 @@ export function calcularBankrollPorCasa(movimientos, apuestas) {
     })
     .sort((a, b) => b.bankroll - a.bankroll);
 }
+
+// Evolución del bankroll real a lo largo del tiempo: dinero de verdad que
+// tienes en las casas (ingresos - retiradas + beneficio de apuestas), sumado
+// entre TODAS las casas y bankrolls (Apuestas/Entretenimiento). A diferencia
+// del gráfico de "Beneficio acumulado", aquí sí cuentan los ingresos/retiradas.
+export function calcularSerieBankrollReal(movimientos, apuestas) {
+  const cronologico = (lista) => [...lista].reverse(); // las listas guardan lo más nuevo primero
+
+  const eventos = [
+    ...cronologico(movimientos).map((m) => ({
+      fecha: m.fecha,
+      variacion: m.tipo === "ingreso" ? m.cantidad : -m.cantidad,
+    })),
+    ...cronologico(apuestas.filter((a) => a.resultado !== "pendiente")).map(
+      (a) => ({ fecha: a.fecha, variacion: calcularBeneficio(a) })
+    ),
+  ].sort((a, b) => a.fecha.localeCompare(b.fecha)); // sort estable: mantiene el orden anterior dentro del mismo día
+
+  let acumulado = 0;
+  return eventos.map((evento) => {
+    acumulado += evento.variacion;
+    return { fecha: evento.fecha, acumulado };
+  });
+}

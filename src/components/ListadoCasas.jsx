@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Landmark, Trash2 } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
 import ConfirmDialog from "./ConfirmDialog";
+import GraficoBankroll from "./GraficoBankroll";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 
 const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, roiPct: 0 };
@@ -18,6 +19,7 @@ export default function ListadoCasas({
 
   return (
     <div className="space-y-4">
+      <GraficoBankroll movimientos={movimientos} apuestas={apuestas} />
       <FormularioCasa onAgregar={onAgregarCasa} />
 
       {casas.length === 0 ? (
