@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { usePartidos } from "../hooks/usePartidos";
-import { PAISES_CONECTADOS } from "../utils/ligasConectadas";
+import { PAISES_CONECTADOS, PAISES_GRUPO_EUROPA } from "../utils/ligasConectadas";
+
+// Sentinela para "Otras ligas": no puede coincidir con ningún nombre real
+// de país de PAISES_CONECTADOS.
+const OTRAS_LIGAS = "otras";
 
 // Quita acentos para que "atletico" encuentre "Atletico" al escribir.
 function normalizar(texto) {
@@ -10,16 +14,24 @@ function normalizar(texto) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-// Campo "Evento" con autocompletado: si el partido está en una de las
-// ligas conectadas (ver api/partidos.js) para la fecha de la apuesta, se
-// puede elegir de una lista y se rellenan solos evento/país/competición.
-// Los desplegables de País/Competición son solo para filtrar la lista antes
-// de escribir (p.ej. elegir "Europa" para ver solo Champions/Europa
-// League/Conference) — no se guardan hasta que se elige un partido de
-// verdad, para no acabar con un país guardado sin un evento real detrás.
-// Si no aparece nada (liga no conectada, sin conexión, o en local sin
-// "vercel dev"), se sigue pudiendo escribir a mano como siempre — esto
-// nunca bloquea el formulario.
+const PAISES_INDIVIDUALES = PAISES_CONECTADOS.filter(
+  (p) => !PAISES_GRUPO_EUROPA.includes(p.pais) && p.pais !== "Competición Europea"
+);
+const PAISES_EUROPA = PAISES_CONECTADOS.filter((p) => PAISES_GRUPO_EUROPA.includes(p.pais));
+const COMPETICION_EUROPEA = PAISES_CONECTADOS.find((p) => p.pais === "Competición Europea");
+
+// Campo "Evento" con autocompletado, con dos modos según el desplegable de
+// País:
+// - Sin elegir país todavía, o "Otras ligas": modo manual de toda la vida,
+//   sin sugerencias — para ligas no conectadas (la inmensa mayoría del
+//   mundo).
+// - Un país conectado: hay que elegir también la competición (si ese país
+//   tiene más de una — p.ej. "Competición Europea" tiene Champions/Europa
+//   League/Conference) antes de ver ningún partido, para no mezclarlas
+//   todas en una lista larga. Con la competición elegida, el texto escrito
+//   filtra esa lista en vez de ser un evento libre.
+// País/competición no se guardan hasta elegir un partido de verdad, para
+// no acabar con un país guardado sin un evento real detrás.
 export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartido }) {
   const [abierto, setAbierto] = useState(false);
   const [paisFiltro, setPaisFiltro] = useState("");
@@ -37,15 +49,24 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
     return () => document.removeEventListener("mousedown", manejarClickFuera);
   }, []);
 
-  const competicionesDisponibles = paisFiltro
-    ? PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? []
-    : [];
+  const modoManual = !paisFiltro || paisFiltro === OTRAS_LIGAS;
+  const competicionesDisponibles = modoManual
+    ? []
+    : PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? [];
+  const necesitaCompeticion =
+    !modoManual && competicionesDisponibles.length > 1 && !competicionFiltro;
 
-  const coincidencias = partidos
-    .filter((p) => !paisFiltro || p.pais === paisFiltro)
-    .filter((p) => !competicionFiltro || p.competicion === competicionFiltro)
-    .filter((p) => !valor.trim() || normalizar(p.evento).includes(normalizar(valor)))
-    .slice(0, 8);
+  const coincidencias =
+    modoManual || necesitaCompeticion
+      ? []
+      : partidos
+          .filter((p) => p.pais === paisFiltro)
+          .filter((p) => !competicionFiltro || p.competicion === competicionFiltro)
+          .filter((p) => !valor.trim() || normalizar(p.evento).includes(normalizar(valor)));
+  // Sin límite de resultados: la lista ya viene acotada a una sola
+  // competición (país + competición son obligatorios antes de ver nada), y
+  // el cuadro tiene scroll para listas largas (p.ej. una jornada completa
+  // de Conference League, ~27 partidos).
 
   return (
     <div ref={contenedorRef} className="space-y-1.5">
@@ -59,12 +80,29 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           }}
           className="w-full border border-line rounded-lg px-2 py-1.5 text-xs bg-surface text-ink"
         >
-          <option value="">País</option>
-          {PAISES_CONECTADOS.map(({ pais }) => (
-            <option key={pais} value={pais}>
-              {pais}
+          <option value="">Seleccionar un país</option>
+          <optgroup label="Grandes ligas">
+            {PAISES_INDIVIDUALES.map(({ pais }) => (
+              <option key={pais} value={pais}>
+                {pais}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Europa">
+            {PAISES_EUROPA.map(({ pais }) => (
+              <option key={pais} value={pais}>
+                {pais}
+              </option>
+            ))}
+          </optgroup>
+          {COMPETICION_EUROPEA && (
+            <option value={COMPETICION_EUROPEA.pais} className="font-bold">
+              {COMPETICION_EUROPEA.pais}
             </option>
-          ))}
+          )}
+          <option value={OTRAS_LIGAS} className="font-bold">
+            Otras ligas
+          </option>
         </select>
         <select
           value={competicionFiltro}
@@ -72,7 +110,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             setCompeticionFiltro(e.target.value);
             setAbierto(true);
           }}
-          disabled={!paisFiltro}
+          disabled={modoManual}
           className="w-full border border-line rounded-lg px-2 py-1.5 text-xs bg-surface text-ink disabled:opacity-50"
         >
           <option value="">Competición</option>
@@ -93,12 +131,20 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             setAbierto(true);
           }}
           onFocus={() => setAbierto(true)}
-          placeholder="Ej. Real Madrid - FC Barcelona"
+          placeholder={modoManual ? "Ej. Real Madrid - FC Barcelona" : "Escribe para filtrar"}
           required
           className="w-full border border-line rounded-lg px-3 py-2 text-sm"
         />
 
-        {abierto && coincidencias.length > 0 && (
+        {abierto && necesitaCompeticion && (
+          <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
+            <p className="px-3 py-2 text-xs text-slate">
+              Elige una competición para ver los partidos.
+            </p>
+          </div>
+        )}
+
+        {abierto && !necesitaCompeticion && coincidencias.length > 0 && (
           <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto text-left">
             {coincidencias.map((partido) => (
               <button

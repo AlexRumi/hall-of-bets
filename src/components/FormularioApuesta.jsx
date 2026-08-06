@@ -4,7 +4,11 @@ import { calcularCuotaTotal } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 import BuscadorEvento from "./BuscadorEvento";
-import CuotasDialog from "./CuotasDialog";
+// "Ver cuotas" (CuotasDialog) se queda comentado, no borrado: al registrar
+// una apuesta la casa ya está decidida (la apuesta ya está hecha), así que
+// comparar cuotas de otras casas aquí tiene poco sentido ahora mismo. Podría
+// tener más sentido en un futuro "modo planificación" antes de apostar.
+// import CuotasDialog from "./CuotasDialog";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 const seleccionVacia = () => ({
@@ -52,7 +56,7 @@ export default function FormularioApuesta({
   const [selecciones, setSelecciones] = useState(
     apuestaInicial ? seleccionesDesdeApuesta(apuestaInicial) : [seleccionVacia()]
   );
-  const [indiceCuotas, setIndiceCuotas] = useState(null);
+  // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
   const esCombinada = selecciones.length > 1;
 
@@ -273,7 +277,8 @@ export default function FormularioApuesta({
                   <p className="text-xs text-slate">
                     {seleccion.competicion} · {seleccion.pais}
                   </p>
-                  {seleccion.partidoId && (
+                  {/* "Ver cuotas" oculto por ahora, ver comentario junto al import de CuotasDialog */}
+                  {/* {seleccion.partidoId && (
                     <button
                       type="button"
                       onClick={() => setIndiceCuotas(index)}
@@ -281,7 +286,7 @@ export default function FormularioApuesta({
                     >
                       Ver cuotas
                     </button>
-                  )}
+                  )} */}
                 </div>
               )}
             </div>
@@ -359,12 +364,12 @@ export default function FormularioApuesta({
         )}
       </div>
 
-      <CuotasDialog
+      {/* <CuotasDialog
         abierto={indiceCuotas !== null}
         evento={indiceCuotas !== null ? selecciones[indiceCuotas]?.evento : ""}
         partidoId={indiceCuotas !== null ? selecciones[indiceCuotas]?.partidoId : null}
         onCerrar={() => setIndiceCuotas(null)}
-      />
+      /> */}
     </form>
   );
 }

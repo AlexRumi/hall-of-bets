@@ -231,13 +231,19 @@ antes de pasar a la siguiente.
   propia, solo suaviza la propia aparición de la app.
 - **Buscador de partidos (API-Football)** (no era una fase del guion,
   petición directa — el guion la daba por descartada, ver fase 22 y
-  sección 3): al escribir en "Evento" (`BuscadorEvento.jsx`), sugiere
-  partidos reales de 21 competiciones conectadas (España/Italia/Francia/
-  Alemania/Inglaterra — primera, segunda y copa de cada una —, las 3
-  copas europeas, Portugal y Países Bajos; el resto de ligas del mundo
-  quedan fuera y se sigue escribiendo a mano como siempre). Al elegir un
-  partido se rellenan solos evento, país, competición y la fecha de la
-  apuesta.
+  sección 3): al elegir un país en "Evento" (`BuscadorEvento.jsx`),
+  sugiere partidos reales de 22 competiciones conectadas — España,
+  Reino Unido, Alemania, Italia y Francia (primera, segunda y copa de
+  cada una, agrupadas en el desplegable bajo "Grandes ligas"), Portugal/
+  Holanda/Bélgica (agrupadas bajo "Europa"), y "Competición Europea"
+  (Champions/Europa League/Conference); el resto de ligas del mundo se
+  sigue escribiendo a mano como siempre eligiendo "Otras ligas" (o sin
+  elegir país todavía). Si el país tiene más de una competición (p.ej.
+  "Competición Europea"), hay que elegir también cuál antes de ver ningún
+  partido — si no, listas como la de Conference League (~27 partidos en
+  un día de jornada europea) saldrían mezcladas con las otras dos. Al
+  elegir un partido se rellenan solos evento, país, competición y la
+  fecha de la apuesta.
   - **Arquitectura**: la key de API-Football es secreta (a diferencia de
     la de Supabase) y no puede llamarse desde el navegador, así que hizo
     falta la primera pieza de servidor propio del proyecto: `api/
@@ -282,23 +288,31 @@ antes de pasar a la siguiente.
     responde 200 con un error dentro del JSON en vez de un código HTTP de
     error cuando falta la key, así que parecía "sin partidos" y no "sin
     key").
-  - **Comparador de cuotas** (petición directa, misma sesión): botón "Ver
-    cuotas" junto a un partido ya elegido, que abre `CuotasDialog.jsx` con
-    las cuotas de Gana local/Empate/Gana visitante ("Match Winner") de 5
-    casas — Bet365, Betfair, William Hill, Bwin y Betway. Solo estas 5:
-    Codere, Winamax y Luckia se pidieron primero pero no existen en el
-    catálogo de casas de API-Football (`GET /odds/bookmakers`, 33 casas
-    en total, ninguna española de las pedidas), así que se sustituyeron
-    por otras que sí están y operan en España. Nueva Serverless Function
-    `api/cuotas.js` (`GET /odds?fixture=ID`, id numérico de la casa →
-    nombre fijado a mano igual que las ligas) — es una llamada por
-    partido, no por día, así que solo se pide al pulsar el botón, nunca
-    en automático al buscar. El id del partido (`partidoId`) se guarda
-    también dentro de la selección (igual que país/competición) para que
-    el botón siga funcionando si se reabre la apuesta para editarla.
-    Si ninguna de las 5 tiene cuota para ese partido (pasa a menudo, cada
-    casa cubre unas ligas u otras), el diálogo lo dice en vez de salir
-    vacío sin explicación.
+  - **Comparador de cuotas — oculto por ahora** (petición directa, misma
+    sesión): se montó un botón "Ver cuotas" junto a un partido ya elegido
+    (`CuotasDialog.jsx`, con las cuotas de Gana local/Empate/Gana
+    visitante de Bet365, Betfair, William Hill, Bwin y Betway — Codere,
+    Winamax y Luckia se pidieron primero pero no existen en el catálogo de
+    API-Football, `GET /odds/bookmakers`) y una Serverless Function
+    `api/cuotas.js` (`GET /odds?fixture=ID`, una llamada por partido, solo
+    al pulsar el botón). Se comentó (no se borró) en `FormularioApuesta.jsx`
+    tras probarlo: al registrar una apuesta la casa ya está decidida (la
+    apuesta ya está hecha), así que comparar cuotas de otras casas ahí no
+    aporta — podría tener sentido en un futuro "modo planificación" antes
+    de apostar. `partidoId` se sigue guardando en cada selección (por si se
+    retoma), y los archivos (`CuotasDialog.jsx`, `useCuotas.js`,
+    `api/cuotas.js`) siguen intactos, solo sin usar.
+  - **Ronda de ajuste tras probarlo con datos reales**: el buscador
+    limitaba las sugerencias a 8 resultados (`slice(0, 8)`), pensado para
+    cuando aún se podía buscar sin país; con país+competición ya
+    obligatorios eso escondía partidos de verdad (una jornada de
+    Conference League tiene ~27) — se quitó el límite, el cuadro ya tiene
+    scroll. El desplegable de País pasó de "Otro" como valor por
+    defecto a placeholder real ("Seleccionar un país"), con "Otras ligas"
+    como opción explícita al final (mismo comportamiento manual, pero ya
+    no es la opción inicial). Bélgica (Jupiler Pro League, id 144,
+    verificado igual que el resto) se añadió al grupo "Europa" del
+    desplegable junto a Portugal y Holanda.
 
 ## Convenciones de código
 

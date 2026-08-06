@@ -4,33 +4,38 @@
 // a esta ruta (/api/partidos?fecha=YYYY-MM-DD), nunca a API-Football
 // directamente.
 //
-// Solo se filtran estas 21 competiciones (las que se pidió conectar); el
+// Solo se filtran estas 22 competiciones (las que se pidió conectar); el
 // resto de partidos del mundo que devuelve API-Football para ese día se
 // descartan. IDs verificados a mano en el panel de API-Football del usuario
 // el 2026-08-06 — si algún día cambian de nombre de patrocinador (ya pasó
 // con "LaLiga Hypermotion" y "Carabao Cup"), el id numérico no cambia.
+// "pais" tiene que coincidir exactamente con el desplegable de
+// src/components/BuscadorEvento.jsx (mismos nombres: "Reino Unido" en vez
+// de "Inglaterra", "Holanda" en vez de "Países Bajos", "Competición
+// Europea" en vez de "Europa" — para no confundirlo con el país).
 const LIGAS = {
   140: { pais: "España", competicion: "La Liga" },
   141: { pais: "España", competicion: "Segunda División" },
   143: { pais: "España", competicion: "Copa del Rey" },
+  39: { pais: "Reino Unido", competicion: "Premier League" },
+  40: { pais: "Reino Unido", competicion: "Championship" },
+  45: { pais: "Reino Unido", competicion: "FA Cup" },
+  48: { pais: "Reino Unido", competicion: "EFL Cup" },
+  78: { pais: "Alemania", competicion: "Bundesliga" },
+  79: { pais: "Alemania", competicion: "2. Bundesliga" },
+  81: { pais: "Alemania", competicion: "DFB Pokal" },
   135: { pais: "Italia", competicion: "Serie A" },
   136: { pais: "Italia", competicion: "Serie B" },
   137: { pais: "Italia", competicion: "Coppa Italia" },
   61: { pais: "Francia", competicion: "Ligue 1" },
   62: { pais: "Francia", competicion: "Ligue 2" },
   66: { pais: "Francia", competicion: "Coupe de France" },
-  78: { pais: "Alemania", competicion: "Bundesliga" },
-  79: { pais: "Alemania", competicion: "2. Bundesliga" },
-  81: { pais: "Alemania", competicion: "DFB Pokal" },
-  39: { pais: "Inglaterra", competicion: "Premier League" },
-  40: { pais: "Inglaterra", competicion: "Championship" },
-  45: { pais: "Inglaterra", competicion: "FA Cup" },
-  48: { pais: "Inglaterra", competicion: "EFL Cup" },
-  2: { pais: "Europa", competicion: "Champions League" },
-  3: { pais: "Europa", competicion: "Europa League" },
-  848: { pais: "Europa", competicion: "Conference League" },
   94: { pais: "Portugal", competicion: "Primeira Liga" },
-  88: { pais: "Países Bajos", competicion: "Eredivisie" },
+  88: { pais: "Holanda", competicion: "Eredivisie" },
+  144: { pais: "Bélgica", competicion: "Jupiler Pro League" },
+  2: { pais: "Competición Europea", competicion: "Champions League" },
+  3: { pais: "Competición Europea", competicion: "Europa League" },
+  848: { pais: "Competición Europea", competicion: "Conference League" },
 };
 
 export default async function handler(req, res) {
