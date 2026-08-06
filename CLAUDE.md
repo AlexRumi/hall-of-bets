@@ -198,6 +198,16 @@ antes de pasar a la siguiente.
   si ganada, roja si perdida, gris si nula, azul si cash out. En
   combinadas, como la app no guarda resultado por selección, las tres
   cuotas comparten el color del resultado final de la apuesta completa.
+  Ronda posterior de ajuste fino: el nombre de la casa baja a `text-sm`
+  (entre las etiquetas pequeñas de Fútbol/Ganada y el evento, que se queda
+  como el más grande), y la fila de Apostado/Cuota total/Beneficio sube de
+  `text-xs` a `text-sm`.
+- **Iconos de la app renovados** (no era una fase del guion, petición
+  directa): `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180×180)
+  y uno nuevo `icon-1024.png` (añadido también a `manifest.json`) — mismo
+  ticket que el badge de la pantalla de carga, pero sobre fondo verde
+  cuadrado liso, sin el aro dorado ni el texto "Hall of Bets" (ese solo va
+  en `splash-badge.png`, que es un archivo aparte).
 - **Pantalla de carga (splash)** (no era una fase del guion, petición
   directa): `SplashScreen.jsx`, a pantalla completa con fondo `#0A2A20` y
   el badge `public/splash-badge.png` centrado (distinto del icono limpio

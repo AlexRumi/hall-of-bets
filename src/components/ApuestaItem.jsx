@@ -66,7 +66,7 @@ export default function ApuestaItem({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs text-slate">{apuesta.fecha}</span>
           <span className="text-xs text-slate">·</span>
-          <span className="text-base font-bold text-ink">{apuesta.casa}</span>
+          <span className="text-sm font-bold text-ink">{apuesta.casa}</span>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-paperDim text-slate">
             {apuesta.deporte}
           </span>
@@ -126,7 +126,7 @@ export default function ApuestaItem({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-xs text-slate">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-sm text-slate">
           <span>Apostado: {apuesta.stake.toFixed(2)}€</span>
           <span>Cuota total: {cuotaTotal.toFixed(2)}</span>
           {apuesta.resultado === "cashout" && (
