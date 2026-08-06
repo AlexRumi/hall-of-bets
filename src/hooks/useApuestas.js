@@ -90,6 +90,7 @@ export function useApuestas(userId) {
           cuota: Number(seleccion.cuota),
           pais: seleccion.pais ?? null,
           competicion: seleccion.competicion ?? null,
+          partidoId: seleccion.partidoId ?? null,
         })),
       })
       .select()
@@ -120,6 +121,7 @@ export function useApuestas(userId) {
           cuota: Number(seleccion.cuota),
           pais: seleccion.pais ?? null,
           competicion: seleccion.competicion ?? null,
+          partidoId: seleccion.partidoId ?? null,
         })),
       })
       .eq("id", id)

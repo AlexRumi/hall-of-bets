@@ -4,9 +4,17 @@ import { calcularCuotaTotal } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 import BuscadorEvento from "./BuscadorEvento";
+import CuotasDialog from "./CuotasDialog";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const seleccionVacia = () => ({ evento: "", apuesta: "", cuota: "", pais: "", competicion: "" });
+const seleccionVacia = () => ({
+  evento: "",
+  apuesta: "",
+  cuota: "",
+  pais: "",
+  competicion: "",
+  partidoId: null,
+});
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 const seleccionesDesdeApuesta = (apuesta) =>
   apuesta.selecciones.map((s) => ({
@@ -14,9 +22,10 @@ const seleccionesDesdeApuesta = (apuesta) =>
     apuesta: s.apuesta,
     cuota: String(s.cuota),
     // Las apuestas de antes de conectar el buscador de partidos no tienen
-    // país/competición guardados.
+    // país/competición/id de partido guardados.
     pais: s.pais ?? "",
     competicion: s.competicion ?? "",
+    partidoId: s.partidoId ?? null,
   }));
 
 // Mismo formulario para crear una apuesta nueva y para editar una ya
@@ -43,6 +52,7 @@ export default function FormularioApuesta({
   const [selecciones, setSelecciones] = useState(
     apuestaInicial ? seleccionesDesdeApuesta(apuestaInicial) : [seleccionVacia()]
   );
+  const [indiceCuotas, setIndiceCuotas] = useState(null);
 
   const esCombinada = selecciones.length > 1;
 
@@ -81,7 +91,13 @@ export default function FormularioApuesta({
     setSelecciones((actuales) =>
       actuales.map((s, i) =>
         i === index
-          ? { ...s, evento: partido.evento, pais: partido.pais, competicion: partido.competicion }
+          ? {
+              ...s,
+              evento: partido.evento,
+              pais: partido.pais,
+              competicion: partido.competicion,
+              partidoId: partido.id,
+            }
           : s
       )
     );
@@ -117,6 +133,7 @@ export default function FormularioApuesta({
         cuota: s.cuota,
         pais: s.pais || null,
         competicion: s.competicion || null,
+        partidoId: s.partidoId || null,
       })),
     });
 
@@ -252,9 +269,20 @@ export default function FormularioApuesta({
                 onElegirPartido={(partido) => aplicarPartido(index, partido)}
               />
               {seleccion.pais && (
-                <p className="mt-1 text-xs text-slate">
-                  {seleccion.competicion} · {seleccion.pais}
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-slate">
+                    {seleccion.competicion} · {seleccion.pais}
+                  </p>
+                  {seleccion.partidoId && (
+                    <button
+                      type="button"
+                      onClick={() => setIndiceCuotas(index)}
+                      className="text-xs font-medium text-gold hover:underline"
+                    >
+                      Ver cuotas
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -330,6 +358,13 @@ export default function FormularioApuesta({
           </button>
         )}
       </div>
+
+      <CuotasDialog
+        abierto={indiceCuotas !== null}
+        evento={indiceCuotas !== null ? selecciones[indiceCuotas]?.evento : ""}
+        partidoId={indiceCuotas !== null ? selecciones[indiceCuotas]?.partidoId : null}
+        onCerrar={() => setIndiceCuotas(null)}
+      />
     </form>
   );
 }

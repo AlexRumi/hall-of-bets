@@ -282,6 +282,23 @@ antes de pasar a la siguiente.
     responde 200 con un error dentro del JSON en vez de un código HTTP de
     error cuando falta la key, así que parecía "sin partidos" y no "sin
     key").
+  - **Comparador de cuotas** (petición directa, misma sesión): botón "Ver
+    cuotas" junto a un partido ya elegido, que abre `CuotasDialog.jsx` con
+    las cuotas de Gana local/Empate/Gana visitante ("Match Winner") de 5
+    casas — Bet365, Betfair, William Hill, Bwin y Betway. Solo estas 5:
+    Codere, Winamax y Luckia se pidieron primero pero no existen en el
+    catálogo de casas de API-Football (`GET /odds/bookmakers`, 33 casas
+    en total, ninguna española de las pedidas), así que se sustituyeron
+    por otras que sí están y operan en España. Nueva Serverless Function
+    `api/cuotas.js` (`GET /odds?fixture=ID`, id numérico de la casa →
+    nombre fijado a mano igual que las ligas) — es una llamada por
+    partido, no por día, así que solo se pide al pulsar el botón, nunca
+    en automático al buscar. El id del partido (`partidoId`) se guarda
+    también dentro de la selección (igual que país/competición) para que
+    el botón siga funcionando si se reabre la apuesta para editarla.
+    Si ninguna de las 5 tiene cuota para ese partido (pasa a menudo, cada
+    casa cubre unas ligas u otras), el diálogo lo dice en vez de salir
+    vacío sin explicación.
 
 ## Convenciones de código
 
