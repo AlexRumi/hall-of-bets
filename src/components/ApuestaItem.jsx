@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal } from "../utils/apuestas";
+import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
 import CashOutDialog from "./CashOutDialog";
 import FormularioApuesta from "./FormularioApuesta";
@@ -37,7 +38,9 @@ export default function ApuestaItem({
   const esCombinada = apuesta.selecciones.length > 1;
   const cuotaTotal = calcularCuotaTotal(apuesta.selecciones);
   const beneficio = calcularBeneficio(apuesta);
-  const logoCasa = casas.find((c) => c.nombre === apuesta.casa)?.logo;
+  const casaObj = casas.find((c) => c.nombre === apuesta.casa);
+  const logoCasa = casaObj?.logo;
+  const colorCasa = useColorCasa(casaObj ?? { nombre: apuesta.casa, logo: null });
 
   if (editando) {
     return (
@@ -66,7 +69,12 @@ export default function ApuestaItem({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs text-slate">{apuesta.fecha}</span>
           <span className="text-xs text-slate">·</span>
-          <span className="text-sm font-bold text-ink">{apuesta.casa}</span>
+          <span
+            className="text-sm font-bold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: `${colorCasa}1A`, color: colorCasa }}
+          >
+            {apuesta.casa}
+          </span>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-paperDim text-slate">
             {apuesta.deporte}
           </span>
@@ -126,7 +134,7 @@ export default function ApuestaItem({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-sm text-slate">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-[13px] text-slate">
           <span>Apostado: {apuesta.stake.toFixed(2)}€</span>
           <span>Cuota total: {cuotaTotal.toFixed(2)}</span>
           {apuesta.resultado === "cashout" && (

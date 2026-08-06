@@ -3,7 +3,7 @@
   "short_name": "Hall of Bets",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F4EA",
+  "background_color": "#0A2A20",
   "theme_color": "#0F3D2E",
   "icons": [
     {
