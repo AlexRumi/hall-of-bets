@@ -42,19 +42,27 @@ export default function App() {
 
   if (comprobandoSesion) return null;
 
-  return !sesion ? (
-    <PantallaLogin
-      onIniciarSesion={iniciarSesion}
-      oscuro={oscuro}
-      onAlternarModoOscuro={alternar}
-    />
-  ) : (
-    <AppAutenticada
-      userId={sesion.user.id}
-      onCerrarSesion={cerrarSesion}
-      oscuro={oscuro}
-      onAlternarModoOscuro={alternar}
-    />
+  // La app entraba de golpe (0 a 100% en un instante), así que se nota
+  // brusca al abrirla. Un fundido de entrada un poco más largo (sin
+  // pantalla de carga propia, solo la propia app apareciendo despacio)
+  // suaviza esa primera impresión.
+  return (
+    <div style={{ animation: "app-entrada 1.5s ease-out" }}>
+      {!sesion ? (
+        <PantallaLogin
+          onIniciarSesion={iniciarSesion}
+          oscuro={oscuro}
+          onAlternarModoOscuro={alternar}
+        />
+      ) : (
+        <AppAutenticada
+          userId={sesion.user.id}
+          onCerrarSesion={cerrarSesion}
+          oscuro={oscuro}
+          onAlternarModoOscuro={alternar}
+        />
+      )}
+    </div>
   );
 }
 

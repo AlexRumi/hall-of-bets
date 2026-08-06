@@ -58,6 +58,15 @@ textarea {
   color: var(--color-ink);
 }
 
+@keyframes app-entrada {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes trofeo-entrada {
   from {
     opacity: 0;
