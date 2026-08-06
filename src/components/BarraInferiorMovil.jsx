@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { Wallet, Gamepad2, PieChart, Ticket, Trophy, GraduationCap } from "lucide-react";
+import { Wallet, PieChart, Ticket, Trophy, GraduationCap } from "lucide-react";
 
 const ITEMS_LATERALES_IZQ = [
   { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
@@ -28,68 +27,26 @@ function BotonBarra({ id, etiqueta, Icono, activa, onCambiar }) {
 // lateral). Informe, Casas de apuestas y Ajustes no caben aquí — se llegan
 // por el menú ☰, que en móvil se queda con las 9 secciones de siempre.
 export default function BarraInferiorMovil({ activa, onCambiar }) {
-  const [menuApuestasAbierto, setMenuApuestasAbierto] = useState(false);
-  const contenedorRef = useRef(null);
   const enApuestas = activa === "apuestas" || activa === "entretenimiento";
-
-  useEffect(() => {
-    function manejarClickFuera(e) {
-      if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
-        setMenuApuestasAbierto(false);
-      }
-    }
-    document.addEventListener("mousedown", manejarClickFuera);
-    return () => document.removeEventListener("mousedown", manejarClickFuera);
-  }, []);
-
-  // Si se cambia de sección por otra vía (p.ej. el menú ☰), este desplegable
-  // se queda abierto de fondo si no se cierra explícitamente al navegar.
-  useEffect(() => {
-    setMenuApuestasAbierto(false);
-  }, [activa]);
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-felt border-t border-gold/30 flex items-stretch">
-      {/* Apuestas: al tocarlo, desplegar Apuestas/Entretenimiento */}
-      <div ref={contenedorRef} className="relative flex-1">
-        <button
-          type="button"
-          onClick={() => setMenuApuestasAbierto((actual) => !actual)}
-          className={`w-full flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
-            enApuestas ? "text-gold" : "text-paper/70"
-          }`}
-        >
-          <Wallet size={20} />
-          Apuestas
-        </button>
-
-        {menuApuestasAbierto && (
-          <div className="absolute bottom-full left-0 mb-2 w-44 bg-surface border border-line rounded-xl shadow-lg overflow-hidden text-left">
-            <button
-              type="button"
-              onClick={() => {
-                onCambiar("apuestas");
-                setMenuApuestasAbierto(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-ink hover:bg-paperDim transition-colors"
-            >
-              <Wallet size={15} />
-              Apuestas
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onCambiar("entretenimiento");
-                setMenuApuestasAbierto(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-ink hover:bg-paperDim transition-colors border-t border-line"
-            >
-              <Gamepad2 size={15} />
-              Entretenimiento
-            </button>
-          </div>
-        )}
-      </div>
+      {/* "Registro": lleva directo al formulario de apuesta. Si ya estabas
+          en Apuestas o Entretenimiento, se queda donde estabas — el
+          selector Apuestas/Entretenimiento vive arriba del todo, dentro de
+          esa pantalla (ver App.jsx). */}
+      <button
+        type="button"
+        onClick={() => {
+          if (!enApuestas) onCambiar("apuestas");
+        }}
+        className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
+          enApuestas ? "text-gold" : "text-paper/70"
+        }`}
+      >
+        <Wallet size={20} />
+        Registro
+      </button>
 
       {ITEMS_LATERALES_IZQ.map((item) => (
         <BotonBarra key={item.id} {...item} activa={activa} onCambiar={onCambiar} />

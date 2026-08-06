@@ -213,6 +213,24 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
               />
             ) : esBankroll ? (
               <>
+                {/* Solo móvil: en escritorio ya se elige directamente en el
+                    menú lateral (Apuestas y Entretenimiento por separado). */}
+                <div className="md:hidden flex justify-center gap-2">
+                  {Object.entries(ETIQUETAS_SECCION).map(([id, etiqueta]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setSeccionActiva(id)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                        seccionActiva === id
+                          ? "bg-felt text-paper border-felt"
+                          : "border-line text-slate hover:text-ink"
+                      }`}
+                    >
+                      {etiqueta}
+                    </button>
+                  ))}
+                </div>
                 <FormularioApuesta
                   onGuardar={manejarAgregar}
                   casas={casas}
