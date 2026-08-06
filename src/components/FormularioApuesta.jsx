@@ -3,15 +3,20 @@ import { PlusCircle, Save, X, AlertTriangle } from "lucide-react";
 import { calcularCuotaTotal } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
+import BuscadorEvento from "./BuscadorEvento";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const seleccionVacia = () => ({ evento: "", apuesta: "", cuota: "" });
+const seleccionVacia = () => ({ evento: "", apuesta: "", cuota: "", pais: "", competicion: "" });
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 const seleccionesDesdeApuesta = (apuesta) =>
   apuesta.selecciones.map((s) => ({
     evento: s.evento,
     apuesta: s.apuesta,
     cuota: String(s.cuota),
+    // Las apuestas de antes de conectar el buscador de partidos no tienen
+    // país/competición guardados.
+    pais: s.pais ?? "",
+    competicion: s.competicion ?? "",
   }));
 
 // Mismo formulario para crear una apuesta nueva y para editar una ya
@@ -69,6 +74,20 @@ export default function FormularioApuesta({
     );
   }
 
+  // Al elegir un partido del buscador: rellena evento/país/competición de
+  // esa selección, y pone la fecha de la apuesta a la del partido (la
+  // última selección elegida manda, para el caso normal de una sola fecha).
+  function aplicarPartido(index, partido) {
+    setSelecciones((actuales) =>
+      actuales.map((s, i) =>
+        i === index
+          ? { ...s, evento: partido.evento, pais: partido.pais, competicion: partido.competicion }
+          : s
+      )
+    );
+    setFecha(partido.fecha);
+  }
+
   function añadirSeleccion() {
     setSelecciones((actuales) => [...actuales, seleccionVacia()]);
   }
@@ -96,6 +115,8 @@ export default function FormularioApuesta({
         evento: s.evento.trim(),
         apuesta: s.apuesta.trim(),
         cuota: s.cuota,
+        pais: s.pais || null,
+        competicion: s.competicion || null,
       })),
     });
 
@@ -224,16 +245,17 @@ export default function FormularioApuesta({
           >
             <div>
               <label className="block text-xs text-slate mb-1">Evento</label>
-              <input
-                type="text"
-                value={seleccion.evento}
-                onChange={(e) =>
-                  actualizarSeleccion(index, "evento", e.target.value)
-                }
-                placeholder="Ej. Real Madrid - FC Barcelona"
-                required
-                className="w-full border border-line rounded-lg px-3 py-2 text-sm"
+              <BuscadorEvento
+                valor={seleccion.evento}
+                fecha={fecha}
+                onCambiar={(valor) => actualizarSeleccion(index, "evento", valor)}
+                onElegirPartido={(partido) => aplicarPartido(index, partido)}
               />
+              {seleccion.pais && (
+                <p className="mt-1 text-xs text-slate">
+                  {seleccion.competicion} · {seleccion.pais}
+                </p>
+              )}
             </div>
 
             <div className="flex gap-2 items-end">

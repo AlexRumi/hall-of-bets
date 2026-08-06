@@ -88,6 +88,8 @@ export function useApuestas(userId) {
           evento: seleccion.evento,
           apuesta: seleccion.apuesta,
           cuota: Number(seleccion.cuota),
+          pais: seleccion.pais ?? null,
+          competicion: seleccion.competicion ?? null,
         })),
       })
       .select()
@@ -116,6 +118,8 @@ export function useApuestas(userId) {
           evento: seleccion.evento,
           apuesta: seleccion.apuesta,
           cuota: Number(seleccion.cuota),
+          pais: seleccion.pais ?? null,
+          competicion: seleccion.competicion ?? null,
         })),
       })
       .eq("id", id)

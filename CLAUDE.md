@@ -6,12 +6,12 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 - Frontend: React + Vite, JavaScript (no TypeScript por ahora)
 - Estilos: Tailwind CSS (paleta y fuentes ya configuradas en `tailwind.config.js` / `src/index.css`)
-- Backend: Supabase (plan gratuito) — solo como base de datos + autenticación, no hay servidor propio. La fase 11 (bot de fotos) seguiría sin backend propio (API key de IA), se omitió por el coste recurrente
+- Backend: Supabase (plan gratuito) — solo como base de datos + autenticación. La fase 11 (bot de fotos) seguiría necesitando un backend propio (API key de IA), se omitió por el coste recurrente. Desde el buscador de partidos (ver más abajo) sí hay una pieza mínima de servidor propio: una Serverless Function de Vercel, solo para no exponer la key de API-Football
 - Base de datos: Supabase (Postgres), con Row Level Security atada al usuario. Antes vivía en localStorage del navegador (decidido en fase 2); se migró para poder ver las mismas apuestas desde PC y móvil. Un solo usuario, creado a mano en el panel de Supabase (Authentication > Users), sin registro público. `trofeos-vistos` (qué notificaciones de trofeo ya se han visto) se queda en localStorage de cada dispositivo, no se sincroniza
 - Autenticación: Supabase Auth (email + contraseña), sesión persistida por dispositivo; pantalla de login propia en `src/components/PantallaLogin.jsx`
 - Gráficas: recharts
 - Iconos: lucide-react
-- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`. Vercel necesita las variables de entorno `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (Project Settings > Environment Variables) para conectar con Supabase; en local van en `.env.local` (no se sube a git, ver `.env.example`)
+- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`. Vercel necesita las variables de entorno `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` y `API_FOOTBALL_KEY` (Project Settings > Environment Variables) — las dos primeras para conectar con Supabase, la tercera la usa solo `api/partidos.js` (nunca lleva el prefijo `VITE_`, para que no acabe en el bundle del navegador); en local van en `.env.local` (no se sube a git, ver `.env.example`)
 
 ## Identidad visual (no cambiar sin pedirlo explícitamente)
 
@@ -224,7 +224,64 @@ antes de pasar a la siguiente.
   sola, y tener las dos añadía una transición de más. Se quitó
   `SplashScreen.jsx`, `splash-badge.png` (quedó redundante con
   `icon-1024.png`) y el `cargando` que se había añadido a `useApuestas`/
-  `useCasas`/`useMovimientos` solo para esto.
+  `useCasas`/`useMovimientos` solo para esto. Como la app seguía entrando
+  de golpe (sin pantalla de carga que disimulara), se añadió un fundido de
+  opacidad de 1,5s al arrancar (`@keyframes app-entrada` en `index.css`,
+  aplicado al `<div>` raíz en `App.jsx`) — sin volver a montar una pantalla
+  propia, solo suaviza la propia aparición de la app.
+- **Buscador de partidos (API-Football)** (no era una fase del guion,
+  petición directa — el guion la daba por descartada, ver fase 22 y
+  sección 3): al escribir en "Evento" (`BuscadorEvento.jsx`), sugiere
+  partidos reales de 21 competiciones conectadas (España/Italia/Francia/
+  Alemania/Inglaterra — primera, segunda y copa de cada una —, las 3
+  copas europeas, Portugal y Países Bajos; el resto de ligas del mundo
+  quedan fuera y se sigue escribiendo a mano como siempre). Al elegir un
+  partido se rellenan solos evento, país, competición y la fecha de la
+  apuesta.
+  - **Arquitectura**: la key de API-Football es secreta (a diferencia de
+    la de Supabase) y no puede llamarse desde el navegador, así que hizo
+    falta la primera pieza de servidor propio del proyecto: `api/
+    partidos.js`, una Serverless Function de Vercel (gratis en su plan
+    free) que guarda la key en la variable de entorno `API_FOOTBALL_KEY`
+    y hace de intermediaria. El listado de las 21 ligas (con su id
+    numérico de API-Football) vive en ese mismo archivo — los ids se
+    verificaron a mano contra la cuenta del usuario (`GET /leagues` con
+    su key), no adivinados, porque un id equivocado falla en silencio
+    (esa liga nunca encontraría partidos).
+  - **Cuota gratuita**: el plan free de API-Football da ~100 peticiones/
+    día. Para no gastarla de más, `api/partidos.js` pide `/fixtures?date=X`
+    una vez por día (trae todas las ligas del mundo de golpe, se filtra a
+    las 21 después) en vez de una llamada por liga, y el hook
+    `usePartidos.js` cachea el resultado en el navegador por fecha durante
+    toda la visita — buscar varias veces, en varias apuestas o
+    selecciones, el mismo día, no vuelve a llamar a la función. En la
+    práctica es ~1 request por día distinto que se consulte, no por
+    apuesta.
+  - **País/competición**: se guardan dentro de cada selección (el array
+    `selecciones` ya es una columna `jsonb` en Supabase, así que añadir
+    estos dos campos no hizo falta ninguna migración — a diferencia de
+    "deporte", que si necesitó una columna nueva). Las apuestas de antes
+    de esta fase simplemente no los tienen (`null`), y no se muestran.
+  - **Probar en local**: `api/partidos.js` no funciona con `npm run dev`
+    normal (ese comando es solo Vite, no sabe nada de Serverless
+    Functions) — hace falta `vercel dev` en su lugar para probar el
+    buscador en concreto (primera vez: pide iniciar sesión en Vercel y
+    enlaza el proyecto solo). El resto de la app sigue funcionando igual
+    con `npm run dev`; si `/api/partidos` no responde (404, sin
+    conexión...), el buscador simplemente no sugiere nada y se puede
+    seguir escribiendo el evento a mano, nunca bloquea el formulario.
+  - **Ojo con "Sensitive" en Vercel**: si una variable de entorno se marca
+    como "Sensitive" al crearla, Vercel no la deja usar en el entorno
+    Development — y esa marca no se puede quitar después (hay que borrar
+    la variable y crearla de nuevo sin marcarla). `vercel dev` tampoco
+    lee `.env.local` directamente para las Serverless Functions de un
+    proyecto ya enlazado: usa las variables que el propio proyecto tenga
+    en Vercel para el entorno Development, así que sin "Sensitive"
+    quitado no llegan de ninguna manera. `API_FOOTBALL_KEY` se creó así
+    por error la primera vez (tardó en detectarse porque API-Football
+    responde 200 con un error dentro del JSON en vez de un código HTTP de
+    error cuando falta la key, así que parecía "sin partidos" y no "sin
+    key").
 
 ## Convenciones de código
 

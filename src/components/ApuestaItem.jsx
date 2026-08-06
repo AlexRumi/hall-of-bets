@@ -112,6 +112,11 @@ export default function ApuestaItem({
                       {seleccion.apuesta}
                     </p>
                   )}
+                  {seleccion.pais && (
+                    <p className="mt-1 text-xs text-slate">
+                      {seleccion.competicion} · {seleccion.pais}
+                    </p>
+                  )}
                 </div>
                 <span className="font-mono text-xs text-slate shrink-0 pt-0.5">
                   {seleccion.cuota.toFixed(2)}
@@ -129,6 +134,11 @@ export default function ApuestaItem({
                 className={`inline-block mt-1 px-2 py-0.5 rounded-md text-sm font-bold break-words ${ESTILOS_RESULTADO[apuesta.resultado]}`}
               >
                 {apuesta.selecciones[0].apuesta}
+              </p>
+            )}
+            {apuesta.selecciones[0].pais && (
+              <p className="mt-1 text-xs text-slate">
+                {apuesta.selecciones[0].competicion} · {apuesta.selecciones[0].pais}
               </p>
             )}
           </div>
