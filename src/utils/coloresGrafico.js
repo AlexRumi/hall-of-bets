@@ -10,6 +10,7 @@ const CLARO = {
   lose: "#C0392B",
   pending: "#B8934D",
   void: "#8B8478",
+  cashout: "#3A6EA5",
 };
 
 const OSCURO = {
@@ -20,6 +21,7 @@ const OSCURO = {
   lose: "#E1685A",
   pending: "#D8B378",
   void: "#9C9284",
+  cashout: "#6FA8DC",
 };
 
 export function coloresGrafico(oscuro) {

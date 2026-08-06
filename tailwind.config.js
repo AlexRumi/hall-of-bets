@@ -23,6 +23,7 @@ export default {
         lose: "rgb(var(--color-lose) / <alpha-value>)",
         pending: "rgb(var(--color-pending) / <alpha-value>)",
         void: "rgb(var(--color-void) / <alpha-value>)",
+        cashout: "rgb(var(--color-cashout) / <alpha-value>)",
         // Niveles de trofeo (el nivel "oro" reutiliza el dorado de acento de arriba).
         bronce: "rgb(181 101 29 / <alpha-value>)",
         plata: "rgb(152 162 172 / <alpha-value>)",

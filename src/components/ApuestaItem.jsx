@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal } from "../utils/apuestas";
 import ConfirmDialog from "./ConfirmDialog";
+import CashOutDialog from "./CashOutDialog";
 import FormularioApuesta from "./FormularioApuesta";
 
 const ESTILOS_RESULTADO = {
@@ -9,6 +10,7 @@ const ESTILOS_RESULTADO = {
   ganada: "bg-win/10 text-win",
   perdida: "bg-lose/10 text-lose",
   nula: "bg-void/10 text-void",
+  cashout: "bg-cashout/10 text-cashout",
 };
 
 const ETIQUETAS_RESULTADO = {
@@ -16,6 +18,7 @@ const ETIQUETAS_RESULTADO = {
   ganada: "Ganada",
   perdida: "Perdida",
   nula: "Nula",
+  cashout: "Cash Out",
 };
 
 export default function ApuestaItem({
@@ -28,6 +31,7 @@ export default function ApuestaItem({
   onEditar,
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+  const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
   const [editando, setEditando] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
   const esCombinada = apuesta.selecciones.length > 1;
@@ -86,31 +90,36 @@ export default function ApuestaItem({
         </div>
 
         {esCombinada ? (
-          <ul className="mt-1 space-y-1">
+          <ul className="mt-1.5 space-y-2">
             {apuesta.selecciones.map((seleccion) => (
-              <li
-                key={seleccion.id}
-                className="text-sm text-ink break-words flex gap-2"
-              >
-                <span className="flex-1 min-w-0">
-                  {seleccion.evento}
+              <li key={seleccion.id} className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-base font-semibold text-ink break-words">
+                    {seleccion.evento}
+                  </p>
                   {seleccion.apuesta && (
-                    <span className="italic text-slate"> — {seleccion.apuesta}</span>
+                    <p
+                      className={`inline-block mt-1 px-2 py-0.5 rounded-md text-sm font-bold break-words ${ESTILOS_RESULTADO[apuesta.resultado]}`}
+                    >
+                      {seleccion.apuesta}
+                    </p>
                   )}
-                </span>
-                <span className="font-mono text-xs text-slate shrink-0">
+                </div>
+                <span className="font-mono text-xs text-slate shrink-0 pt-0.5">
                   {seleccion.cuota.toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="mt-1">
-            <p className="text-sm text-ink break-words">
+          <div className="mt-1.5">
+            <p className="text-base font-semibold text-ink break-words">
               {apuesta.selecciones[0].evento}
             </p>
             {apuesta.selecciones[0].apuesta && (
-              <p className="text-sm italic text-slate break-words">
+              <p
+                className={`inline-block mt-1 px-2 py-0.5 rounded-md text-sm font-bold break-words ${ESTILOS_RESULTADO[apuesta.resultado]}`}
+              >
                 {apuesta.selecciones[0].apuesta}
               </p>
             )}
@@ -120,6 +129,9 @@ export default function ApuestaItem({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 font-mono text-xs text-slate">
           <span>Apostado: {apuesta.stake.toFixed(2)}€</span>
           <span>Cuota total: {cuotaTotal.toFixed(2)}</span>
+          {apuesta.resultado === "cashout" && (
+            <span>Cash out: {apuesta.cashoutImporte.toFixed(2)}€</span>
+          )}
           {!esPendiente && (
             <span className={`font-bold ${beneficio > 0 ? "text-win" : beneficio < 0 ? "text-lose" : "text-void"}`}>
               {beneficio > 0 ? "+" : ""}
@@ -150,6 +162,12 @@ export default function ApuestaItem({
             >
               Nula
             </button>
+            <button
+              onClick={() => setMostrandoCashOut(true)}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-cashout text-cashout hover:bg-cashout/10 transition-colors"
+            >
+              Cash Out
+            </button>
           </>
         )}
         <button
@@ -177,6 +195,15 @@ export default function ApuestaItem({
           setConfirmandoBorrado(false);
         }}
         onCancelar={() => setConfirmandoBorrado(false)}
+      />
+
+      <CashOutDialog
+        abierto={mostrandoCashOut}
+        onConfirmar={(importe) => {
+          onMarcarResultado(apuesta.id, "cashout", importe);
+          setMostrandoCashOut(false);
+        }}
+        onCancelar={() => setMostrandoCashOut(false)}
       />
     </div>
   );

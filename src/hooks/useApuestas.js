@@ -11,6 +11,8 @@ function desdeFila(fila) {
     resultado: fila.resultado,
     categoria: fila.categoria,
     tipoFondos: fila.tipo_fondos,
+    cashoutImporte:
+      fila.cashout_importe === null ? null : Number(fila.cashout_importe),
     // Las apuestas de antes de tener este campo no tienen deporte asignado.
     deporte: fila.deporte ?? "Otro",
   };
@@ -22,6 +24,7 @@ function desdeFila(fila) {
 // registra, edita o borra una apuesta desde otro dispositivo.
 export function useApuestas(userId) {
   const [apuestas, setApuestas] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
@@ -32,7 +35,9 @@ export function useApuestas(userId) {
       .select("*")
       .order("creado_en", { ascending: false })
       .then(({ data, error }) => {
-        if (vivo && !error) setApuestas(data.map(desdeFila));
+        if (!vivo) return;
+        if (!error) setApuestas(data.map(desdeFila));
+        setCargando(false);
       });
 
     const canal = supabase
@@ -127,10 +132,15 @@ export function useApuestas(userId) {
     }
   }
 
-  async function marcarResultado(id, resultado) {
+  // "cashoutImporte" solo se usa (y se guarda) cuando resultado es "cashout";
+  // en cualquier otro caso se limpia, por si se estaba corrigiendo un cash out.
+  async function marcarResultado(id, resultado, cashoutImporte = null) {
     const { data, error } = await supabase
       .from("apuestas")
-      .update({ resultado })
+      .update({
+        resultado,
+        cashout_importe: resultado === "cashout" ? Number(cashoutImporte) : null,
+      })
       .eq("id", id)
       .select()
       .single();
@@ -165,6 +175,7 @@ export function useApuestas(userId) {
 
   return {
     apuestas,
+    cargando,
     agregarApuesta,
     editarApuesta,
     marcarResultado,

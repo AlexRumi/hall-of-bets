@@ -23,6 +23,7 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 - Registro de apuestas: fecha, casa, deporte (lista cerrada: Fútbol/Baloncesto/Tenis/eSports/Otro), evento (texto libre, sin desplegable de mercados), stake, cuota, resultado
 - Estado inicial de toda apuesta nueva: **Pendiente**
+- Resultados posibles: Ganada / Perdida / Nula / **Cash Out** (cierre anticipado pagado por la casa; pide el importe recibido, no se calcula con la cuota). Disponible en Apuestas y en Entretenimiento por igual
 - Combinadas: apuesta con varias selecciones ("añadir nueva cuota"); la cuota total es el producto de las cuotas de cada selección
 - Tipo de fondos por apuesta: dinero real / crédito bono (freebet)
   - Si gana: ganancia real = `stake × (cuota − 1)` en ambos casos
@@ -159,6 +160,55 @@ antes de pasar a la siguiente.
   (id, categoria, tier, comprobar, progreso opcional) está pensada para que
   un futuro "objetivo personal" del usuario encaje igual sin tocar
   `SalaTrofeos.jsx` — no implementado, queda para la fase 22.
+- **Filtro por casa en Estadísticas y rediseño de la barra móvil** (no era
+  una fase del guion, petición directa tras la fase 21):
+  `EstadisticasDashboard.jsx` gana pastillas de acceso rápido ("Estadísticas
+  Totales" + una por cada casa) que recalculan todo el dashboard (KPIs,
+  gráficas, calendario, insights) para esa casa sola — "ROI por casa" se
+  oculta cuando hay una casa filtrada, porque ya no aporta nada. En la barra
+  inferior móvil, el botón "Inicio" pasa a ser un círculo grande que
+  sobresale por encima de la barra (con un aro `ring-fondo` para que parezca
+  flotar). La pestaña "Apuestas" se renombra a "Registro" y quita el
+  desplegable Apuestas/Entretenimiento: ahora lleva directo al formulario
+  (o te deja donde estabas si ya estabas en uno de los dos bankrolls), y el
+  selector Apuestas/Entretenimiento vive arriba de esa pantalla, solo en
+  móvil (`md:hidden` en `App.jsx` — en escritorio ya está en el menú
+  lateral). Se renombró para evitar el choque de "Registro > Apuestas" en
+  vez de "Apuestas > Apuestas".
+- **Cash Out** (no era una fase del guion, petición directa): nuevo
+  resultado `"cashout"` además de Ganada/Perdida/Nula, disponible en Apuestas
+  y en Entretenimiento por igual (se descartó restringirlo a una sola
+  sección, no aportaba nada). Al pulsarlo pide el importe pagado por la casa
+  (`CashOutDialog.jsx`, no se puede calcular con la cuota) y lo guarda en la
+  columna nueva `cashout_importe` de Supabase (`supabase-setup.sql`).
+  Beneficio en `calcularBeneficio` (`utils/apuestas.js`): con dinero real es
+  `importe recibido − stake`; con freebet, el importe recibido es ganancia
+  entera (el stake nunca fue dinero propio). No cuenta como "ganada" ni
+  "perdida" en el % de acierto (igual que "Nula"), pero si corta una racha
+  de victorias en curso, y sí suma al beneficio/yield. Color propio
+  `cashout` (azul acero) en `tailwind.config.js`/`index.css`/
+  `coloresGrafico.js`, para no reutilizar ninguno de los 4 colores de
+  resultado que ya existían.
+- **Evento y apuesta más visibles en `ApuestaItem.jsx`** (no era una fase
+  del guion, petición directa): el evento (partido) pasa a `text-base
+  font-semibold`, más grande que antes. La apuesta concreta ("Gana X",
+  "Over 2.5 goals") va en una pastilla con fondo/color según el resultado
+  — reutiliza `ESTILOS_RESULTADO` (el mismo mapa que ya pinta la etiqueta
+  Pendiente/Ganada/Perdida/Nula/Cash Out): dorado si está pendiente, verde
+  si ganada, roja si perdida, gris si nula, azul si cash out. En
+  combinadas, como la app no guarda resultado por selección, las tres
+  cuotas comparten el color del resultado final de la apuesta completa.
+- **Pantalla de carga (splash)** (no era una fase del guion, petición
+  directa): `SplashScreen.jsx`, a pantalla completa con fondo `#0A2A20` y
+  el badge `public/splash-badge.png` centrado (distinto del icono limpio
+  de `icon-192.png`/`icon-512.png`/`apple-touch-icon.png`, esos no se han
+  tocado). Solo se muestra en móvil (`esMovil` en `App.jsx`, mismo corte
+  de 768px que el resto de la app) — en escritorio no hace falta. Se queda
+  un mínimo de 1,2s O hasta que terminen de llegar apuestas/casas/
+  movimientos de Supabase, lo que tarde más: los tres hooks (`useApuestas`,
+  `useCasas`, `useMovimientos`) ahora devuelven también `cargando`, y
+  `AppAutenticada` avisa a `App.jsx` (`onDatosListos`) en cuanto los tres
+  terminan. Desaparece con un fundido de 0,5s.
 
 ## Convenciones de código
 

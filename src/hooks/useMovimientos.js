@@ -13,6 +13,7 @@ function desdeFila(fila) {
 
 export function useMovimientos(userId) {
   const [movimientos, setMovimientos] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
@@ -23,7 +24,9 @@ export function useMovimientos(userId) {
       .select("*")
       .order("creado_en", { ascending: false })
       .then(({ data, error }) => {
-        if (vivo && !error) setMovimientos(data.map(desdeFila));
+        if (!vivo) return;
+        if (!error) setMovimientos(data.map(desdeFila));
+        setCargando(false);
       });
 
     const canal = supabase
@@ -82,6 +85,7 @@ export function useMovimientos(userId) {
 
   return {
     movimientos,
+    cargando,
     agregarMovimiento,
     borrarMovimiento,
     borrarTodosMovimientos,

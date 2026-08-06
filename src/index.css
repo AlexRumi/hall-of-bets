@@ -21,6 +21,7 @@
   --color-lose: 192 57 43;
   --color-pending: 184 147 77;
   --color-void: 139 132 120;
+  --color-cashout: 58 110 165;
 }
 
 /* Modo oscuro: misma paleta "cuaderno", pero invertida y con los acentos
@@ -39,6 +40,7 @@
   --color-lose: 225 104 90;
   --color-pending: 216 179 120;
   --color-void: 156 146 132;
+  --color-cashout: 111 168 220;
 }
 
 body {

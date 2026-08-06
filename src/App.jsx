@@ -27,6 +27,7 @@ import MenuSecundario from "./components/MenuSecundario";
 import SidebarNavegacion from "./components/SidebarNavegacion";
 import BarraInferiorMovil from "./components/BarraInferiorMovil";
 import SelectorModoOscuro from "./components/SelectorModoOscuro";
+import SplashScreen from "./components/SplashScreen";
 import { useModoOscuro } from "./hooks/useModoOscuro";
 
 const ETIQUETAS_SECCION = {
@@ -40,50 +41,70 @@ export default function App() {
   const { oscuro, alternar } = useModoOscuro();
   const { sesion, comprobandoSesion, iniciarSesion, cerrarSesion } = useAuth();
 
-  if (comprobandoSesion) {
-    return (
-      <div className="min-h-screen bg-fondo flex items-center justify-center">
-        <p className="text-sm text-slate">Cargando…</p>
-      </div>
-    );
-  }
+  // La pantalla de carga se queda un mínimo de 1,2s (para que no sea un
+  // parpadeo si todo va rápido) O hasta que terminen de llegar los datos de
+  // Supabase, lo que tarde más. Sin sesión no hay datos de bankroll que
+  // esperar, así que solo depende del tiempo mínimo.
+  const [tiempoMinimoCumplido, setTiempoMinimoCumplido] = useState(false);
+  const [datosListos, setDatosListos] = useState(false);
+  // Solo en móvil (mismo corte que el resto de la app, "md" de Tailwind =
+  // 768px): en escritorio no hace falta pantalla de carga.
+  const [esMovil] = useState(() => window.matchMedia("(max-width: 767px)").matches);
 
-  if (!sesion) {
-    return (
-      <PantallaLogin
-        onIniciarSesion={iniciarSesion}
-        oscuro={oscuro}
-        onAlternarModoOscuro={alternar}
-      />
-    );
-  }
+  useEffect(() => {
+    const temporizador = setTimeout(() => setTiempoMinimoCumplido(true), 1200);
+    return () => clearTimeout(temporizador);
+  }, []);
+
+  const listo = !comprobandoSesion && (!sesion || datosListos);
+  const mostrarSplash = !tiempoMinimoCumplido || !listo;
 
   return (
-    <AppAutenticada
-      userId={sesion.user.id}
-      onCerrarSesion={cerrarSesion}
-      oscuro={oscuro}
-      onAlternarModoOscuro={alternar}
-    />
+    <>
+      {esMovil && <SplashScreen visible={mostrarSplash} />}
+      {comprobandoSesion ? null : !sesion ? (
+        <PantallaLogin
+          onIniciarSesion={iniciarSesion}
+          oscuro={oscuro}
+          onAlternarModoOscuro={alternar}
+        />
+      ) : (
+        <AppAutenticada
+          userId={sesion.user.id}
+          onCerrarSesion={cerrarSesion}
+          oscuro={oscuro}
+          onAlternarModoOscuro={alternar}
+          onDatosListos={() => setDatosListos(true)}
+        />
+      )}
+    </>
   );
 }
 
-function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }) {
+function AppAutenticada({
+  userId,
+  onCerrarSesion,
+  oscuro,
+  onAlternarModoOscuro,
+  onDatosListos,
+}) {
   const {
     apuestas,
+    cargando: cargandoApuestas,
     agregarApuesta,
     editarApuesta,
     marcarResultado,
     borrarApuesta,
     borrarTodoBankroll,
   } = useApuestas(userId);
-  const { casas, agregarCasa, borrarCasa } = useCasas(userId);
+  const { casas, cargando: cargandoCasas, agregarCasa, borrarCasa } = useCasas(userId);
   // Los trofeos se calculan sobre todas las apuestas, sin importar la
   // sección que se esté viendo, para que la notificación de un trofeo nuevo
   // pueda saltar aunque no estés en la pestaña de Trofeos.
   const { trofeos, notificacion, cerrarNotificacion } = useTrofeos(apuestas);
   const {
     movimientos,
+    cargando: cargandoMovimientos,
     agregarMovimiento,
     borrarMovimiento,
     borrarTodosMovimientos,
@@ -93,6 +114,15 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   const [filtroFondos, setFiltroFondos] = useState("todas");
   const [periodo, setPeriodo] = useState("todo");
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
+
+  // Avisa a App.jsx (una sola vez) en cuanto han llegado los tres datos
+  // iniciales, para que la pantalla de carga pueda desaparecer.
+  useEffect(() => {
+    if (!cargandoApuestas && !cargandoCasas && !cargandoMovimientos) {
+      onDatosListos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargandoApuestas, cargandoCasas, cargandoMovimientos]);
 
   // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
   // con el scroll donde estaba la sección anterior).

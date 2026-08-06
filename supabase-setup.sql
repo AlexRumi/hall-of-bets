@@ -67,3 +67,7 @@ alter publication supabase_realtime add table public.promociones;
 alter publication supabase_realtime add table public.movimientos;
 alter table public.apuestas add column deporte text;
 
+-- Cash Out: importe que paga la casa al cerrar una apuesta antes de tiempo
+-- (solo se rellena cuando resultado = 'cashout'; en cualquier otro caso queda en null).
+alter table public.apuestas add column cashout_importe numeric;
+

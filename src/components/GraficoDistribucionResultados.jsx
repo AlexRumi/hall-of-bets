@@ -6,6 +6,7 @@ const ETIQUETAS = {
   ganada: "Ganada",
   perdida: "Perdida",
   nula: "Nula",
+  cashout: "Cash Out",
 };
 
 function TooltipPersonalizado({ active, payload }) {
@@ -30,6 +31,7 @@ export default function GraficoDistribucionResultados({ apuestas, oscuro }) {
     ganada: colores.win,
     perdida: colores.lose,
     nula: colores.void,
+    cashout: colores.cashout,
   };
 
   const datos = Object.keys(ETIQUETAS)

@@ -5,13 +5,20 @@ export function calcularCuotaTotal(selecciones) {
 
 // Ganancia real: si gana, stake x (cuota total - 1) tanto en real como en freebet.
 // Si pierde con freebet, no se pierde dinero real (el stake no era dinero propio).
+// Si se hace cash out, el beneficio no se calcula con la cuota (la casa paga lo
+// que decide en ese momento): con dinero real es el importe recibido menos el
+// stake puesto; con freebet, el importe recibido es ganancia entera (el stake
+// nunca fue dinero propio).
 export function calcularBeneficio(apuesta) {
-  const { resultado, stake, selecciones, tipoFondos } = apuesta;
+  const { resultado, stake, selecciones, tipoFondos, cashoutImporte } = apuesta;
   if (resultado === "pendiente") return 0;
 
   const cuotaTotal = calcularCuotaTotal(selecciones);
   if (resultado === "ganada") return stake * (cuotaTotal - 1);
   if (resultado === "perdida") return tipoFondos === "freebet" ? 0 : -stake;
+  if (resultado === "cashout") {
+    return tipoFondos === "freebet" ? cashoutImporte : cashoutImporte - stake;
+  }
   return 0;
 }
 
