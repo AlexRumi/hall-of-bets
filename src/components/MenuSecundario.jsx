@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Menu,
+  Home,
+  Wallet,
+  Gamepad2,
   PieChart,
   Landmark,
   CalendarDays,
@@ -12,7 +15,14 @@ import {
   LogOut,
 } from "lucide-react";
 
+// En escritorio la navegación va por SidebarNavegacion.jsx, así que esta
+// lista solo se ve en móvil (envuelta en md:hidden más abajo). En móvil
+// sigue siendo el menú completo, incluyendo lo que no cabe en la barra
+// inferior (Informe, Casas de apuestas, Ajustes).
 const OPCIONES = [
+  { id: "inicio", etiqueta: "Inicio", Icono: Home },
+  { id: "apuestas", etiqueta: "Apuestas", Icono: Wallet },
+  { id: "entretenimiento", etiqueta: "Entretenimiento", Icono: Gamepad2 },
   { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
@@ -21,9 +31,6 @@ const OPCIONES = [
   { id: "academia", etiqueta: "Academia", Icono: GraduationCap },
 ];
 
-// Secciones que no dependen del bankroll activo (Apuestas/Entretenimiento):
-// se agrupan aparte, en un menú propio, para que no parezcan sub-pestañas
-// de la que esté seleccionada arriba.
 // El botón de modo oscuro vive aquí dentro (y no suelto en la cabecera)
 // porque en móvil, junto al icono ☰, chocaba con el título "Hall of Bets".
 export default function MenuSecundario({
@@ -35,7 +42,6 @@ export default function MenuSecundario({
 }) {
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
-  const seccionActivaEsGlobal = OPCIONES.some((o) => o.id === activa);
 
   useEffect(() => {
     function manejarClickFuera(e) {
@@ -52,36 +58,34 @@ export default function MenuSecundario({
       <button
         type="button"
         onClick={() => setAbierto((actual) => !actual)}
-        aria-label="Más secciones"
-        className={`p-2 rounded-full transition-colors ${
-          seccionActivaEsGlobal
-            ? "bg-felt text-paper border border-gold"
-            : "text-paper hover:bg-white/10"
-        }`}
+        aria-label="Menú"
+        className="p-2 rounded-full text-paper hover:bg-white/10 transition-colors"
       >
         <Menu size={18} />
       </button>
 
       {abierto && (
         <div className="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-xl shadow-lg overflow-hidden z-50 text-left">
-          {OPCIONES.map(({ id, etiqueta, Icono }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                onCambiar(id);
-                setAbierto(false);
-              }}
-              className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                activa === id
-                  ? "bg-gold/10 text-gold"
-                  : "text-ink hover:bg-paperDim"
-              }`}
-            >
-              <Icono size={16} />
-              {etiqueta}
-            </button>
-          ))}
+          <div className="md:hidden">
+            {OPCIONES.map(({ id, etiqueta, Icono }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  onCambiar(id);
+                  setAbierto(false);
+                }}
+                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  activa === id
+                    ? "bg-gold/10 text-gold"
+                    : "text-ink hover:bg-paperDim"
+                }`}
+              >
+                <Icono size={16} />
+                {etiqueta}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={onAlternarModoOscuro}

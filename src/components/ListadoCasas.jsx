@@ -42,9 +42,6 @@ export default function ListadoCasas({
         </div>
       )}
       <FormularioCasa onAgregar={onAgregarCasa} />
-      {casas.length > 0 && (
-        <FormularioMovimiento onAgregar={onAgregarMovimiento} casas={casas} />
-      )}
 
       {casas.length === 0 ? (
         <p className="text-center text-sm text-slate py-10">
@@ -57,6 +54,9 @@ export default function ListadoCasas({
             {casas.length === 1 ? "casa registrada" : "casas registradas"}
           </p>
 
+          {/* Cada tarjeta va cerrada por defecto (logo, nombre y bankroll,
+              lo único que importa de un vistazo); el resto de datos, el
+              historial y el botón de añadir movimiento se ven al abrirla. */}
           <div className="space-y-3">
             {casas.map((casa) => {
               const bankroll =
@@ -69,99 +69,110 @@ export default function ListadoCasas({
               return (
                 <div
                   key={casa.nombre}
-                  className="bg-surface border border-line rounded-xl p-3 sm:p-4 space-y-3"
+                  className="bg-surface border border-line rounded-xl overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCasaExpandida(expandida ? null : casa.nombre)}
+                    className="w-full flex items-center gap-3 p-3 sm:p-4 text-left hover:bg-paperDim transition-colors"
+                  >
                     {casa.logo ? (
                       <img
                         src={casa.logo}
                         alt=""
-                        className="w-16 h-16 rounded-lg object-contain shrink-0"
+                        className="w-12 h-12 rounded-lg object-contain shrink-0"
                       />
                     ) : (
-                      <Landmark size={32} className="text-gold shrink-0" />
+                      <Landmark size={28} className="text-gold shrink-0" />
                     )}
-                    <p className="flex-1 min-w-0 text-base font-bold text-ink">
+                    <p className="flex-1 min-w-0 text-base font-bold text-ink truncate">
                       {casa.nombre}
                     </p>
-                    <button
-                      onClick={() => setCasaABorrar(casa.nombre)}
-                      aria-label={`Borrar ${casa.nombre}`}
-                      className="text-slate hover:text-lose transition-colors p-1.5 shrink-0"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 border-t border-line">
-                    <div>
-                      <p className="text-xs text-slate">Ingresos</p>
-                      <p className="font-mono text-sm font-medium text-ink">
-                        {bankroll.ingresos.toFixed(2)}€
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate">Retiradas</p>
-                      <p className="font-mono text-sm font-medium text-ink">
-                        {bankroll.retiradas.toFixed(2)}€
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate">Beneficio</p>
-                      <p
-                        className={`font-mono text-sm font-bold ${
-                          bankroll.beneficio > 0
-                            ? "text-win"
-                            : bankroll.beneficio < 0
-                            ? "text-lose"
-                            : "text-ink"
-                        }`}
-                      >
-                        {bankroll.beneficio > 0 ? "+" : ""}
-                        {bankroll.beneficio.toFixed(2)}€
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate">Bankroll actual</p>
-                      <p className="font-mono text-sm font-bold text-goldDark">
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-slate">Bankroll</p>
+                      <p className="font-mono text-base font-bold text-goldDark">
                         {bankroll.bankroll.toFixed(2)}€
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate">ROI</p>
-                      <p
-                        className={`font-mono text-sm font-medium ${
-                          bankroll.roiPct > 0
-                            ? "text-win"
-                            : bankroll.roiPct < 0
-                            ? "text-lose"
-                            : "text-ink"
-                        }`}
-                      >
-                        {bankroll.roiPct > 0 ? "+" : ""}
-                        {bankroll.roiPct.toFixed(2)}%
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setCasaExpandida(expandida ? null : casa.nombre)}
-                    className="flex items-center gap-1 text-xs font-medium text-gold hover:underline"
-                  >
-                    {expandida ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {expandida
-                      ? "Ocultar movimientos"
-                      : `Ver movimientos (${movimientosCasa.length})`}
+                    {expandida ? (
+                      <ChevronUp size={18} className="text-slate shrink-0" />
+                    ) : (
+                      <ChevronDown size={18} className="text-slate shrink-0" />
+                    )}
                   </button>
 
                   {expandida && (
-                    <div className="pt-3 border-t border-line">
-                      <ListaMovimientos
-                        movimientos={movimientosCasa}
+                    <div className="px-3 sm:px-4 pb-4 space-y-4 border-t border-line pt-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                          <p className="text-xs text-slate">Ingresos</p>
+                          <p className="font-mono text-sm font-medium text-ink">
+                            {bankroll.ingresos.toFixed(2)}€
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate">Retiradas</p>
+                          <p className="font-mono text-sm font-medium text-ink">
+                            {bankroll.retiradas.toFixed(2)}€
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate">Beneficio</p>
+                          <p
+                            className={`font-mono text-sm font-bold ${
+                              bankroll.beneficio > 0
+                                ? "text-win"
+                                : bankroll.beneficio < 0
+                                ? "text-lose"
+                                : "text-ink"
+                            }`}
+                          >
+                            {bankroll.beneficio > 0 ? "+" : ""}
+                            {bankroll.beneficio.toFixed(2)}€
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate">ROI</p>
+                          <p
+                            className={`font-mono text-sm font-medium ${
+                              bankroll.roiPct > 0
+                                ? "text-win"
+                                : bankroll.roiPct < 0
+                                ? "text-lose"
+                                : "text-ink"
+                            }`}
+                          >
+                            {bankroll.roiPct > 0 ? "+" : ""}
+                            {bankroll.roiPct.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+
+                      <FormularioMovimiento
+                        onAgregar={onAgregarMovimiento}
                         casas={casas}
-                        onBorrar={onBorrarMovimiento}
+                        casaFija={casa.nombre}
                       />
+
+                      <div>
+                        <p className="text-xs font-medium text-slate mb-2">
+                          Movimientos ({movimientosCasa.length})
+                        </p>
+                        <ListaMovimientos
+                          movimientos={movimientosCasa}
+                          casas={casas}
+                          onBorrar={onBorrarMovimiento}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCasaABorrar(casa.nombre)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-lose hover:underline"
+                      >
+                        <Trash2 size={14} />
+                        Borrar esta casa
+                      </button>
                     </div>
                   )}
                 </div>

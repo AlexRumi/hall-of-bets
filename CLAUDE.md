@@ -97,6 +97,20 @@ abordan una a una, sin saltar, cada una probada antes de pasar a la siguiente.
   `utils/trofeos.js`, `utils/copiaSeguridad.js` y la navegación. La tabla
   `promociones` de Supabase NO se ha borrado (por si hubiera datos
   históricos), simplemente ya no se usa desde la app.
+- **Navegación responsive** (no era una fase del guion, petición directa
+  tras varias vueltas de diseño): en escritorio (`md:` de Tailwind, ≥768px),
+  `src/components/SidebarNavegacion.jsx` es una barra lateral fija a la
+  izquierda con las 9 secciones; en móvil, `src/components/
+  BarraInferiorMovil.jsx` es una barra fija abajo con 5 accesos (Apuestas
+  despliega Apuestas/Entretenimiento al tocarlo; Informe/Casas/Ajustes solo
+  están en el menú ☰). El nombre "Hall of Bets" vive en la cabecera (verde
+  felt, igual en las dos versiones), no en la barra lateral, para no
+  repetirlo. En escritorio el ☰ ya no lista secciones (eso ya está en la
+  barra lateral): solo modo oscuro/claro y cerrar sesión, que en escritorio
+  además se ven como iconos sueltos en la cabecera sin necesidad de abrir
+  el ☰. La barra lateral se estira exactamente a la altura de la fila
+  sidebar+contenido (`md:flex-1` en esa fila) — usar una altura fija ahí
+  metía scroll de más.
 
 ## Convenciones de código
 

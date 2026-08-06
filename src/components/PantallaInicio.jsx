@@ -1,23 +1,15 @@
-import { Landmark, PieChart } from "lucide-react";
 import { calcularEstadisticas, calcularRachaActual } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import ListaApuestas from "./ListaApuestas";
 
-// Apuestas y Entretenimiento no están aquí: ya son las pestañas de arriba,
-// repetirlas como acceso rápido era redundante. Estos dos sí, porque solo
-// se llega a ellos desde el menú ☰.
-const ACCESOS = [
-  { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
-  { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
-];
-
 // Resumen de bienvenida: solo compone datos que ya se calculan en otras
 // secciones (ningún cálculo nuevo), combinando Apuestas + Entretenimiento.
+// Sin accesos directos a otras secciones: todo eso vive en el menú ☰, para
+// no repetirlo aquí también.
 export default function PantallaInicio({
   apuestas,
   casas,
   movimientos,
-  onCambiarSeccion,
   onMarcarResultado,
   onBorrar,
   onEditar,
@@ -74,20 +66,6 @@ export default function PantallaInicio({
           <p className="text-xs text-slate">Racha actual</p>
           <p className="font-mono text-xl font-bold text-gold">{racha}</p>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 justify-center">
-        {ACCESOS.map(({ id, etiqueta, Icono }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onCambiarSeccion(id)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border border-line text-ink hover:bg-paperDim transition-colors"
-          >
-            <Icono size={15} />
-            {etiqueta}
-          </button>
-        ))}
       </div>
 
       <div>

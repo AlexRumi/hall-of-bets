@@ -17,7 +17,7 @@ export default function NotificacionTrofeo({ trofeo, onCerrar }) {
     <button
       type="button"
       onClick={onCerrar}
-      className="fixed bottom-6 left-1/2 z-50 flex items-center gap-3 bg-felt text-paper border border-gold rounded-xl px-4 py-3 shadow-lg"
+      className="fixed bottom-20 md:bottom-6 left-1/2 z-50 flex items-center gap-3 bg-felt text-paper border border-gold rounded-xl px-4 py-3 shadow-lg"
       style={{ animation: "trofeo-entrada 0.25s ease-out forwards" }}
     >
       <Icono size={22} className="text-gold shrink-0" />
