@@ -1,13 +1,18 @@
 import { calcularEstadisticas } from "../utils/apuestas";
+import BotonInfoConcepto from "./BotonInfoConcepto";
 
 export default function EstadisticasApuestas({ apuestas }) {
   const stats = calcularEstadisticas(apuestas);
 
   const tiles = [
     { etiqueta: "Nº apuestas", valor: stats.numApuestas },
-    { etiqueta: "Media apostada", valor: `${stats.stakeMedio.toFixed(2)}€` },
-    { etiqueta: "Cuota media", valor: stats.cuotaMedia.toFixed(2) },
-    { etiqueta: "Total apostado", valor: `${stats.stakeTotalReal.toFixed(2)}€` },
+    { etiqueta: "Media apostada", valor: `${stats.stakeMedio.toFixed(2)}€`, conceptoId: "stake" },
+    { etiqueta: "Cuota media", valor: stats.cuotaMedia.toFixed(2), conceptoId: "cuota" },
+    {
+      etiqueta: "Total apostado",
+      valor: `${stats.stakeTotalReal.toFixed(2)}€`,
+      conceptoId: "stake",
+    },
     {
       etiqueta: "En juego",
       valor: `${stats.stakePendienteReal.toFixed(2)}€`,
@@ -32,16 +37,20 @@ export default function EstadisticasApuestas({ apuestas }) {
           : stats.yieldPct < 0
           ? "text-lose"
           : "text-ink",
+      conceptoId: "yield",
     },
-    { etiqueta: "% Acierto", valor: `${stats.aciertoPct.toFixed(0)}%` },
+    { etiqueta: "% Acierto", valor: `${stats.aciertoPct.toFixed(0)}%`, conceptoId: "win-rate" },
   ];
 
   return (
     <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {tiles.map(({ etiqueta, valor, color }) => (
+        {tiles.map(({ etiqueta, valor, color, conceptoId }) => (
           <div key={etiqueta}>
-            <p className="text-xs text-slate">{etiqueta}</p>
+            <p className="text-xs text-slate flex items-center gap-1">
+              {etiqueta}
+              <BotonInfoConcepto conceptoId={conceptoId} etiqueta={etiqueta} />
+            </p>
             <p className={`font-mono text-lg font-medium ${color ?? "text-ink"}`}>
               {valor}
             </p>

@@ -65,7 +65,14 @@ export default function MenuSecundario({
       </button>
 
       {abierto && (
-        <div className="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-xl shadow-lg overflow-hidden z-50 text-left">
+        <>
+          {/* Fondo difuminado para que el menú destaque más sobre el
+              contenido de detrás, en claro y en oscuro. */}
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
+            onClick={() => setAbierto(false)}
+          />
+          <div className="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-xl shadow-lg overflow-hidden z-50 text-left">
           <div className="md:hidden">
             {OPCIONES.map(({ id, etiqueta, Icono }) => (
               <button
@@ -105,7 +112,8 @@ export default function MenuSecundario({
             <LogOut size={16} />
             Cerrar sesión
           </button>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -23,10 +23,10 @@ function TooltipPersonalizado({ active, payload }) {
   const { fecha, acumulado } = payload[0].payload;
 
   return (
-    <div className="bg-surface border border-line rounded-lg px-3 py-2 shadow-sm">
-      <p className="text-xs text-slate">{formatearFecha(fecha)}</p>
+    <div className="bg-surface border border-gold/40 rounded-lg px-4 py-3 shadow-lg shadow-black/20">
+      <p className="text-sm text-slate">{formatearFecha(fecha)}</p>
       <p
-        className={`font-mono text-sm font-medium ${
+        className={`font-mono text-lg font-bold ${
           acumulado > 0 ? "text-win" : acumulado < 0 ? "text-lose" : "text-ink"
         }`}
       >
@@ -69,7 +69,7 @@ export default function GraficoBeneficio({ apuestas }) {
               width={50}
             />
             <ReferenceLine y={0} stroke={COLORES.texto} strokeDasharray="3 3" />
-            <Tooltip content={<TooltipPersonalizado />} />
+            <Tooltip content={<TooltipPersonalizado />} position={{ y: 70 }} />
             <Line
               type="monotone"
               dataKey="acumulado"

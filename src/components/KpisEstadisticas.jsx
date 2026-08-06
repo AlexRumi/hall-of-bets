@@ -1,5 +1,6 @@
 import { calcularEstadisticas, filtrarPorPeriodo } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
+import BotonInfoConcepto from "./BotonInfoConcepto";
 
 // KPIs combinando Apuestas + Entretenimiento. "ROI" (beneficio / ingresos
 // depositados) es distinto de "Yield" (beneficio / stake apostado) — la app
@@ -28,15 +29,22 @@ export default function KpisEstadisticas({ apuestas, movimientos }) {
       etiqueta: "ROI",
       valor: `${roiPct > 0 ? "+" : ""}${roiPct.toFixed(2)}%`,
       color: roiPct > 0 ? "text-win" : roiPct < 0 ? "text-lose" : "text-ink",
+      conceptoId: "roi",
     },
     {
       etiqueta: "Yield",
       valor: `${stats.yieldPct > 0 ? "+" : ""}${stats.yieldPct.toFixed(2)}%`,
       color: stats.yieldPct > 0 ? "text-win" : stats.yieldPct < 0 ? "text-lose" : "text-ink",
+      conceptoId: "yield",
     },
-    { etiqueta: "% Acierto", valor: `${stats.aciertoPct.toFixed(0)}%` },
-    { etiqueta: "Bankroll", valor: `${bankrollTotal.toFixed(2)}€`, color: "text-goldDark" },
-    { etiqueta: "Cuota media", valor: stats.cuotaMedia.toFixed(2) },
+    { etiqueta: "% Acierto", valor: `${stats.aciertoPct.toFixed(0)}%`, conceptoId: "win-rate" },
+    {
+      etiqueta: "Bankroll",
+      valor: `${bankrollTotal.toFixed(2)}€`,
+      color: "text-goldDark",
+      conceptoId: "bankroll",
+    },
+    { etiqueta: "Cuota media", valor: stats.cuotaMedia.toFixed(2), conceptoId: "cuota" },
     { etiqueta: "Nº apuestas", valor: stats.numApuestas },
     {
       etiqueta: "Beneficio (mes)",
@@ -53,9 +61,12 @@ export default function KpisEstadisticas({ apuestas, movimientos }) {
   return (
     <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {tiles.map(({ etiqueta, valor, color }) => (
+        {tiles.map(({ etiqueta, valor, color, conceptoId }) => (
           <div key={etiqueta}>
-            <p className="text-xs text-slate">{etiqueta}</p>
+            <p className="text-xs text-slate flex items-center gap-1">
+              {etiqueta}
+              <BotonInfoConcepto conceptoId={conceptoId} etiqueta={etiqueta} />
+            </p>
             <p className={`font-mono text-lg font-medium ${color ?? "text-ink"}`}>
               {valor}
             </p>

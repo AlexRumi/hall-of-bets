@@ -64,11 +64,11 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
    los inputs con gris nativo del navegador, arreglado esta vez fijando su
    fondo/color explícitamente en `src/index.css`)
 
-## Fases futuras (20-22)
+## Fases futuras (21-22)
 
-Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 20-22
-(Academia con contenido, gamificación de Trofeos, arquitectura futura). Se
-abordan una a una, sin saltar, cada una probada antes de pasar a la siguiente.
+Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 21-22
+(gamificación de Trofeos, arquitectura futura). Se abordan una a una, sin
+saltar, cada una probada antes de pasar a la siguiente.
 
 - Fase 17 (reorganización de navegación: Inicio, Ajustes, Academia, fusión
   de Ingresos dentro de Casas de apuestas) — ✅ hecho.
@@ -111,6 +111,20 @@ abordan una a una, sin saltar, cada una probada antes de pasar a la siguiente.
   el ☰. La barra lateral se estira exactamente a la altura de la fila
   sidebar+contenido (`md:flex-1` en esa fila) — usar una altura fija ahí
   metía scroll de más.
+- Fase 20 (Academia) — ✅ hecho. 12 conceptos (Stake, ROI, Yield, Bankroll,
+  Cuota, Win Rate, EV, Probabilidad implícita, Cash Out, Void, Apuesta
+  simple, Apuesta combinada) en `src/utils/academia.js` (datos puros),
+  mostrados en `Academia.jsx` como acordeón con buscador. Botón ℹ️
+  (`BotonInfoConcepto.jsx`) junto a las métricas que tienen concepto
+  asociado en `KpisEstadisticas.jsx`, `EstadisticasApuestas.jsx` e
+  `InformeProfesional.jsx` — no en `ListadoCasas.jsx`, para no repetir
+  cableado por poco beneficio. Al pulsar un ℹ️, `App.jsx` guarda qué
+  concepto abrir (`conceptoAcademia`) y navega a Academia, que hace scroll
+  hasta él y avisa cuando ya lo ha mostrado para no forzar scroll en
+  visitas normales. Las fórmulas de ROI y Yield en el contenido están
+  escritas para coincidir exactamente con cómo las calcula la app — si se
+  cambia una fórmula en `utils/apuestas.js` o `utils/movimientos.js`, hay
+  que actualizar el texto correspondiente en `utils/academia.js`.
 
 ## Convenciones de código
 

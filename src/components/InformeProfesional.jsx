@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { calcularEstadisticas, filtrarPorPeriodo } from "../utils/apuestas";
 import { avanzarPeriodo } from "../utils/estadisticas";
+import BotonInfoConcepto from "./BotonInfoConcepto";
 
 const BANKROLLS = [
   { id: "apuestas", etiqueta: "Apuestas" },
@@ -136,12 +137,14 @@ export default function InformeProfesional({ apuestas }) {
       anterior: statsAnterior.yieldPct,
       texto: `${statsActual.yieldPct > 0 ? "+" : ""}${statsActual.yieldPct.toFixed(2)}%`,
       color: statsActual.yieldPct > 0 ? "text-win" : statsActual.yieldPct < 0 ? "text-lose" : "text-ink",
+      conceptoId: "yield",
     },
     {
       etiqueta: "% Acierto",
       actual: statsActual.aciertoPct,
       anterior: statsAnterior.aciertoPct,
       texto: `${statsActual.aciertoPct.toFixed(0)}%`,
+      conceptoId: "win-rate",
     },
   ];
 
@@ -214,9 +217,12 @@ export default function InformeProfesional({ apuestas }) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {tiles.map(({ etiqueta, actual, anterior, texto, color }) => (
+          {tiles.map(({ etiqueta, actual, anterior, texto, color, conceptoId }) => (
             <div key={etiqueta}>
-              <p className="text-xs text-slate">{etiqueta}</p>
+              <p className="text-xs text-slate flex items-center gap-1">
+                {etiqueta}
+                <BotonInfoConcepto conceptoId={conceptoId} etiqueta={etiqueta} />
+              </p>
               <p className={`font-mono text-lg font-medium ${color ?? "text-ink"}`}>
                 {texto}
               </p>

@@ -134,8 +134,10 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     <div className="min-h-screen bg-fondo text-ink md:flex md:flex-col">
       {/* Mismo verde felt en móvil y escritorio (el color del menú lateral
           también, para que no choque un blanco ahí). Móvil: banner grande,
-          centrado. Escritorio: barra más fina, nombre a la izquierda. */}
-      <div className="relative bg-felt px-5 sm:px-8 py-8 md:py-4">
+          centrado. Escritorio: barra más fina, nombre a la izquierda.
+          "sticky" para que se quede fija arriba al hacer scroll, igual que
+          el menú lateral. */}
+      <div className="sticky top-0 z-30 bg-felt px-5 sm:px-8 py-8 md:py-4">
         <div className="flex items-center md:justify-between">
           <button
             type="button"

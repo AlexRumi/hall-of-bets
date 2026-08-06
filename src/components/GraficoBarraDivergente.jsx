@@ -11,15 +11,21 @@ import {
 } from "recharts";
 import { coloresGrafico } from "../utils/coloresGrafico";
 
-function crearTooltip(formatoValor) {
+// Con muchas barras (p.ej. muchas casas de apuestas) el tooltip grande tapa
+// más gráfica, así que se hace algo más compacto en cuanto hay más de 4.
+function crearTooltip(formatoValor, compacto) {
   return function TooltipPersonalizado({ active, payload }) {
     if (!active || !payload?.length) return null;
     const { etiqueta, valor } = payload[0].payload;
     return (
-      <div className="bg-surface border border-line rounded-lg px-3 py-2 shadow-sm">
-        <p className="text-xs text-slate">{etiqueta}</p>
+      <div
+        className={`bg-surface border border-gold/40 rounded-lg shadow-lg shadow-black/20 ${
+          compacto ? "px-3 py-2" : "px-4 py-3"
+        }`}
+      >
+        <p className={compacto ? "text-xs text-slate" : "text-sm text-slate"}>{etiqueta}</p>
         <p
-          className={`font-mono text-sm font-medium ${
+          className={`font-mono font-bold ${compacto ? "text-base" : "text-lg"} ${
             valor > 0 ? "text-win" : valor < 0 ? "text-lose" : "text-ink"
           }`}
         >
@@ -42,7 +48,8 @@ export default function GraficoBarraDivergente({
   mensajeVacio = "Todavía no hay datos suficientes.",
 }) {
   const colores = coloresGrafico(oscuro);
-  const TooltipPersonalizado = crearTooltip(formatoValor);
+  const compacto = datos.length > 4;
+  const TooltipPersonalizado = crearTooltip(formatoValor, compacto);
 
   return (
     <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
@@ -70,7 +77,11 @@ export default function GraficoBarraDivergente({
               width={60}
             />
             <ReferenceLine y={0} stroke={colores.texto} />
-            <Tooltip content={<TooltipPersonalizado />} />
+            <Tooltip
+              content={<TooltipPersonalizado />}
+              cursor={false}
+              position={{ y: compacto ? 90 : 75 }}
+            />
             <Bar dataKey="valor" radius={[4, 4, 4, 4]}>
               {datos.map((d, i) => (
                 <Cell key={i} fill={d.valor >= 0 ? colores.win : colores.lose} />

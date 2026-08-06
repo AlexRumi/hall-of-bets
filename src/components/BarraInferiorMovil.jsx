@@ -42,6 +42,12 @@ export default function BarraInferiorMovil({ activa, onCambiar }) {
     return () => document.removeEventListener("mousedown", manejarClickFuera);
   }, []);
 
+  // Si se cambia de sección por otra vía (p.ej. el menú ☰), este desplegable
+  // se queda abierto de fondo si no se cierra explícitamente al navegar.
+  useEffect(() => {
+    setMenuApuestasAbierto(false);
+  }, [activa]);
+
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-felt border-t border-gold/30 flex items-stretch">
       {/* Apuestas: al tocarlo, desplegar Apuestas/Entretenimiento */}
@@ -58,7 +64,7 @@ export default function BarraInferiorMovil({ activa, onCambiar }) {
         </button>
 
         {menuApuestasAbierto && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44 bg-surface border border-line rounded-xl shadow-lg overflow-hidden text-left">
+          <div className="absolute bottom-full left-0 mb-2 w-44 bg-surface border border-line rounded-xl shadow-lg overflow-hidden text-left">
             <button
               type="button"
               onClick={() => {
