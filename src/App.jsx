@@ -3,7 +3,6 @@ import { Ticket, Trash2 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
-import { usePromociones } from "./hooks/usePromociones";
 import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
@@ -17,17 +16,15 @@ import SelectorPeriodo from "./components/SelectorPeriodo";
 import RachaActual from "./components/RachaActual";
 import EstadisticasApuestas from "./components/EstadisticasApuestas";
 import GraficoBeneficio from "./components/GraficoBeneficio";
-import PromocionesSection from "./components/PromocionesSection";
 import SalaTrofeos from "./components/SalaTrofeos";
 import ListadoCasas from "./components/ListadoCasas";
-import InformeMensual from "./components/InformeMensual";
+import InformeProfesional from "./components/InformeProfesional";
 import EstadisticasDashboard from "./components/EstadisticasDashboard";
 import Ajustes from "./components/Ajustes";
 import Academia from "./components/Academia";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
-import SelectorModoOscuro from "./components/SelectorModoOscuro";
 import { useModoOscuro } from "./hooks/useModoOscuro";
 
 const ETIQUETAS_SECCION = {
@@ -79,20 +76,10 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     borrarTodoBankroll,
   } = useApuestas(userId);
   const { casas, agregarCasa, borrarCasa } = useCasas(userId);
-  const {
-    promociones,
-    agregarPromocion,
-    resolverPromocion,
-    borrarPromocion,
-    borrarTodasPromociones,
-  } = usePromociones(userId);
-  // Los trofeos se calculan sobre todas las apuestas y promociones, sin
-  // importar la sección que se esté viendo, para que la notificación de un
-  // trofeo nuevo pueda saltar aunque no estés en la pestaña de Trofeos.
-  const { trofeos, notificacion, cerrarNotificacion } = useTrofeos(
-    apuestas,
-    promociones
-  );
+  // Los trofeos se calculan sobre todas las apuestas, sin importar la
+  // sección que se esté viendo, para que la notificación de un trofeo nuevo
+  // pueda saltar aunque no estés en la pestaña de Trofeos.
+  const { trofeos, notificacion, cerrarNotificacion } = useTrofeos(apuestas);
   const {
     movimientos,
     agregarMovimiento,
@@ -114,8 +101,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   }, [apuestas, casas, agregarCasa]);
 
   // Cada bankroll (Apuestas/Entretenimiento) es independiente: solo se ven
-  // (y se añaden) apuestas de la pestaña activa. Promociones no es un
-  // bankroll: tiene su propia sección aparte, sin stake, cuota ni yield.
+  // (y se añaden) apuestas de la pestaña activa.
   const apuestasDelBankroll = apuestas.filter(
     (apuesta) => apuesta.categoria === seccionActiva
   );
@@ -145,11 +131,12 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   return (
     <div className="min-h-screen bg-fondo text-ink">
       <div className="relative bg-felt px-5 sm:px-8 py-8 text-center">
-        <div className="absolute top-4 right-4 sm:top-5 sm:right-6 flex items-center gap-1">
-          <SelectorModoOscuro oscuro={oscuro} onAlternar={onAlternarModoOscuro} />
+        <div className="absolute top-4 right-4 sm:top-5 sm:right-6">
           <MenuSecundario
             activa={seccionActiva}
             onCambiar={setSeccionActiva}
+            oscuro={oscuro}
+            onAlternarModoOscuro={onAlternarModoOscuro}
             onCerrarSesion={onCerrarSesion}
           />
         </div>
@@ -220,15 +207,6 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
               onCancelar={() => setConfirmandoBorrarTodo(false)}
             />
           </>
-        ) : seccionActiva === "promociones" ? (
-          <PromocionesSection
-            casas={casas}
-            promociones={promociones}
-            agregarPromocion={agregarPromocion}
-            resolverPromocion={resolverPromocion}
-            borrarPromocion={borrarPromocion}
-            borrarTodasPromociones={borrarTodasPromociones}
-          />
         ) : seccionActiva === "trofeos" ? (
           <SalaTrofeos trofeos={trofeos} />
         ) : seccionActiva === "casas" ? (
@@ -243,7 +221,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
             onBorrarTodosMovimientos={borrarTodosMovimientos}
           />
         ) : seccionActiva === "informe" ? (
-          <InformeMensual apuestas={apuestas} />
+          <InformeProfesional apuestas={apuestas} />
         ) : seccionActiva === "ajustes" ? (
           <Ajustes userId={userId} />
         ) : seccionActiva === "academia" ? (

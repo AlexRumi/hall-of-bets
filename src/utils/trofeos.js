@@ -33,7 +33,7 @@ function hayRemontada(apuestasCronologicas) {
 }
 
 // Todos los datos que necesitan los trofeos, calculados una sola vez.
-function construirContexto(apuestas, promociones) {
+function construirContexto(apuestas) {
   const cronologicas = ordenarCronologicamente(apuestas);
   const ganadas = apuestas.filter((a) => a.resultado === "ganada");
   const decididas = apuestas.filter(
@@ -49,7 +49,6 @@ function construirContexto(apuestas, promociones) {
       0
     ),
     combinadaGanada: ganadas.some((a) => a.selecciones.length > 1),
-    promoCompletada: promociones.some((p) => p.estado === "completada"),
     remontada: hayRemontada(cronologicas),
     aciertoPerfecto:
       decididas.length >= 10 && decididas.every((a) => a.resultado === "ganada"),
@@ -142,13 +141,6 @@ export const TROFEOS = [
     comprobar: (ctx) => ctx.combinadaGanada,
   },
   {
-    id: "primera-promo",
-    nombre: "Cazapromos",
-    descripcion: "Completa tu primera promoción",
-    tier: "bronce",
-    comprobar: (ctx) => ctx.promoCompletada,
-  },
-  {
     id: "remontada",
     nombre: "El fénix",
     descripcion:
@@ -184,8 +176,8 @@ export const TROFEOS = [
   },
 ];
 
-export function evaluarTrofeos(apuestas, promociones) {
-  const contexto = construirContexto(apuestas, promociones);
+export function evaluarTrofeos(apuestas) {
+  const contexto = construirContexto(apuestas);
   return TROFEOS.map((trofeo) => ({
     ...trofeo,
     conseguido: trofeo.comprobar(contexto),

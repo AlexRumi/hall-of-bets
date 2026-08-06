@@ -187,7 +187,7 @@ export default function ListadoCasas({
       <ConfirmDialog
         abierto={casaABorrar !== null}
         titulo="Borrar casa"
-        mensaje={`Vas a borrar "${casaABorrar}" del registro de casas. Las apuestas y promociones que ya tengas con esta casa no se ven afectadas, pero si quieres volver a añadirla (por ejemplo, para ponerle un logo) tendrás que escribir el nombre de nuevo.`}
+        mensaje={`Vas a borrar "${casaABorrar}" del registro de casas. Las apuestas que ya tengas con esta casa no se ven afectadas, pero si quieres volver a añadirla (por ejemplo, para ponerle un logo) tendrás que escribir el nombre de nuevo.`}
         onConfirmar={() => {
           onBorrarCasa(casaABorrar);
           setCasaABorrar(null);

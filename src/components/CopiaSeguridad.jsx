@@ -122,7 +122,7 @@ export default function CopiaSeguridad({ userId }) {
       <ConfirmDialog
         abierto={archivoPendiente !== null}
         titulo="Importar copia de seguridad"
-        mensaje="Esto sustituye todos los datos actuales (apuestas, casas, promociones y movimientos) por los del archivo. Esta acción no se puede deshacer."
+        mensaje="Esto sustituye todos los datos actuales (apuestas, casas y movimientos) por los del archivo. Esta acción no se puede deshacer."
         textoConfirmar="Importar y sobrescribir"
         onConfirmar={confirmarImportacion}
         onCancelar={() => setArchivoPendiente(null)}
@@ -131,7 +131,7 @@ export default function CopiaSeguridad({ userId }) {
       <ConfirmDialog
         abierto={confirmandoMigracion}
         titulo="Subir historial a la nube"
-        mensaje="Se van a subir a Supabase las apuestas, casas, promociones y movimientos guardados en este navegador. Hazlo solo una vez para no duplicar datos."
+        mensaje="Se van a subir a Supabase las apuestas, casas y movimientos guardados en este navegador. Hazlo solo una vez para no duplicar datos."
         textoConfirmar="Subir"
         onConfirmar={confirmarMigracion}
         onCancelar={() => setConfirmandoMigracion(false)}

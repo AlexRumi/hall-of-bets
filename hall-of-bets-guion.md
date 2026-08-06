@@ -6,7 +6,7 @@ Registro personal de apuestas. Hoja de ruta para construirlo poco a poco en VS C
 
 ## 1. Concepto
 
-App personal (no multiusuario) para registrar apuestas deportivas, separando bankroll serio de entretenimiento, con sección aparte para promociones, bot de lectura de fotos, combinadas reales, estadísticas y una sala de trofeos.
+App personal (no multiusuario) para registrar apuestas deportivas, separando bankroll serio de entretenimiento, con bot de lectura de fotos, combinadas reales, estadísticas y una sala de trofeos.
 
 ---
 
@@ -25,9 +25,9 @@ App personal (no multiusuario) para registrar apuestas deportivas, separando ban
 
 **Organización**
 - [x] Dos bankrolls independientes: **Apuestas (serias)** y **Entretenimiento**, cada uno con su propio stake, yield y gráfica
-- [x] Sección **Promociones** aparte (no cuenta en el yield general): tipo, valor, estado, beneficio neto
+- [x] ~~Sección Promociones aparte~~ — se construyó y luego se eliminó (ver sección 8): una promoción se registra como una apuesta normal
 - [x] Ver apuestas filtradas por casa de apuestas específica
-- [x] Filtro adicional por tipo de fondos (Todas / Real / Freebet) — el freebet no tiene sección propia, es un filtro dentro de Apuestas y Entretenimiento (la promo que originó el crédito ya se registra en Promociones)
+- [x] Filtro adicional por tipo de fondos (Todas / Real / Freebet) — el freebet no tiene sección propia, es un filtro dentro de Apuestas y Entretenimiento
 
 **Estadísticas**
 - [x] Stake medio, cuota media, yield
@@ -42,7 +42,6 @@ App personal (no multiusuario) para registrar apuestas deportivas, separando ban
   - 5 apuestas ganadas seguidas
   - 10 apuestas ganadas seguidas
   - Primera combinada acertada
-  - Primera promoción convertida en beneficio
   - (Ampliable con el tiempo — no hace falta definirlos todos ahora)
 
 **Base**
@@ -90,7 +89,7 @@ App personal (no multiusuario) para registrar apuestas deportivas, separando ban
 
 **apuestas**: id, user_id, fecha, casa, stake, tipo_fondos (`real`/`freebet`), categoria (`apuestas`/`entretenimiento`), deporte (texto libre, lista cerrada en el formulario; nullable — de antes de la fase 18), resultado (`pendiente`/`ganada`/`perdida`/`nula`), selecciones (jsonb: una o varias filas — más de una es una combinada), creado_en
 
-**promociones**: id, user_id, fecha, casa, tipo, valor, estado, beneficio_neto, creado_en
+**promociones**: id, user_id, fecha, casa, tipo, valor, estado, beneficio_neto, creado_en — tabla sin usar desde la app (ver sección 8, eliminación de Promociones); no se ha borrado por si hay datos históricos
 
 **movimientos**: id, user_id, fecha, casa, tipo (`ingreso`/`retirada`), cantidad, creado_en
 
@@ -125,9 +124,11 @@ Paleta felt/dorado/paper ya fijada en `tailwind.config.js` / `src/index.css` (co
 
 Bloque grande, iniciado tras confirmar que Supabase funciona y sincroniza bien. Requisitos generales para todas estas fases: no cambiar la identidad visual (paleta felt/dorado), no romper funcionalidades existentes, mantener la app funcional al terminar cada fase, no avanzar a la siguiente sin la anterior terminada y probada. Antes de cada fase, Claude Code debe analizar qué componentes tocar y reutilizar el máximo código posible.
 
-17. ✅ **Reorganización de arquitectura y navegación** — hecho. Sin lógica nueva, solo estructura. Navegación final: 🏠 Inicio · 🎟 Apuestas · 🎲 Entretenimiento · 🎁 Promociones (se mantuvo como pestaña, no se movió) · 📊 Estadísticas · 🏦 Casas de apuestas · 📅 Informe · 🏆 Trofeos · ⚙️ Ajustes · 🎓 Academia (vacía por ahora). "Inicio" nuevo, con resumen (bankroll total, beneficio, yield, racha), últimas 5 apuestas y accesos rápidos, reutilizando datos ya existentes. "Casas de apuestas" pasa a incluir saldo, ingresado, retirado, beneficio e historial de movimientos por casa (se fusionó ahí la antigua sección "Ingresos y retiradas"). "Ajustes" nuevo, con la copia de seguridad movida ahí. "Estadísticas" es de momento la antigua sección "Desglose" renombrada (mismo componente) — la fase 18 la sustituye por el dashboard completo. "Promociones" se mantuvo como pestaña principal, pendiente de revisión futura, sin tocar su lógica.
+17. ✅ **Reorganización de arquitectura y navegación** — hecho. Sin lógica nueva, solo estructura. Navegación final en ese momento: 🏠 Inicio · 🎟 Apuestas · 🎲 Entretenimiento · 🎁 Promociones (se mantuvo como pestaña, no se movió) · 📊 Estadísticas · 🏦 Casas de apuestas · 📅 Informe · 🏆 Trofeos · ⚙️ Ajustes · 🎓 Academia (vacía por ahora). "Inicio" nuevo, con resumen (bankroll total, beneficio, yield, racha), últimas 5 apuestas y accesos rápidos, reutilizando datos ya existentes. "Casas de apuestas" pasa a incluir saldo, ingresado, retirado, beneficio e historial de movimientos por casa (se fusionó ahí la antigua sección "Ingresos y retiradas"). "Ajustes" nuevo, con la copia de seguridad movida ahí. "Estadísticas" es de momento la antigua sección "Desglose" renombrada (mismo componente) — la fase 18 la sustituye por el dashboard completo. "Promociones" se mantuvo como pestaña principal en esta fase, pendiente de revisión futura — ver más abajo, se acabó eliminando del todo.
 18. ✅ **Dashboard de Estadísticas** — hecho. KPIs (beneficio, ROI, yield, % acierto, bankroll, cuota media, nº apuestas, beneficio del mes en curso), evolución (línea, con filtros 7d/30d/90d/año/histórico), beneficio mensual (barras), distribución Ganada/Perdida/Nula/Pendiente (donut, con los colores de estado que ya usa toda la app), rachas (actual/mejor/peor) + mejor y peor apuesta, ROI por deporte, ROI por casa, beneficio por rango de cuotas, calendario de actividad (estilo GitHub, último año), insights automáticos (frases sueltas, sin narrativa — eso es la fase 19). Añadido el campo **deporte** al registrar apuestas: lista cerrada — Fútbol, Baloncesto, Tenis, eSports, Otro (por defecto Fútbol); las apuestas de antes de este campo cuentan como "Otro". Un matiz de nomenclatura: "ROI por casa" es ROI de verdad (beneficio/ingresos, como en Casas de apuestas); "ROI por deporte" es en realidad yield (beneficio/stake), porque los ingresos van ligados a la casa, no al deporte — no hay forma de calcular un ROI real por deporte.
-19. **Informe profesional** — deja de ser una copia de Estadísticas: resumen del periodo, conclusiones e interpretación automática, comparación con periodos anteriores, arquitectura preparada para exportar a PDF (sin implementar el export todavía si no es trivial).
+19. ✅ **Informe profesional** — hecho. Deja de ser una lista de todos los meses: ahora muestra un periodo a la vez (Semana/Mes/Año, elegible), con flechas ← → para navegar hacia atrás (no se puede ir al futuro), comparación automática con el periodo anterior (badges ▲/▼ % en cada KPI) y un bloque de "Conclusiones" con 2-3 frases generadas por plantilla a partir de esos números (sin narrativa compleja ni IA). Mantiene el selector de bankroll Apuestas/Entretenimiento. Sigue siendo un único bloque de contenido estático (sin pestañas ocultas), para que exportar a PDF más adelante sea sencillo — el export en sí no se implementó.
+**Eliminación de Promociones** (no era una fase del guion, decisión directa tras la fase 19): la sección se quita del todo, no se fusiona en ningún otro sitio. Razón: una promoción es al final una apuesta más — se registra igual, opcionalmente con "Promoción" en el texto del evento, sin necesidad de un modelo de datos ni una pantalla propia. Se borran `PromocionesSection.jsx`, `FormularioPromocion.jsx`, `PromocionItem.jsx`, `ListaPromociones.jsx`, `usePromociones.js` y el trofeo "Cazapromos"; la pestaña desaparece de la navegación. La tabla `promociones` de Supabase se queda tal cual, sin usarse, por si hubiera datos históricos que consultar alguna vez a mano.
+
 20. **Academia** — sección educativa nueva. Conceptos mínimos: Stake, ROI, Yield, Bankroll, Cuota, Win Rate, EV, Probabilidad implícita, Cash Out, Void, Apuesta simple, Apuesta combinada. Cada uno con definición, explicación sencilla, fórmula, ejemplo e interpretación, errores frecuentes. Botón ℹ️ junto a cada métrica importante de la app que enlace al concepto correspondiente. El contenido lo redacta Claude Code — conviene una lectura rápida tuya al terminar (no reescribir, solo detectar algo que suene raro), ya que un error aquí es un dato mal explicado, no un fallo visual.
 21. **Gamificación de Trofeos** — añade progreso, categorías, niveles, porcentaje completado a la sala ya existente. Prepara (sin implementar todavía) la arquitectura para objetivos personales futuros.
 22. **Optimización y arquitectura futura** — sin implementar: APIs deportivas, IA para registrar apuestas, autocompletado de partidos, sincronización automática de resultados (todo esto sigue descartado por coste, ver sección 3). Solo dejar la arquitectura preparada para que puedan añadirse más adelante sin fricción, evitando decisiones de código que las dificulten.

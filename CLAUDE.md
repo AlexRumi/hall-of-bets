@@ -30,7 +30,6 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
   - El stake en freebet NO cuenta en el stake total ni en el yield — se muestra aparte
   - Filtro de tipo de fondos (Todas / Real / Freebet) dentro de cada sección, no es una sección propia
 - Dos bankrolls independientes: **Apuestas** y **Entretenimiento**, cada uno con sus propias estadísticas
-- Sección **Promociones** aparte (no cuenta en el yield general): tipo, valor, estado, beneficio neto
 - Casas de apuestas gestionables (añadir nuevas), filtro por casa
 - Estadísticas: nº apuestas, stake medio, cuota media, stake total, beneficio, yield, % acierto
 - Estadísticas y gráfico por periodo: hoy / semana / mes / año
@@ -50,7 +49,7 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 5. Casas de apuestas y filtros (incluyendo filtro de tipo de fondos) — ✅ hecho
 6. Estadísticas y gráfica de beneficio acumulado — ✅ hecho
 7. Estadísticas por periodo + racha de victorias — ✅ hecho
-8. Promociones — ✅ hecho
+8. Promociones — ✅ hecho, luego eliminada por completo (ver "Fases futuras" más abajo)
 9. Borrado individual y total con confirmación — ✅ hecho
 10. Sala de trofeos — ✅ hecho
 11. Bot de fotos (backend propio) — ❌ omitida por coste recurrente de la API de IA; no retomar salvo que se pida explícitamente
@@ -59,18 +58,17 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 ## Backlog pendiente (orden — no saltar sin que se pida)
 
 1. Listado de registro de casas — ✅ hecho
-2. Informe mensual — ✅ hecho
+2. Informe mensual — ✅ hecho (sustituido por el Informe profesional de la fase 19)
 3. Desglose por casa de apuestas — ✅ hecho
 4. Modo oscuro/claro — ✅ hecho (segundo intento; el primero se descartó por
    los inputs con gris nativo del navegador, arreglado esta vez fijando su
    fondo/color explícitamente en `src/index.css`)
 
-## Fases futuras (19-22)
+## Fases futuras (20-22)
 
-Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 19-22
-(Informe profesional, Academia con contenido, gamificación de Trofeos,
-arquitectura futura). Se abordan una a una, sin saltar, cada una probada
-antes de pasar a la siguiente.
+Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 20-22
+(Academia con contenido, gamificación de Trofeos, arquitectura futura). Se
+abordan una a una, sin saltar, cada una probada antes de pasar a la siguiente.
 
 - Fase 17 (reorganización de navegación: Inicio, Ajustes, Academia, fusión
   de Ingresos dentro de Casas de apuestas) — ✅ hecho.
@@ -83,6 +81,22 @@ antes de pasar a la siguiente.
   porque recharts necesita colores reales (hex), no puede leer las
   variables CSS del modo oscuro — si se añade una gráfica nueva, hay que
   usar esos colores para que también funcione en oscuro.
+- Fase 19 (Informe profesional) — ✅ hecho. `InformeMensual.jsx` (lista
+  plana de meses) se sustituyó por `InformeProfesional.jsx`: un periodo a
+  la vez (semana/mes/año, navegable con flechas — no se puede ir al
+  futuro), comparado automáticamente con el periodo anterior, con
+  conclusiones en texto generadas por plantilla (no IA). Pensado como un
+  único bloque estático para poder añadir exportar a PDF más adelante sin
+  reestructurar; el export en sí no está implementado.
+- **Promociones, eliminada por completo** (no era una fase del guion, fue
+  petición directa). Ya no existe como sección independiente: una promoción
+  se registra ahora como una apuesta normal (opcionalmente con "Promoción"
+  en el texto del evento). Se borraron `PromocionesSection.jsx`,
+  `FormularioPromocion.jsx`, `PromocionItem.jsx`, `ListaPromociones.jsx` y
+  `usePromociones.js`, el trofeo "Cazapromos", y toda referencia en
+  `utils/trofeos.js`, `utils/copiaSeguridad.js` y la navegación. La tabla
+  `promociones` de Supabase NO se ha borrado (por si hubiera datos
+  históricos), simplemente ya no se usa desde la app.
 
 ## Convenciones de código
 

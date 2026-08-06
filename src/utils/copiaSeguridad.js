@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 
-const TABLAS = ["apuestas", "casas", "promociones", "movimientos"];
+const TABLAS = ["apuestas", "casas", "movimientos"];
 
 // Claves antiguas de localStorage, de antes de mover los datos a Supabase.
 // Se usan solo para poder subir una vez el historial que ya hubiera en este
@@ -8,7 +8,6 @@ const TABLAS = ["apuestas", "casas", "promociones", "movimientos"];
 const CLAVES_LOCALSTORAGE = {
   apuestas: "hall-of-bets:apuestas",
   casas: "hall-of-bets:casas",
-  promociones: "hall-of-bets:promociones",
   movimientos: "hall-of-bets:movimientos",
 };
 
@@ -56,22 +55,6 @@ export async function migrarLocalStorageASupabase(userId) {
     const { error } = await supabase
       .from("casas")
       .insert(casas.map((c) => ({ user_id: userId, nombre: c.nombre, logo: c.logo })));
-    if (error) throw error;
-  }
-
-  const promociones = leerLocalStorage(CLAVES_LOCALSTORAGE.promociones);
-  if (promociones.length > 0) {
-    const { error } = await supabase.from("promociones").insert(
-      promociones.map((p) => ({
-        user_id: userId,
-        fecha: p.fecha,
-        casa: p.casa,
-        tipo: p.tipo,
-        valor: Number(p.valor),
-        estado: p.estado,
-        beneficio_neto: p.beneficioNeto,
-      }))
-    );
     if (error) throw error;
   }
 

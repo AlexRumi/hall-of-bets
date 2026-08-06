@@ -1,11 +1,12 @@
-import { Wallet, Gamepad2, Landmark, PieChart } from "lucide-react";
+import { Landmark, PieChart } from "lucide-react";
 import { calcularEstadisticas, calcularRachaActual } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import ListaApuestas from "./ListaApuestas";
 
+// Apuestas y Entretenimiento no están aquí: ya son las pestañas de arriba,
+// repetirlas como acceso rápido era redundante. Estos dos sí, porque solo
+// se llega a ellos desde el menú ☰.
 const ACCESOS = [
-  { id: "apuestas", etiqueta: "Apuestas", Icono: Wallet },
-  { id: "entretenimiento", etiqueta: "Entretenimiento", Icono: Gamepad2 },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
 ];

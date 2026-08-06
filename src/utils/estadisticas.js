@@ -125,3 +125,13 @@ export function filtrarPorVentana(apuestas, ventana, referencia = new Date()) {
 
   return apuestas.filter((a) => fechaLocal(a.fecha) >= inicio);
 }
+
+// Mueve una fecha ±1 semana/mes/año. Sirve tanto para las flechas de
+// navegación del Informe como para calcular a qué periodo anterior comparar.
+export function avanzarPeriodo(granularidad, fecha, direccion) {
+  const nueva = new Date(fecha);
+  if (granularidad === "semana") nueva.setDate(nueva.getDate() + 7 * direccion);
+  if (granularidad === "mes") nueva.setMonth(nueva.getMonth() + direccion);
+  if (granularidad === "anio") nueva.setFullYear(nueva.getFullYear() + direccion);
+  return nueva;
+}

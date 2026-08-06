@@ -7,6 +7,8 @@ import {
   Trophy,
   Settings,
   GraduationCap,
+  Sun,
+  Moon,
   LogOut,
 } from "lucide-react";
 
@@ -22,7 +24,15 @@ const OPCIONES = [
 // Secciones que no dependen del bankroll activo (Apuestas/Entretenimiento):
 // se agrupan aparte, en un menú propio, para que no parezcan sub-pestañas
 // de la que esté seleccionada arriba.
-export default function MenuSecundario({ activa, onCambiar, onCerrarSesion }) {
+// El botón de modo oscuro vive aquí dentro (y no suelto en la cabecera)
+// porque en móvil, junto al icono ☰, chocaba con el título "Hall of Bets".
+export default function MenuSecundario({
+  activa,
+  onCambiar,
+  oscuro,
+  onAlternarModoOscuro,
+  onCerrarSesion,
+}) {
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
   const seccionActivaEsGlobal = OPCIONES.some((o) => o.id === activa);
@@ -72,6 +82,14 @@ export default function MenuSecundario({ activa, onCambiar, onCerrarSesion }) {
               {etiqueta}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={onAlternarModoOscuro}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-ink hover:bg-paperDim transition-colors"
+          >
+            {oscuro ? <Sun size={16} /> : <Moon size={16} />}
+            {oscuro ? "Modo claro" : "Modo oscuro"}
+          </button>
           <button
             type="button"
             onClick={() => {

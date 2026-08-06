@@ -64,8 +64,8 @@ export function useCasas(userId) {
     }
   }
 
-  // Borrar una casa del registro no toca las apuestas/promociones ya
-  // guardadas (su campo "casa" es solo texto); si se vuelve a añadir con el
+  // Borrar una casa del registro no toca las apuestas ya guardadas (su
+  // campo "casa" es solo texto); si se vuelve a añadir con el
   // mismo nombre, esas apuestas antiguas recuperan el logo automáticamente.
   async function borrarCasa(nombre) {
     const { error } = await supabase

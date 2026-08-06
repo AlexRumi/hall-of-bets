@@ -12,8 +12,8 @@ function cargarVistos() {
   }
 }
 
-export function useTrofeos(apuestas, promociones) {
-  const trofeos = evaluarTrofeos(apuestas, promociones);
+export function useTrofeos(apuestas) {
+  const trofeos = evaluarTrofeos(apuestas);
   const idsConseguidos = trofeos.filter((t) => t.conseguido).map((t) => t.id);
   const [notificacion, setNotificacion] = useState(null);
 
