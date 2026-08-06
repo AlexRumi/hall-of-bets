@@ -8,6 +8,7 @@ import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import PantallaLogin from "./components/PantallaLogin";
+import PantallaInicio from "./components/PantallaInicio";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
 import SelectorSeccion from "./components/SelectorSeccion";
@@ -21,8 +22,8 @@ import SalaTrofeos from "./components/SalaTrofeos";
 import ListadoCasas from "./components/ListadoCasas";
 import InformeMensual from "./components/InformeMensual";
 import DesgloseCasas from "./components/DesgloseCasas";
-import IngresosSection from "./components/IngresosSection";
-import CopiaSeguridad from "./components/CopiaSeguridad";
+import Ajustes from "./components/Ajustes";
+import Academia from "./components/Academia";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
@@ -98,7 +99,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     borrarMovimiento,
     borrarTodosMovimientos,
   } = useMovimientos(userId);
-  const [seccionActiva, setSeccionActiva] = useState("apuestas");
+  const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
   const [periodo, setPeriodo] = useState("todo");
@@ -166,7 +167,17 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-6">
         <SelectorSeccion activa={seccionActiva} onCambiar={setSeccionActiva} />
 
-        {esBankroll ? (
+        {seccionActiva === "inicio" ? (
+          <PantallaInicio
+            apuestas={apuestas}
+            casas={casas}
+            movimientos={movimientos}
+            onCambiarSeccion={setSeccionActiva}
+            onMarcarResultado={marcarResultado}
+            onBorrar={borrarApuesta}
+            onEditar={editarApuesta}
+          />
+        ) : esBankroll ? (
           <>
             <FormularioApuesta onGuardar={manejarAgregar} casas={casas} />
             <FiltrosApuestas
@@ -227,19 +238,16 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
             onBorrarCasa={borrarCasa}
             movimientos={movimientos}
             apuestas={apuestas}
+            onAgregarMovimiento={agregarMovimiento}
+            onBorrarMovimiento={borrarMovimiento}
+            onBorrarTodosMovimientos={borrarTodosMovimientos}
           />
         ) : seccionActiva === "informe" ? (
           <InformeMensual apuestas={apuestas} />
-        ) : seccionActiva === "ingresos" ? (
-          <IngresosSection
-            casas={casas}
-            movimientos={movimientos}
-            agregarMovimiento={agregarMovimiento}
-            borrarMovimiento={borrarMovimiento}
-            borrarTodosMovimientos={borrarTodosMovimientos}
-          />
-        ) : seccionActiva === "copia" ? (
-          <CopiaSeguridad userId={userId} />
+        ) : seccionActiva === "ajustes" ? (
+          <Ajustes userId={userId} />
+        ) : seccionActiva === "academia" ? (
+          <Academia />
         ) : (
           <DesgloseCasas apuestas={apuestas} casas={casas} />
         )}

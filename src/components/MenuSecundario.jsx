@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Menu,
-  CalendarDays,
   PieChart,
   Landmark,
+  CalendarDays,
   Trophy,
-  Banknote,
-  DatabaseBackup,
+  Settings,
+  GraduationCap,
   LogOut,
 } from "lucide-react";
 
 const OPCIONES = [
-  { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
-  { id: "desglose", etiqueta: "Desglose", Icono: PieChart },
+  { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
-  { id: "ingresos", etiqueta: "Ingresos y retiradas", Icono: Banknote },
+  { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
-  { id: "copia", etiqueta: "Copia de seguridad", Icono: DatabaseBackup },
+  { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
+  { id: "academia", etiqueta: "Academia", Icono: GraduationCap },
 ];
 
 // Secciones que no dependen del bankroll activo (Apuestas/Entretenimiento):

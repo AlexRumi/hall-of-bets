@@ -65,6 +65,15 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
    los inputs con gris nativo del navegador, arreglado esta vez fijando su
    fondo/color explícitamente en `src/index.css`)
 
+## Fases futuras (18-22)
+
+Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 18-22
+(dashboard de Estadísticas, Informe profesional, Academia con contenido,
+gamificación de Trofeos, arquitectura futura). Se abordan una a una, sin
+saltar, cada una probada antes de pasar a la siguiente. La fase 17
+(reorganización de navegación: Inicio, Ajustes, Academia, fusión de
+Ingresos dentro de Casas de apuestas) ya está hecha.
+
 ## Convenciones de código
 
 - Componentes funcionales con hooks, sin clases

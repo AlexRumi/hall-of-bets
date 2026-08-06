@@ -1,6 +1,7 @@
-import { Wallet, Gamepad2, Gift } from "lucide-react";
+import { Home, Wallet, Gamepad2, Gift } from "lucide-react";
 
 const SECCIONES = [
+  { id: "inicio", etiqueta: "Inicio", Icono: Home },
   { id: "apuestas", etiqueta: "Apuestas", Icono: Wallet },
   { id: "entretenimiento", etiqueta: "Entretenimiento", Icono: Gamepad2 },
   { id: "promociones", etiqueta: "Promociones", Icono: Gift },

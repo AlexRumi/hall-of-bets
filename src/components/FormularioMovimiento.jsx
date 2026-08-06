@@ -4,20 +4,22 @@ import CampoCasa from "./CampoCasa";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
-export default function FormularioMovimiento({ onAgregar, casas }) {
+// "casaFija" se usa cuando el formulario se abre desde dentro de la ficha
+// de una casa concreta: no hace falta volver a escribirla ni se puede tocar.
+export default function FormularioMovimiento({ onAgregar, casas, casaFija = null }) {
   const [fecha, setFecha] = useState(hoy());
-  const [casa, setCasa] = useState("");
+  const [casa, setCasa] = useState(casaFija ?? "");
   const [tipo, setTipo] = useState("ingreso");
   const [cantidad, setCantidad] = useState("");
 
   function manejarEnvio(e) {
     e.preventDefault();
-    const casaFinal = casa.trim();
+    const casaFinal = (casaFija ?? casa).trim();
     if (!casaFinal || !cantidad) return;
 
     onAgregar({ fecha, casa: casaFinal, tipo, cantidad });
 
-    setCasa("");
+    setCasa(casaFija ?? "");
     setTipo("ingreso");
     setCantidad("");
     setFecha(hoy());
@@ -44,7 +46,9 @@ export default function FormularioMovimiento({ onAgregar, casas }) {
           />
         </div>
 
-        <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
+        {casaFija === null && (
+          <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
+        )}
 
         <div>
           <label className="block text-xs text-slate mb-1">Tipo</label>

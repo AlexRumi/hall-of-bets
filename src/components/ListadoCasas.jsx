@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Landmark, Trash2 } from "lucide-react";
+import { Landmark, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
+import FormularioMovimiento from "./FormularioMovimiento";
+import ListaMovimientos from "./ListaMovimientos";
 import ConfirmDialog from "./ConfirmDialog";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 
@@ -12,12 +14,22 @@ export default function ListadoCasas({
   onBorrarCasa,
   movimientos,
   apuestas,
+  onAgregarMovimiento,
+  onBorrarMovimiento,
+  onBorrarTodosMovimientos,
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
+  const [casaExpandida, setCasaExpandida] = useState(null);
+  const [confirmandoBorrarMovimientos, setConfirmandoBorrarMovimientos] = useState(false);
   const bankrolls = calcularBankrollPorCasa(movimientos, apuestas);
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
   const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
+
+  function manejarBorrarTodosMovimientos() {
+    onBorrarTodosMovimientos();
+    setConfirmandoBorrarMovimientos(false);
+  }
 
   return (
     <div className="space-y-4">
@@ -30,6 +42,9 @@ export default function ListadoCasas({
         </div>
       )}
       <FormularioCasa onAgregar={onAgregarCasa} />
+      {casas.length > 0 && (
+        <FormularioMovimiento onAgregar={onAgregarMovimiento} casas={casas} />
+      )}
 
       {casas.length === 0 ? (
         <p className="text-center text-sm text-slate py-10">
@@ -46,6 +61,10 @@ export default function ListadoCasas({
             {casas.map((casa) => {
               const bankroll =
                 bankrolls.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
+              const expandida = casaExpandida === casa.nombre;
+              const movimientosCasa = movimientos.filter(
+                (m) => m.casa === casa.nombre
+              );
 
               return (
                 <div
@@ -124,11 +143,45 @@ export default function ListadoCasas({
                       </p>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setCasaExpandida(expandida ? null : casa.nombre)}
+                    className="flex items-center gap-1 text-xs font-medium text-gold hover:underline"
+                  >
+                    {expandida ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {expandida
+                      ? "Ocultar movimientos"
+                      : `Ver movimientos (${movimientosCasa.length})`}
+                  </button>
+
+                  {expandida && (
+                    <div className="pt-3 border-t border-line">
+                      <ListaMovimientos
+                        movimientos={movimientosCasa}
+                        casas={casas}
+                        onBorrar={onBorrarMovimiento}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         </>
+      )}
+
+      {movimientos.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmandoBorrarMovimientos(true)}
+            className="flex items-center gap-1.5 text-xs font-medium text-lose hover:underline"
+          >
+            <Trash2 size={14} />
+            Borrar todos los movimientos
+          </button>
+        </div>
       )}
 
       <ConfirmDialog
@@ -140,6 +193,14 @@ export default function ListadoCasas({
           setCasaABorrar(null);
         }}
         onCancelar={() => setCasaABorrar(null)}
+      />
+
+      <ConfirmDialog
+        abierto={confirmandoBorrarMovimientos}
+        titulo="Borrar todos los movimientos"
+        mensaje={`Vas a borrar los ${movimientos.length} movimientos registrados. Esta acción no se puede deshacer.`}
+        onConfirmar={manejarBorrarTodosMovimientos}
+        onCancelar={() => setConfirmandoBorrarMovimientos(false)}
       />
     </div>
   );
