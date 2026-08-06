@@ -198,27 +198,33 @@ antes de pasar a la siguiente.
   si ganada, roja si perdida, gris si nula, azul si cash out. En
   combinadas, como la app no guarda resultado por selección, las tres
   cuotas comparten el color del resultado final de la apuesta completa.
-  Ronda posterior de ajuste fino: el nombre de la casa baja a `text-sm`
-  (entre las etiquetas pequeñas de Fútbol/Ganada y el evento, que se queda
-  como el más grande), y la fila de Apostado/Cuota total/Beneficio sube de
-  `text-xs` a `text-sm`.
-- **Iconos de la app renovados** (no era una fase del guion, petición
-  directa): `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180×180)
-  y uno nuevo `icon-1024.png` (añadido también a `manifest.json`) — mismo
-  ticket que el badge de la pantalla de carga, pero sobre fondo verde
-  cuadrado liso, sin el aro dorado ni el texto "Hall of Bets" (ese solo va
-  en `splash-badge.png`, que es un archivo aparte).
-- **Pantalla de carga (splash)** (no era una fase del guion, petición
-  directa): `SplashScreen.jsx`, a pantalla completa con fondo `#0A2A20` y
-  el badge `public/splash-badge.png` centrado (distinto del icono limpio
-  de `icon-192.png`/`icon-512.png`/`apple-touch-icon.png`, esos no se han
-  tocado). Solo se muestra en móvil (`esMovil` en `App.jsx`, mismo corte
-  de 768px que el resto de la app) — en escritorio no hace falta. Se queda
-  un mínimo de 1,2s O hasta que terminen de llegar apuestas/casas/
-  movimientos de Supabase, lo que tarde más: los tres hooks (`useApuestas`,
-  `useCasas`, `useMovimientos`) ahora devuelven también `cargando`, y
-  `AppAutenticada` avisa a `App.jsx` (`onDatosListos`) en cuanto los tres
-  terminan. Desaparece con un fundido de 0,5s.
+  Ronda posterior de ajuste fino: el nombre de la casa pasa a pastilla
+  redondeada igual que Fútbol/Ganada/etc. (antes texto suelto en `text-sm`),
+  con un color propio por casa — `utils/colorCasa.js` +
+  `hooks/useColorCasa.js` sacan el tono medio del logo si tiene (con caché
+  por nombre, para no recalcularlo en cada apuesta), o si no lo tiene un
+  color fijo a partir de un hash del nombre. Funciona bien en escritorio;
+  en algún caso concreto en móvil (p.ej. el logo de Betfair) el tono sale
+  distinto al esperado — pendiente de investigar la causa real en móvil
+  antes de tocar el algoritmo otra vez (un primer intento de "arreglo",
+  ponderar por saturación en vez de promediar RGB, se descartó porque en
+  escritorio sí funcionaba bien tal como estaba). La fila de Apostado/Cuota
+  total/Beneficio sube de `text-xs` a 13px (`text-[13px]`).
+- **Iconos de la app renovados, splash propio descartado** (no era una fase
+  del guion, varias vueltas de petición directa): `icon-192.png`,
+  `icon-512.png`, `icon-1024.png` (nuevo, en `manifest.json`) y
+  `apple-touch-icon.png` son el badge con aro dorado, ticket y texto "Hall
+  of Bets", sobre fondo verde cuadrado liso (`#0A2A20`, igual que
+  `background_color` en `manifest.json`) en vez de transparente, para que
+  se vea bien en cualquier contexto. Primero se probó un `SplashScreen.jsx`
+  propio (pantalla de carga a pantalla completa en React, solo en móvil),
+  pero al usar el mismo diseño en el icono ya no aportaba nada — la
+  pantalla de arranque que genera el propio sistema para la PWA instalada
+  (a partir del icono + `background_color` del manifest) hace ese trabajo
+  sola, y tener las dos añadía una transición de más. Se quitó
+  `SplashScreen.jsx`, `splash-badge.png` (quedó redundante con
+  `icon-1024.png`) y el `cargando` que se había añadido a `useApuestas`/
+  `useCasas`/`useMovimientos` solo para esto.
 
 ## Convenciones de código
 

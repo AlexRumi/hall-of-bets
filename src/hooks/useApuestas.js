@@ -24,7 +24,6 @@ function desdeFila(fila) {
 // registra, edita o borra una apuesta desde otro dispositivo.
 export function useApuestas(userId) {
   const [apuestas, setApuestas] = useState([]);
-  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
@@ -35,9 +34,7 @@ export function useApuestas(userId) {
       .select("*")
       .order("creado_en", { ascending: false })
       .then(({ data, error }) => {
-        if (!vivo) return;
-        if (!error) setApuestas(data.map(desdeFila));
-        setCargando(false);
+        if (vivo && !error) setApuestas(data.map(desdeFila));
       });
 
     const canal = supabase
@@ -175,7 +172,6 @@ export function useApuestas(userId) {
 
   return {
     apuestas,
-    cargando,
     agregarApuesta,
     editarApuesta,
     marcarResultado,

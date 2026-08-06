@@ -7,7 +7,6 @@ function desdeFila(fila) {
 
 export function useCasas(userId) {
   const [casas, setCasas] = useState([]);
-  const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     if (!userId) return;
@@ -17,9 +16,7 @@ export function useCasas(userId) {
       .from("casas")
       .select("*")
       .then(({ data, error }) => {
-        if (!vivo) return;
-        if (!error) setCasas(data.map(desdeFila));
-        setCargando(false);
+        if (vivo && !error) setCasas(data.map(desdeFila));
       });
 
     const canal = supabase
@@ -88,5 +85,5 @@ export function useCasas(userId) {
     a.nombre.localeCompare(b.nombre, "es")
   );
 
-  return { casas: casasOrdenadas, cargando, agregarCasa, borrarCasa };
+  return { casas: casasOrdenadas, agregarCasa, borrarCasa };
 }
