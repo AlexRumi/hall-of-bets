@@ -95,17 +95,29 @@ export default function BarraInferiorMovil({ activa, onCambiar }) {
         <BotonBarra key={item.id} {...item} activa={activa} onCambiar={onCambiar} />
       ))}
 
+      {/* Inicio: círculo grande que sobresale por encima de la barra, con
+          un aro del color de fondo de la página para que parezca "flotar"
+          (como en muchas apps de equipos/clubes). */}
       <button
         type="button"
         onClick={() => onCambiar("inicio")}
-        className="flex-1 flex flex-col items-center justify-center py-1.5"
+        className="flex-1 flex flex-col items-center gap-1 pb-2"
       >
         <span
-          className={`flex items-center justify-center w-11 h-11 rounded-full transition-colors ${
-            activa === "inicio" ? "bg-gold text-felt" : "bg-white/10 text-gold"
+          className={`flex items-center justify-center w-14 h-14 -mt-6 rounded-full ring-4 ring-fondo shadow-lg transition-colors ${
+            activa === "inicio"
+              ? "bg-gold text-felt"
+              : "bg-felt text-gold border-2 border-gold/40"
           }`}
         >
-          <Ticket size={22} />
+          <Ticket size={24} />
+        </span>
+        <span
+          className={`text-[11px] font-medium transition-colors ${
+            activa === "inicio" ? "text-gold" : "text-paper/70"
+          }`}
+        >
+          Inicio
         </span>
       </button>
 

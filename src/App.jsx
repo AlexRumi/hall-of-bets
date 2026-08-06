@@ -284,6 +284,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
               <EstadisticasDashboard
                 apuestas={apuestas}
                 movimientos={movimientos}
+                casas={casas}
                 oscuro={oscuro}
               />
             )}
