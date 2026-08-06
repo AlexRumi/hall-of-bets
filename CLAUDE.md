@@ -64,11 +64,11 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
    los inputs con gris nativo del navegador, arreglado esta vez fijando su
    fondo/color explícitamente en `src/index.css`)
 
-## Fases futuras (21-22)
+## Fases futuras (22)
 
-Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 21-22
-(gamificación de Trofeos, arquitectura futura). Se abordan una a una, sin
-saltar, cada una probada antes de pasar a la siguiente.
+Ver `hall-of-bets-guion.md` (sección 8) para el detalle de la fase 22
+(arquitectura futura). Se abordan una a una, sin saltar, cada una probada
+antes de pasar a la siguiente.
 
 - Fase 17 (reorganización de navegación: Inicio, Ajustes, Academia, fusión
   de Ingresos dentro de Casas de apuestas) — ✅ hecho.
@@ -118,13 +118,47 @@ saltar, cada una probada antes de pasar a la siguiente.
   (`BotonInfoConcepto.jsx`) junto a las métricas que tienen concepto
   asociado en `KpisEstadisticas.jsx`, `EstadisticasApuestas.jsx` e
   `InformeProfesional.jsx` — no en `ListadoCasas.jsx`, para no repetir
-  cableado por poco beneficio. Al pulsar un ℹ️, `App.jsx` guarda qué
-  concepto abrir (`conceptoAcademia`) y navega a Academia, que hace scroll
-  hasta él y avisa cuando ya lo ha mostrado para no forzar scroll en
-  visitas normales. Las fórmulas de ROI y Yield en el contenido están
+  cableado por poco beneficio. Al pulsar un ℹ️ se abre un recuadro con la
+  explicación del concepto ahí mismo (`BotonInfoConcepto.jsx` busca el
+  concepto en `CONCEPTOS` y lo muestra en un modal propio) — al principio
+  navegaba a Academia y había que volver, se cambió a este recuadro in-situ
+  por feedback directo. Las fórmulas de ROI y Yield en el contenido están
   escritas para coincidir exactamente con cómo las calcula la app — si se
   cambia una fórmula en `utils/apuestas.js` o `utils/movimientos.js`, hay
   que actualizar el texto correspondiente en `utils/academia.js`.
+- **Pulido de navegación y gráficas** (no era una fase del guion, varias
+  rondas de ajustes directos tras la fase 20): cabecera y menú lateral de
+  escritorio fijos al hacer scroll (`sticky`); menú ☰ móvil con el mismo
+  orden que el lateral, borde dorado y fondo difuminado para destacar en
+  oscuro; tooltips de las 4 gráficas de barras/líneas con borde dorado
+  (`border-gold/40`, no `border-line` — en oscuro el tooltip y la tarjeta
+  comparten `bg-surface` y con `border-line` no se distinguían), tamaño
+  responsive (más pequeño en móvil, `sm:` para el tamaño normal) y versión
+  más compacta si hay más de 4 barras (`GraficoBarraDivergente.jsx`, para
+  cuando hay muchas casas de apuestas). Al cambiar de sección
+  (`seccionActiva` en `App.jsx`) la página vuelve arriba del todo
+  (`window.scrollTo(0, 0)` en un `useEffect`), porque si no se quedaba con
+  el scroll de la sección anterior.
+- **Bankroll disponible al apostar** (no era una fase del guion, petición
+  directa): `FormularioApuesta.jsx` calcula con `calcularBankrollPorCasa`
+  el bankroll de la casa elegida y lo muestra debajo del selector; si está
+  a 0 o el importe lo supera, avisa en rojo. Es solo un aviso, no bloquea
+  el envío — decisión consciente porque el cálculo no descuenta el stake
+  de apuestas todavía pendientes en esa casa, así que a veces no sería
+  exacto. `movimientos` y `apuestas` (la lista completa, sin filtrar) se
+  pasan ahora también a `ListaApuestas.jsx` → `ApuestaItem.jsx`, para que
+  el mismo aviso funcione también al editar una apuesta ya existente.
+- Fase 21 (Gamificación de Trofeos) — ✅ hecho. `utils/trofeos.js`: cada
+  trofeo tiene `categoria` (Volumen/Rachas/Cuotas/Combinadas/Especiales) y,
+  si aplica, una función `progreso(ctx)` que devuelve `{ pct, texto }`
+  (p.ej. "42 / 100 apuestas"); los trofeos ocultos no calculan progreso
+  hasta desbloquearse, para no delatar el objetivo. `SalaTrofeos.jsx`:
+  cabecera con % completado y barra, resumen de conseguidos por nivel
+  (bronce/plata/oro/platino), trofeos agrupados por categoría, y barra de
+  progreso en cada trofeo pendiente que tenga uno. La forma de cada trofeo
+  (id, categoria, tier, comprobar, progreso opcional) está pensada para que
+  un futuro "objetivo personal" del usuario encaje igual sin tocar
+  `SalaTrofeos.jsx` — no implementado, queda para la fase 22.
 
 ## Convenciones de código
 
