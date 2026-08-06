@@ -21,7 +21,7 @@ import PromocionesSection from "./components/PromocionesSection";
 import SalaTrofeos from "./components/SalaTrofeos";
 import ListadoCasas from "./components/ListadoCasas";
 import InformeMensual from "./components/InformeMensual";
-import DesgloseCasas from "./components/DesgloseCasas";
+import EstadisticasDashboard from "./components/EstadisticasDashboard";
 import Ajustes from "./components/Ajustes";
 import Academia from "./components/Academia";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -249,7 +249,11 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
         ) : seccionActiva === "academia" ? (
           <Academia />
         ) : (
-          <DesgloseCasas apuestas={apuestas} casas={casas} />
+          <EstadisticasDashboard
+            apuestas={apuestas}
+            movimientos={movimientos}
+            oscuro={oscuro}
+          />
         )}
       </div>
 

@@ -5,6 +5,7 @@ import CampoCasa from "./CampoCasa";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 const seleccionVacia = () => ({ evento: "", apuesta: "", cuota: "" });
+const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 const seleccionesDesdeApuesta = (apuesta) =>
   apuesta.selecciones.map((s) => ({
     evento: s.evento,
@@ -30,6 +31,7 @@ export default function FormularioApuesta({
   const [tipoFondos, setTipoFondos] = useState(
     apuestaInicial?.tipoFondos ?? "real"
   );
+  const [deporte, setDeporte] = useState(apuestaInicial?.deporte ?? "Fútbol");
   const [selecciones, setSelecciones] = useState(
     apuestaInicial ? seleccionesDesdeApuesta(apuestaInicial) : [seleccionVacia()]
   );
@@ -73,6 +75,7 @@ export default function FormularioApuesta({
       casa: casaFinal,
       stake: cantidadApostada,
       tipoFondos,
+      deporte,
       selecciones: selecciones.map((s) => ({
         evento: s.evento.trim(),
         apuesta: s.apuesta.trim(),
@@ -88,6 +91,7 @@ export default function FormularioApuesta({
     setCasa("");
     setCantidadApostada("");
     setTipoFondos("real");
+    setDeporte("Fútbol");
     setSelecciones([seleccionVacia()]);
     setFecha(hoy());
   }
@@ -128,6 +132,21 @@ export default function FormularioApuesta({
             required
             className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate mb-1">Deporte</label>
+          <select
+            value={deporte}
+            onChange={(e) => setDeporte(e.target.value)}
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink"
+          >
+            {DEPORTES.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

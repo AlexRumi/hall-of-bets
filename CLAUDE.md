@@ -21,7 +21,7 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 ## Funcionalidades objetivo (ver guion completo para detalle)
 
-- Registro de apuestas: fecha, casa, evento (texto libre, sin desplegable de mercados), stake, cuota, resultado
+- Registro de apuestas: fecha, casa, deporte (lista cerrada: Fútbol/Baloncesto/Tenis/eSports/Otro), evento (texto libre, sin desplegable de mercados), stake, cuota, resultado
 - Estado inicial de toda apuesta nueva: **Pendiente**
 - Combinadas: apuesta con varias selecciones ("añadir nueva cuota"); la cuota total es el producto de las cuotas de cada selección
 - Tipo de fondos por apuesta: dinero real / crédito bono (freebet)
@@ -65,14 +65,24 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
    los inputs con gris nativo del navegador, arreglado esta vez fijando su
    fondo/color explícitamente en `src/index.css`)
 
-## Fases futuras (18-22)
+## Fases futuras (19-22)
 
-Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 18-22
-(dashboard de Estadísticas, Informe profesional, Academia con contenido,
-gamificación de Trofeos, arquitectura futura). Se abordan una a una, sin
-saltar, cada una probada antes de pasar a la siguiente. La fase 17
-(reorganización de navegación: Inicio, Ajustes, Academia, fusión de
-Ingresos dentro de Casas de apuestas) ya está hecha.
+Ver `hall-of-bets-guion.md` (sección 8) para el detalle de las fases 19-22
+(Informe profesional, Academia con contenido, gamificación de Trofeos,
+arquitectura futura). Se abordan una a una, sin saltar, cada una probada
+antes de pasar a la siguiente.
+
+- Fase 17 (reorganización de navegación: Inicio, Ajustes, Academia, fusión
+  de Ingresos dentro de Casas de apuestas) — ✅ hecho.
+- Fase 18 (dashboard de Estadísticas) — ✅ hecho. Añade el campo **deporte**
+  a cada apuesta (Fútbol/Baloncesto/Tenis/eSports/Otro, por defecto Fútbol;
+  las apuestas de antes de este campo cuentan como "Otro"). El dashboard
+  vive en `src/components/EstadisticasDashboard.jsx`, con los cálculos
+  nuevos en `src/utils/estadisticas.js` (aparte de `utils/apuestas.js` para
+  no seguir engordándolo). Los gráficos usan `src/utils/coloresGrafico.js`
+  porque recharts necesita colores reales (hex), no puede leer las
+  variables CSS del modo oscuro — si se añade una gráfica nueva, hay que
+  usar esos colores para que también funcione en oscuro.
 
 ## Convenciones de código
 

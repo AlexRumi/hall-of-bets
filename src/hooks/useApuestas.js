@@ -11,6 +11,8 @@ function desdeFila(fila) {
     resultado: fila.resultado,
     categoria: fila.categoria,
     tipoFondos: fila.tipo_fondos,
+    // Las apuestas de antes de tener este campo no tienen deporte asignado.
+    deporte: fila.deporte ?? "Otro",
   };
 }
 
@@ -66,6 +68,7 @@ export function useApuestas(userId) {
     selecciones,
     categoria,
     tipoFondos,
+    deporte,
   }) {
     const { data, error } = await supabase
       .from("apuestas")
@@ -76,6 +79,7 @@ export function useApuestas(userId) {
         stake: Number(stake),
         tipo_fondos: tipoFondos,
         categoria,
+        deporte,
         resultado: "pendiente",
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
@@ -96,7 +100,7 @@ export function useApuestas(userId) {
 
   // Actualiza los datos de una apuesta ya creada (para corregir errores al
   // escribirla), sin tocar su resultado ni el bankroll al que pertenece.
-  async function editarApuesta(id, { fecha, casa, stake, selecciones, tipoFondos }) {
+  async function editarApuesta(id, { fecha, casa, stake, selecciones, tipoFondos, deporte }) {
     const { data, error } = await supabase
       .from("apuestas")
       .update({
@@ -104,6 +108,7 @@ export function useApuestas(userId) {
         casa,
         stake: Number(stake),
         tipo_fondos: tipoFondos,
+        deporte,
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
           evento: seleccion.evento,

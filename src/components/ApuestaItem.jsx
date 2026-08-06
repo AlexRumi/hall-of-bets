@@ -53,6 +53,9 @@ export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorra
           <span className="font-mono text-xs text-slate">{apuesta.fecha}</span>
           <span className="text-xs text-slate">·</span>
           <span className="text-base font-bold text-ink">{apuesta.casa}</span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-paperDim text-slate">
+            {apuesta.deporte}
+          </span>
           {esCombinada && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
               Combinada · {apuesta.selecciones.length} selecciones

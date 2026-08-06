@@ -65,3 +65,5 @@ alter publication supabase_realtime add table public.apuestas;
 alter publication supabase_realtime add table public.casas;
 alter publication supabase_realtime add table public.promociones;
 alter publication supabase_realtime add table public.movimientos;
+alter table public.apuestas add column deporte text;
+
