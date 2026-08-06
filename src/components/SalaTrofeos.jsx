@@ -67,10 +67,12 @@ function FilaTrofeo({ trofeo }) {
             trofeo.conseguido ? "font-semibold text-ink" : "font-medium text-slate"
           }`}
         >
-          {esSecreto ? "???" : trofeo.nombre}
+          {esSecreto ? "Desafío sorpresa" : trofeo.nombre}
         </p>
         <p className="text-xs text-slate">
-          {esSecreto ? "Trofeo secreto" : trofeo.descripcion}
+          {esSecreto
+            ? "Sigue registrando apuestas y usando la app: se desbloqueará solo."
+            : trofeo.descripcion}
         </p>
 
         {trofeo.progreso && !trofeo.conseguido && (
