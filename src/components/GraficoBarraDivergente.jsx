@@ -13,6 +13,8 @@ import { coloresGrafico } from "../utils/coloresGrafico";
 
 // Con muchas barras (p.ej. muchas casas de apuestas) el tooltip grande tapa
 // más gráfica, así que se hace algo más compacto en cuanto hay más de 4.
+// Además, en móvil (pantalla más pequeña) siempre arranca más pequeño y
+// crece un poco a partir de "sm:" (tablet/escritorio).
 function crearTooltip(formatoValor, compacto) {
   return function TooltipPersonalizado({ active, payload }) {
     if (!active || !payload?.length) return null;
@@ -20,14 +22,20 @@ function crearTooltip(formatoValor, compacto) {
     return (
       <div
         className={`bg-surface border border-gold/40 rounded-lg shadow-lg shadow-black/20 ${
-          compacto ? "px-3 py-2" : "px-4 py-3"
+          compacto ? "px-2.5 py-1.5 sm:px-3 sm:py-2" : "px-3 py-2 sm:px-4 sm:py-3"
         }`}
       >
-        <p className={compacto ? "text-xs text-slate" : "text-sm text-slate"}>{etiqueta}</p>
         <p
-          className={`font-mono font-bold ${compacto ? "text-base" : "text-lg"} ${
-            valor > 0 ? "text-win" : valor < 0 ? "text-lose" : "text-ink"
-          }`}
+          className={
+            compacto ? "text-[11px] sm:text-xs text-slate" : "text-xs sm:text-sm text-slate"
+          }
+        >
+          {etiqueta}
+        </p>
+        <p
+          className={`font-mono font-bold ${
+            compacto ? "text-sm sm:text-base" : "text-base sm:text-lg"
+          } ${valor > 0 ? "text-win" : valor < 0 ? "text-lose" : "text-ink"}`}
         >
           {formatoValor(valor)}
         </p>

@@ -75,6 +75,8 @@ export default function PantallaInicio({
         <ListaApuestas
           apuestas={ultimas}
           casas={casas}
+          movimientos={movimientos}
+          todasApuestas={apuestas}
           onMarcarResultado={onMarcarResultado}
           onBorrar={onBorrar}
           onEditar={onEditar}

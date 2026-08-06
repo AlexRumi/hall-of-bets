@@ -23,10 +23,10 @@ function TooltipPersonalizado({ active, payload }) {
   const { fecha, acumulado } = payload[0].payload;
 
   return (
-    <div className="bg-surface border border-gold/40 rounded-lg px-4 py-3 shadow-lg shadow-black/20">
-      <p className="text-sm text-slate">{formatearFecha(fecha)}</p>
+    <div className="bg-surface border border-gold/40 rounded-lg px-3 py-2 sm:px-4 sm:py-3 shadow-lg shadow-black/20">
+      <p className="text-xs sm:text-sm text-slate">{formatearFecha(fecha)}</p>
       <p
-        className={`font-mono text-lg font-bold ${
+        className={`font-mono text-base sm:text-lg font-bold ${
           acumulado > 0 ? "text-win" : acumulado < 0 ? "text-lose" : "text-ink"
         }`}
       >

@@ -18,7 +18,15 @@ const ETIQUETAS_RESULTADO = {
   nula: "Nula",
 };
 
-export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorrar, onEditar }) {
+export default function ApuestaItem({
+  apuesta,
+  casas,
+  movimientos,
+  todasApuestas,
+  onMarcarResultado,
+  onBorrar,
+  onEditar,
+}) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [editando, setEditando] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
@@ -31,6 +39,8 @@ export default function ApuestaItem({ apuesta, casas, onMarcarResultado, onBorra
     return (
       <FormularioApuesta
         casas={casas}
+        movimientos={movimientos}
+        apuestas={todasApuestas}
         apuestaInicial={apuesta}
         onGuardar={(datos) => onEditar(apuesta.id, datos)}
         onCancelar={() => setEditando(false)}

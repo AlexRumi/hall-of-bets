@@ -19,16 +19,18 @@ import {
 // lista solo se ve en móvil (envuelta en md:hidden más abajo). En móvil
 // sigue siendo el menú completo, incluyendo lo que no cabe en la barra
 // inferior (Informe, Casas de apuestas, Ajustes).
+// Mismo orden que SidebarNavegacion.jsx (el menú de escritorio), para que
+// no cambie según dónde se mire.
 const OPCIONES = [
   { id: "inicio", etiqueta: "Inicio", Icono: Home },
   { id: "apuestas", etiqueta: "Apuestas", Icono: Wallet },
   { id: "entretenimiento", etiqueta: "Entretenimiento", Icono: Gamepad2 },
   { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
-  { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
+  { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
-  { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
   { id: "academia", etiqueta: "Academia", Icono: GraduationCap },
+  { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
 ];
 
 // El botón de modo oscuro vive aquí dentro (y no suelto en la cabecera)
@@ -66,13 +68,15 @@ export default function MenuSecundario({
 
       {abierto && (
         <>
-          {/* Fondo difuminado para que el menú destaque más sobre el
-              contenido de detrás, en claro y en oscuro. */}
+          {/* Fondo difuminado (más ligero que antes) + borde dorado en el
+              propio menú: en oscuro, el fondo del menú y el de detrás son
+              casi el mismo color, así que el borde es lo que de verdad lo
+              separa visualmente. */}
           <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
+            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40"
             onClick={() => setAbierto(false)}
           />
-          <div className="absolute right-0 mt-2 w-56 bg-surface border border-line rounded-xl shadow-lg overflow-hidden z-50 text-left">
+          <div className="absolute right-0 mt-2 w-56 bg-surface border border-gold/40 rounded-xl shadow-lg shadow-black/30 overflow-hidden z-50 text-left">
           <div className="md:hidden">
             {OPCIONES.map(({ id, etiqueta, Icono }) => (
               <button

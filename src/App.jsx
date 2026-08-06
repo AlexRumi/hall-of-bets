@@ -94,6 +94,12 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   const [periodo, setPeriodo] = useState("todo");
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
 
+  // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
+  // con el scroll donde estaba la sección anterior).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [seccionActiva]);
+
   // Siembra la lista gestionable de casas con los nombres ya usados en
   // apuestas de fases anteriores, para no perder ese historial.
   useEffect(() => {
@@ -207,7 +213,12 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
               />
             ) : esBankroll ? (
               <>
-                <FormularioApuesta onGuardar={manejarAgregar} casas={casas} />
+                <FormularioApuesta
+                  onGuardar={manejarAgregar}
+                  casas={casas}
+                  movimientos={movimientos}
+                  apuestas={apuestas}
+                />
                 <FiltrosApuestas
                   casas={casas}
                   filtroCasa={filtroCasa}
@@ -235,6 +246,8 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 <ListaApuestas
                   apuestas={apuestasFiltradas}
                   casas={casas}
+                  movimientos={movimientos}
+                  todasApuestas={apuestas}
                   onMarcarResultado={marcarResultado}
                   onBorrar={borrarApuesta}
                   onEditar={editarApuesta}

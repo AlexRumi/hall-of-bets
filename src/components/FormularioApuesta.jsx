@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { PlusCircle, Save, X } from "lucide-react";
+import { PlusCircle, Save, X, AlertTriangle } from "lucide-react";
 import { calcularCuotaTotal } from "../utils/apuestas";
+import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -18,6 +19,8 @@ const seleccionesDesdeApuesta = (apuesta) =>
 // llama a onGuardar en vez de resetear el formulario.
 export default function FormularioApuesta({
   casas,
+  movimientos = [],
+  apuestas = [],
   apuestaInicial = null,
   onGuardar,
   onCancelar,
@@ -37,6 +40,19 @@ export default function FormularioApuesta({
   );
 
   const esCombinada = selecciones.length > 1;
+
+  // Bankroll actual de la casa elegida (mismo cálculo que en Casas de
+  // apuestas: ingresos - retiradas + beneficio de apuestas ya resueltas).
+  // Ojo: no descuenta el stake de apuestas todavía pendientes en esa casa,
+  // igual que el resto de la app.
+  const bankrollCasa = casa
+    ? calcularBankrollPorCasa(movimientos, apuestas).find((b) => b.casa === casa)
+        ?.bankroll ?? 0
+    : null;
+  const stakeNumero = Number(cantidadApostada) || 0;
+  const sinBankroll = bankrollCasa !== null && bankrollCasa <= 0;
+  const superaBankroll =
+    !sinBankroll && bankrollCasa !== null && stakeNumero > bankrollCasa;
 
   // Cuota total en vivo, solo con las selecciones que ya tienen una cuota válida.
   const cuotasValidas = selecciones
@@ -117,7 +133,23 @@ export default function FormularioApuesta({
           />
         </div>
 
-        <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
+        <div>
+          <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
+          {bankrollCasa !== null && (
+            <p
+              className={`mt-1 text-xs flex items-center gap-1 ${
+                sinBankroll || superaBankroll ? "text-lose" : "text-slate"
+              }`}
+            >
+              {(sinBankroll || superaBankroll) && <AlertTriangle size={12} />}
+              {sinBankroll
+                ? "No hay bankroll disponible en esta casa."
+                : superaBankroll
+                ? `El importe supera el bankroll disponible (${bankrollCasa.toFixed(2)}€).`
+                : `Bankroll disponible: ${bankrollCasa.toFixed(2)}€`}
+            </p>
+          )}
+        </div>
 
         <div>
           <label className="block text-xs text-slate mb-1">

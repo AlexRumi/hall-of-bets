@@ -12,9 +12,9 @@ function TooltipPersonalizado({ active, payload }) {
   if (!active || !payload?.length) return null;
   const { etiqueta, cantidad } = payload[0].payload;
   return (
-    <div className="bg-surface border border-gold/40 rounded-lg px-4 py-3 shadow-lg shadow-black/20">
-      <p className="text-sm text-slate">{etiqueta}</p>
-      <p className="font-mono text-lg font-bold text-ink">
+    <div className="bg-surface border border-gold/40 rounded-lg px-3 py-2 sm:px-4 sm:py-3 shadow-lg shadow-black/20">
+      <p className="text-xs sm:text-sm text-slate">{etiqueta}</p>
+      <p className="font-mono text-base sm:text-lg font-bold text-ink">
         {cantidad} {cantidad === 1 ? "apuesta" : "apuestas"}
       </p>
     </div>
