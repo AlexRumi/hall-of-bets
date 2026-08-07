@@ -290,17 +290,22 @@ export default function FormularioApuesta({
           </div>
         </div>
 
-        <div className="sm:col-span-2">
-          <label className="flex items-center gap-2 text-xs text-slate mb-1">
+        <div
+          className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${
+            asegurada ? "border-gold bg-gold/10" : "border-line"
+          }`}
+        >
+          <label className="flex items-center gap-2 text-sm font-semibold text-ink cursor-pointer">
             <input
               type="checkbox"
               checked={asegurada}
               onChange={(e) => setAsegurada(e.target.checked)}
+              className="w-4 h-4 accent-gold"
             />
-            Apuesta asegurada (freebet si pierdo)
+            Apuesta asegurada
           </label>
           {asegurada && (
-            <>
+            <div className="mt-2 space-y-1">
               <input
                 type="number"
                 step="0.01"
@@ -309,41 +314,48 @@ export default function FormularioApuesta({
                 onChange={(e) => setSeguroImporte(e.target.value)}
                 placeholder="Importe del freebet (€)"
                 required
-                className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono"
+                className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
               />
-              <p className="mt-1 text-xs text-slate">
+              <p className="text-xs text-slate">
                 Se añadirá a Bonos pendientes si la marcas como Perdida.
               </p>
-            </>
+            </div>
           )}
         </div>
 
-        <div className="sm:col-span-2">
-          <label className="flex items-center gap-2 text-xs text-slate mb-1">
+        <div
+          className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${
+            conAumento ? "border-gold bg-gold/10" : "border-line"
+          }`}
+        >
+          <label className="flex items-center gap-2 text-sm font-semibold text-ink cursor-pointer">
             <input
               type="checkbox"
               checked={conAumento}
               onChange={(e) => setConAumento(e.target.checked)}
+              className="w-4 h-4 accent-gold"
             />
-            Aumento de cuota (si gano)
+            Aumento de cuota
           </label>
           {conAumento && (
-            <input
-              type="number"
-              step="1"
-              min="1"
-              max="200"
-              value={aumentoPct}
-              onChange={(e) => setAumentoPct(e.target.value)}
-              placeholder="% de aumento"
-              required
-              className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono"
-            />
+            <div className="mt-2">
+              <input
+                type="number"
+                step="1"
+                min="1"
+                max="200"
+                value={aumentoPct}
+                onChange={(e) => setAumentoPct(e.target.value)}
+                placeholder="% de aumento"
+                required
+                className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
+              />
+            </div>
           )}
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 pt-4 border-t border-line">
         <div className="flex items-center justify-between">
           <label className="block text-xs text-slate">Selecciones</label>
           {cuotaTotal !== null && (

@@ -116,6 +116,14 @@ export const CATEGORIAS_MERCADO = [
       { id: "12", texto: (eq) => `Doble oportunidad: ${eq.local} o ${eq.visitante}` },
       { id: "dnb-1", texto: (eq) => `Empate no válido: ${eq.local}` },
       { id: "dnb-2", texto: (eq) => `Empate no válido: ${eq.visitante}` },
+      // Betfair Exchange: se puede apostar a favor (back) o en contra
+      // (lay) de cada resultado, no solo elegir un ganador.
+      { id: "exchange-1-favor", texto: (eq) => `${eq.local} a favor` },
+      { id: "exchange-1-contra", texto: (eq) => `${eq.local} en contra` },
+      { id: "exchange-x-favor", texto: () => "Empate a favor" },
+      { id: "exchange-x-contra", texto: () => "Empate en contra" },
+      { id: "exchange-2-favor", texto: (eq) => `${eq.visitante} a favor` },
+      { id: "exchange-2-contra", texto: (eq) => `${eq.visitante} en contra` },
     ],
   },
   {

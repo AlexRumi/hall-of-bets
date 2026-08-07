@@ -522,6 +522,19 @@ antes de pasar a la siguiente.
     de campos del grid de 2 columnas — quedan una debajo de la otra en
     cualquier tamaño de pantalla. Sus campos numéricos limitan el ancho
     (`sm:max-w-xs`) para no estirarse a todo lo ancho de la fila nueva.
+  - Última ronda: esas dos casillas se veían demasiado simples (solo texto
+    pequeño), así que pasan a ser su propia caja (`border`, `p-3`,
+    `rounded-lg`) que se ilumina en dorado (`border-gold bg-gold/10`)
+    cuando están marcadas — mismo lenguaje visual que ya usa el resto de
+    la app para "esto es una promo/bono" (Freebet, Asegurada, +X% aumento
+    en `ApuestaItem.jsx`, las tarjetas de `bonos_pendientes`...). Y un
+    separador (`border-t`) entre el bloque de datos generales y
+    "Selecciones", que antes quedaban pegados. Las etiquetas de las dos
+    casillas pierden el paréntesis explicativo ("Apuesta asegurada",
+    "Aumento de cuota" a secas) — ya se entienden solas.
+  - "Resultado" gana las 6 apuestas de Betfair Exchange (a favor/en
+    contra de cada resultado — local, empate, visitante — en vez de solo
+    elegir un ganador), al final de esa misma categoría.
 
 ## Convenciones de código
 
