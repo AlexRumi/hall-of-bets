@@ -85,6 +85,7 @@ export default function PantallaInicio({
           onMarcarResultado={onMarcarResultado}
           onBorrar={onBorrar}
           onEditar={onEditar}
+          agrupada={false}
         />
       </div>
     </div>

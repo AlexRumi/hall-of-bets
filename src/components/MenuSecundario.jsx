@@ -1,10 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
-  Menu,
-  Home,
-  Wallet,
-  Gamepad2,
-  PieChart,
   Landmark,
   CalendarDays,
   Trophy,
@@ -15,17 +10,10 @@ import {
   LogOut,
 } from "lucide-react";
 
-// En escritorio la navegación va por SidebarNavegacion.jsx, así que esta
-// lista solo se ve en móvil (envuelta en md:hidden más abajo). En móvil
-// sigue siendo el menú completo, incluyendo lo que no cabe en la barra
-// inferior (Informe, Casas de apuestas, Ajustes).
-// Mismo orden que SidebarNavegacion.jsx (el menú de escritorio), para que
-// no cambie según dónde se mire.
+// Solo lo que no tiene ya su propio botón directo en BarraInferiorMovil.jsx
+// (Inicio/Bets/Statistics tienen el suyo). Mismo orden que
+// SidebarNavegacion.jsx (el menú de escritorio) para las que coinciden.
 const OPCIONES = [
-  { id: "inicio", etiqueta: "Inicio", Icono: Home },
-  { id: "apuestas", etiqueta: "Apuestas", Icono: Wallet },
-  { id: "entretenimiento", etiqueta: "Entretenimiento", Icono: Gamepad2 },
-  { id: "estadisticas", etiqueta: "Estadísticas", Icono: PieChart },
   { id: "informe", etiqueta: "Informe", Icono: CalendarDays },
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
@@ -33,92 +21,81 @@ const OPCIONES = [
   { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
 ];
 
-// El botón de modo oscuro vive aquí dentro (y no suelto en la cabecera)
-// porque en móvil, junto al icono ☰, chocaba con el título "Hall of Bets".
+// Panel "More" de la barra inferior móvil (ver BarraInferiorMovil.jsx):
+// componente controlado, sin botón disparador propio ni estado de
+// abierto/cerrado — lo maneja App.jsx igual que seccionActiva. Aparece como
+// hoja inferior (justo encima de la barra) en vez de dropdown, porque el
+// botón que lo abre ahora vive abajo, no en la cabecera.
 export default function MenuSecundario({
+  abierto,
+  onCerrar,
   activa,
   onCambiar,
   oscuro,
   onAlternarModoOscuro,
   onCerrarSesion,
 }) {
-  const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
 
   useEffect(() => {
+    if (!abierto) return;
     function manejarClickFuera(e) {
       if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
-        setAbierto(false);
+        onCerrar();
       }
     }
     document.addEventListener("mousedown", manejarClickFuera);
     return () => document.removeEventListener("mousedown", manejarClickFuera);
-  }, []);
+  }, [abierto, onCerrar]);
+
+  if (!abierto) return null;
 
   return (
-    <div ref={contenedorRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setAbierto((actual) => !actual)}
-        aria-label="Menú"
-        className="p-2 rounded-full text-paper hover:bg-white/10 transition-colors"
+    <>
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40"
+        onClick={onCerrar}
+      />
+      <div
+        ref={contenedorRef}
+        className="fixed inset-x-3 bottom-[4.5rem] bg-surface border border-gold/40 rounded-xl shadow-lg shadow-black/30 overflow-hidden z-50 text-left"
       >
-        <Menu size={18} />
-      </button>
-
-      {abierto && (
-        <>
-          {/* Fondo difuminado (más ligero que antes) + borde dorado en el
-              propio menú: en oscuro, el fondo del menú y el de detrás son
-              casi el mismo color, así que el borde es lo que de verdad lo
-              separa visualmente. */}
-          <div
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-40"
-            onClick={() => setAbierto(false)}
-          />
-          <div className="absolute right-0 mt-2 w-56 bg-surface border border-gold/40 rounded-xl shadow-lg shadow-black/30 overflow-hidden z-50 text-left">
-          <div className="md:hidden">
-            {OPCIONES.map(({ id, etiqueta, Icono }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  onCambiar(id);
-                  setAbierto(false);
-                }}
-                className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                  activa === id
-                    ? "bg-gold/10 text-gold"
-                    : "text-ink hover:bg-paperDim"
-                }`}
-              >
-                <Icono size={16} />
-                {etiqueta}
-              </button>
-            ))}
-          </div>
+        {OPCIONES.map(({ id, etiqueta, Icono }) => (
           <button
-            type="button"
-            onClick={onAlternarModoOscuro}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-ink hover:bg-paperDim transition-colors"
-          >
-            {oscuro ? <Sun size={16} /> : <Moon size={16} />}
-            {oscuro ? "Modo claro" : "Modo oscuro"}
-          </button>
-          <button
+            key={id}
             type="button"
             onClick={() => {
-              onCerrarSesion();
-              setAbierto(false);
+              onCambiar(id);
+              onCerrar();
             }}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-lose hover:bg-lose/10 transition-colors"
+            className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              activa === id ? "bg-gold/10 text-gold" : "text-ink hover:bg-paperDim"
+            }`}
           >
-            <LogOut size={16} />
-            Cerrar sesión
+            <Icono size={16} />
+            {etiqueta}
           </button>
-          </div>
-        </>
-      )}
-    </div>
+        ))}
+        <button
+          type="button"
+          onClick={onAlternarModoOscuro}
+          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-ink hover:bg-paperDim transition-colors"
+        >
+          {oscuro ? <Sun size={16} /> : <Moon size={16} />}
+          {oscuro ? "Modo claro" : "Modo oscuro"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onCerrarSesion();
+            onCerrar();
+          }}
+          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-lose hover:bg-lose/10 transition-colors"
+        >
+          <LogOut size={16} />
+          Cerrar sesión
+        </button>
+      </div>
+    </>
   );
 }

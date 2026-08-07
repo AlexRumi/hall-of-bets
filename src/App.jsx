@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Ticket, Trash2, LogOut } from "lucide-react";
+import { Ticket, Trash2, LogOut, ChevronLeft } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
@@ -94,6 +94,10 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   const [filtroFondos, setFiltroFondos] = useState("todas");
   const [periodo, setPeriodo] = useState("todo");
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
+  // Solo tienen efecto visual en móvil (ver BarraInferiorMovil.jsx): en
+  // escritorio el formulario está siempre visible y "More" no existe.
+  const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
+  const [masAbierto, setMasAbierto] = useState(false);
 
   // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
   // con el scroll donde estaba la sección anterior).
@@ -130,11 +134,25 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
 
   function manejarAgregar(datos) {
     agregarApuesta({ ...datos, categoria: seccionActiva });
+    setMostrandoFormulario(false);
   }
 
   function manejarBorrarTodo() {
     borrarTodoBankroll(seccionActiva);
     setConfirmandoBorrarTodo(false);
+  }
+
+  // "Bets" y "+" de la barra inferior móvil: si no se estaba ya en un
+  // bankroll, se entra en "apuestas" por defecto (mismo criterio que tenía
+  // antes la pestaña "Registro").
+  function irABets() {
+    if (!esBankroll) setSeccionActiva("apuestas");
+    setMostrandoFormulario(false);
+  }
+
+  function irANuevaApuesta() {
+    if (!esBankroll) setSeccionActiva("apuestas");
+    setMostrandoFormulario(true);
   }
 
   return (
@@ -185,15 +203,6 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
             >
               <LogOut size={18} />
             </button>
-            <div className="md:hidden">
-              <MenuSecundario
-                activa={seccionActiva}
-                onCambiar={setSeccionActiva}
-                oscuro={oscuro}
-                onAlternarModoOscuro={onAlternarModoOscuro}
-                onCerrarSesion={onCerrarSesion}
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -233,52 +242,73 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                     </button>
                   ))}
                 </div>
-                <FormularioApuesta
-                  onGuardar={manejarAgregar}
-                  casas={casas}
-                  movimientos={movimientos}
-                  apuestas={apuestas}
-                />
-                <FiltrosApuestas
-                  casas={casas}
-                  filtroCasa={filtroCasa}
-                  onCambiarCasa={setFiltroCasa}
-                  filtroFondos={filtroFondos}
-                  onCambiarFondos={setFiltroFondos}
-                />
-                <RachaActual racha={racha} />
-                <ObjetivoPersonal
-                  categoria={seccionActiva}
-                  apuestasDelBankroll={apuestasDelBankroll}
-                  objetivo={objetivos.find((o) => o.categoria === seccionActiva) ?? null}
-                  onGuardar={guardarObjetivo}
-                  onBorrar={borrarObjetivo}
-                />
-                <SelectorPeriodo activo={periodo} onCambiar={setPeriodo} />
-                <EstadisticasApuestas apuestas={apuestasPeriodo} />
-                <GraficoBeneficio apuestas={apuestasPeriodo} />
-
-                {apuestasDelBankroll.length > 0 && (
-                  <div className="flex justify-end">
+                {/* Bloque formulario: en escritorio siempre visible (como
+                    antes); en móvil solo cuando se entra desde el "+" de la
+                    barra inferior (ver BarraInferiorMovil.jsx). */}
+                <div className={mostrandoFormulario ? "space-y-4" : "hidden md:block space-y-4"}>
+                  {mostrandoFormulario && (
                     <button
                       type="button"
-                      onClick={() => setConfirmandoBorrarTodo(true)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-lose hover:underline"
+                      onClick={() => setMostrandoFormulario(false)}
+                      className="md:hidden flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
                     >
-                      <Trash2 size={14} />
-                      Borrar todas las apuestas de {ETIQUETAS_SECCION[seccionActiva]}
+                      <ChevronLeft size={16} />
+                      Volver
                     </button>
-                  </div>
-                )}
-                <ListaApuestas
-                  apuestas={apuestasFiltradas}
-                  casas={casas}
-                  movimientos={movimientos}
-                  todasApuestas={apuestas}
-                  onMarcarResultado={marcarResultado}
-                  onBorrar={borrarApuesta}
-                  onEditar={editarApuesta}
-                />
+                  )}
+                  <FormularioApuesta
+                    onGuardar={manejarAgregar}
+                    casas={casas}
+                    movimientos={movimientos}
+                    apuestas={apuestas}
+                  />
+                </div>
+
+                {/* Bloque lista: en móvil, lo que se ve al entrar por "Bets";
+                    se oculta mientras se está en el formulario ("+"). En
+                    escritorio siempre visible, junto al formulario. */}
+                <div className={mostrandoFormulario ? "hidden md:block space-y-6" : "space-y-6"}>
+                  <FiltrosApuestas
+                    casas={casas}
+                    filtroCasa={filtroCasa}
+                    onCambiarCasa={setFiltroCasa}
+                    filtroFondos={filtroFondos}
+                    onCambiarFondos={setFiltroFondos}
+                  />
+                  <RachaActual racha={racha} />
+                  <ObjetivoPersonal
+                    categoria={seccionActiva}
+                    apuestasDelBankroll={apuestasDelBankroll}
+                    objetivo={objetivos.find((o) => o.categoria === seccionActiva) ?? null}
+                    onGuardar={guardarObjetivo}
+                    onBorrar={borrarObjetivo}
+                  />
+                  <SelectorPeriodo activo={periodo} onCambiar={setPeriodo} />
+                  <EstadisticasApuestas apuestas={apuestasPeriodo} />
+                  <GraficoBeneficio apuestas={apuestasPeriodo} />
+
+                  {apuestasDelBankroll.length > 0 && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmandoBorrarTodo(true)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-lose hover:underline"
+                      >
+                        <Trash2 size={14} />
+                        Borrar todas las apuestas de {ETIQUETAS_SECCION[seccionActiva]}
+                      </button>
+                    </div>
+                  )}
+                  <ListaApuestas
+                    apuestas={apuestasFiltradas}
+                    casas={casas}
+                    movimientos={movimientos}
+                    todasApuestas={apuestas}
+                    onMarcarResultado={marcarResultado}
+                    onBorrar={borrarApuesta}
+                    onEditar={editarApuesta}
+                  />
+                </div>
 
                 <ConfirmDialog
                   abierto={confirmandoBorrarTodo}
@@ -321,7 +351,27 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
         </div>
       </div>
 
-      <BarraInferiorMovil activa={seccionActiva} onCambiar={setSeccionActiva} />
+      <div className="md:hidden">
+        <MenuSecundario
+          abierto={masAbierto}
+          onCerrar={() => setMasAbierto(false)}
+          activa={seccionActiva}
+          onCambiar={setSeccionActiva}
+          oscuro={oscuro}
+          onAlternarModoOscuro={onAlternarModoOscuro}
+          onCerrarSesion={onCerrarSesion}
+        />
+      </div>
+
+      <BarraInferiorMovil
+        activa={seccionActiva}
+        onCambiar={setSeccionActiva}
+        onIrABets={irABets}
+        onIrANuevaApuesta={irANuevaApuesta}
+        mostrandoFormulario={mostrandoFormulario}
+        onAbrirMas={() => setMasAbierto(true)}
+        masAbierto={masAbierto}
+      />
     </div>
   );
 }

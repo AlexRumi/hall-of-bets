@@ -58,6 +58,18 @@ export default async function handler(req, res) {
     }
 
     const datos = await respuesta.json();
+
+    // El plan gratuito de API-Football solo deja consultar un rango corto
+    // alrededor de hoy (~ayer/hoy/mañana, comprobado a mano el 2026-08-07:
+    // pedir una fecha fuera de rango responde 200 con datos.errors.plan en
+    // vez de un código de error HTTP — mismo patrón que ya pasó con la key
+    // que falta). Se lo decimos al frontend en vez de devolver una lista
+    // vacía indistinguible de "no hay partidos ese día".
+    if (datos.errors?.plan) {
+      res.status(200).json({ partidos: [], fueraDeRango: true });
+      return;
+    }
+
     const partidos = (datos.response ?? [])
       .filter((p) => LIGAS[p.league.id])
       .map((p) => ({

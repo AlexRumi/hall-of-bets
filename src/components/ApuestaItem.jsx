@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
@@ -30,6 +30,7 @@ export default function ApuestaItem({
   onMarcarResultado,
   onBorrar,
   onEditar,
+  onCerrar,
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
@@ -56,7 +57,17 @@ export default function ApuestaItem({
   }
 
   return (
-    <div className="bg-surface border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+    <div className="relative bg-surface border border-line rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      {onCerrar && (
+        <button
+          type="button"
+          onClick={onCerrar}
+          aria-label="Cerrar"
+          className="absolute top-3 right-3 text-slate hover:text-ink transition-colors p-1"
+        >
+          <X size={18} />
+        </button>
+      )}
       {logoCasa && (
         <img
           src={logoCasa}

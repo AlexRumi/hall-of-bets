@@ -37,7 +37,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   const [paisFiltro, setPaisFiltro] = useState("");
   const [competicionFiltro, setCompeticionFiltro] = useState("");
   const contenedorRef = useRef(null);
-  const partidos = usePartidos(fecha);
+  const { partidos, fueraDeRango } = usePartidos(fecha);
 
   useEffect(() => {
     function manejarClickFuera(e) {
@@ -140,6 +140,16 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
             <p className="px-3 py-2 text-xs text-slate">
               Elige una competición para ver los partidos.
+            </p>
+          </div>
+        )}
+
+        {abierto && !necesitaCompeticion && !modoManual && fueraDeRango && (
+          <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
+            <p className="px-3 py-2 text-xs text-slate">
+              El plan gratuito de API-Football solo permite buscar partidos
+              de ayer, hoy o mañana. Para esta fecha, escribe el evento a
+              mano.
             </p>
           </div>
         )}

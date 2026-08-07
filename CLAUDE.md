@@ -313,6 +313,22 @@ antes de pasar a la siguiente.
     no es la opción inicial). Bélgica (Jupiler Pro League, id 144,
     verificado igual que el resto) se añadió al grupo "Europa" del
     desplegable junto a Portugal y Holanda.
+  - **Límite de fechas del plan gratuito**: comprobado a mano el
+    2026-08-07 llamando a API-Football directamente (no a través de
+    `api/partidos.js`) — el plan gratuito solo deja consultar un rango
+    corto alrededor de hoy (la propia API respondió con
+    `errors.plan: "Free plans do not have access to this date, try from
+    2026-08-06 to 2026-08-08"` al pedir una fecha de hace meses o de
+    dentro de varias semanas). Fuera de ese rango, antes se devolvía
+    silenciosamente una lista vacía, indistinguible de "no hay partidos
+    ese día" — igual que ya pasó una vez con la key que falta (ver más
+    abajo). `api/partidos.js` ahora detecta `datos.errors?.plan` y
+    devuelve `{ partidos: [], fueraDeRango: true }`; `usePartidos.js`
+    guarda ese objeto completo en caché (no solo la lista) y
+    `BuscadorEvento.jsx` avisa con un texto explicando el límite en vez de
+    quedarse en blanco. No hay forma de ampliar este rango sin pasar a un
+    plan de pago de API-Football — para fechas fuera de rango, el evento
+    se sigue pudiendo escribir a mano como siempre.
 - **Aviso de pendientes, PDF del Informe y objetivo personal** (no eran
   fases del guion, tres peticiones directas en la misma sesión):
   - `AvisoPendientes.jsx` (nuevo, mostrado en `PantallaInicio.jsx`): avisa
@@ -342,6 +358,51 @@ antes de pasar a la siguiente.
     `evaluarTrofeos`/`SalaTrofeos.jsx` (aunque la forma de un trofeo en
     `utils/trofeos.js` se pensó para eso): un único objetivo por bankroll
     sin niveles ni desbloqueo no lo necesitaba.
+- **Rediseño de navegación móvil y listado de apuestas** (no era una fase
+  del guion, petición directa inspirada en una captura de la app "Bet
+  Analityx" — colores y modo oscuro se quedan igual, solo cambia la
+  estructura). `BarraInferiorMovil.jsx` pasa de "Inicio como círculo
+  central + pestaña Registro" a 5 accesos tipo Home/Bets/+/Statistics/More:
+  Home (Inicio), Bets (listado del bankroll activo), + (círculo central,
+  ahora dedicado solo a abrir el formulario de nueva apuesta), Statistics,
+  y More (panel con Informe/Casas/Trofeos/Academia/Ajustes). Trofeos y
+  Academia pierden su icono directo en la barra móvil por esto — en
+  escritorio `SidebarNavegacion.jsx` no cambia, los sigue teniendo todos.
+  `MenuSecundario.jsx` pasa de dropdown con botón propio (anclado en la
+  cabecera) a panel controlado por `App.jsx` (props `abierto`/`onCerrar`,
+  estado `masAbierto`), con pinta de hoja inferior
+  (`fixed inset-x-3 bottom-[4.5rem]`) porque ahora lo abre el botón "More"
+  de abajo, no un icono en la cabecera — la cabecera móvil se queda solo
+  con el título. `App.jsx` separa lo que antes era un único bloque
+  (formulario + lista) en dos, con el estado `mostrandoFormulario`: en
+  escritorio da igual (los dos se ven siempre, `md:block`), en móvil solo
+  se ve uno u otro según se haya entrado por "Bets" o por "+" (con un
+  botón "Volver" en el segundo caso).
+  El listado en sí (`ListaApuestas.jsx`) agrupa las apuestas por mes
+  (colapsable, con el beneficio del mes) y por día dentro de cada mes
+  (`utils/agrupado.js`, `agruparPorMesYDia` — aprovecha que las apuestas ya
+  llegan ordenadas de más reciente a más antigua, así que un `Map` basta
+  para no tener que ordenar nada a mano), con un prop `agrupada` para
+  poder desactivar el agrupado en "Últimas apuestas" de
+  `PantallaInicio.jsx` (5 apuestas sueltas no lo necesitan). Cada apuesta
+  se pinta con la tarjeta nueva y compacta `TarjetaApuestaResumen.jsx`
+  (día, evento, un emoji por deporte — no hay iconos de fútbol/baloncesto/
+  tenis en `lucide-react` — y el beneficio/resultado; en `sm:`/`md:` añade
+  casa/cuota/stake, aprovechando el espacio extra en escritorio). Tocar la
+  tarjeta abre el detalle completo en un modal: es `ApuestaItem.jsx` tal
+  cual (sin rediseñar, ya tenía todos los badges y las acciones de marcar
+  resultado/Cash Out/editar/borrar), con un prop nuevo `onCerrar` opcional
+  que le añade una "X" para cerrar el modal.
+  Ronda de ajuste tras probarlo: las etiquetas de la barra inferior estaban
+  en inglés (herencia directa del ejemplo) — se tradujeron a Inicio/
+  Apuestas/Estadísticas/Más. El modal de detalle salía roto en escritorio
+  (el evento se partía letra a letra): `sm:flex-row` en `ApuestaItem.jsx`
+  se activa por el ancho de la ventana, no por el del contenedor, así que
+  con el modal limitado a `max-w-lg` (512px) intentaba el layout "de
+  escritorio" (logo + contenido + botones en fila) en un hueco demasiado
+  estrecho. Se subió el modal a `max-w-3xl` en `ListaApuestas.jsx` —mismo
+  ancho que el contenedor del listado normal, donde ese layout ya
+  funcionaba bien—, sin tocar `ApuestaItem.jsx`.
 
 ## Convenciones de código
 
