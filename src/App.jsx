@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Ticket, Trash2, LogOut, ChevronLeft } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
@@ -98,6 +98,9 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   // escritorio el formulario está siempre visible y "More" no existe.
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
+  // Se comparte con MenuSecundario.jsx para que su "click fuera" no
+  // confunda un click en este mismo botón con un click fuera del panel.
+  const masBotonRef = useRef(null);
 
   // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
   // con el scroll donde estaba la sección anterior).
@@ -360,6 +363,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
           oscuro={oscuro}
           onAlternarModoOscuro={onAlternarModoOscuro}
           onCerrarSesion={onCerrarSesion}
+          botonRef={masBotonRef}
         />
       </div>
 
@@ -369,8 +373,9 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
         onIrABets={irABets}
         onIrANuevaApuesta={irANuevaApuesta}
         mostrandoFormulario={mostrandoFormulario}
-        onAbrirMas={() => setMasAbierto(true)}
+        onAbrirMas={() => setMasAbierto((actual) => !actual)}
         masAbierto={masAbierto}
+        masBotonRef={masBotonRef}
       />
     </div>
   );

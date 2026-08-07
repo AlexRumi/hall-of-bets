@@ -403,6 +403,15 @@ antes de pasar a la siguiente.
   estrecho. Se subió el modal a `max-w-3xl` en `ListaApuestas.jsx` —mismo
   ancho que el contenedor del listado normal, donde ese layout ya
   funcionaba bien—, sin tocar `ApuestaItem.jsx`.
+  El botón "Más" tampoco se cerraba al tocarlo dos veces (solo funcionaba
+  tocando fuera): `onAbrirMas` ponía `masAbierto` siempre a `true` (no
+  alternaba), y además el botón vive en `BarraInferiorMovil.jsx`, fuera
+  del `contenedorRef` de `MenuSecundario.jsx` — su propio `mousedown`
+  contaba como "click fuera" y cerraba el panel un instante antes de que
+  el `onClick` del botón lo volviera a abrir, así que tocarlo no cambiaba
+  nada a la vista. `onAbrirMas` ahora alterna, y `App.jsx` comparte un
+  `masBotonRef` entre `BarraInferiorMovil.jsx` (lo pone en el botón) y
+  `MenuSecundario.jsx` (lo excluye de su detección de "click fuera").
 
 ## Convenciones de código
 

@@ -1,8 +1,9 @@
 import { Home, Wallet, Plus, PieChart, MoreHorizontal } from "lucide-react";
 
-function BotonBarra({ activa, Icono, etiqueta, onClick }) {
+function BotonBarra({ activa, Icono, etiqueta, onClick, botonRef }) {
   return (
     <button
+      ref={botonRef}
       type="button"
       onClick={onClick}
       className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
@@ -30,6 +31,7 @@ export default function BarraInferiorMovil({
   mostrandoFormulario,
   onAbrirMas,
   masAbierto,
+  masBotonRef,
 }) {
   const enBankroll = activa === "apuestas" || activa === "entretenimiento";
 
@@ -75,7 +77,13 @@ export default function BarraInferiorMovil({
         onClick={() => onCambiar("estadisticas")}
       />
 
-      <BotonBarra activa={masAbierto} Icono={MoreHorizontal} etiqueta="Más" onClick={onAbrirMas} />
+      <BotonBarra
+        activa={masAbierto}
+        Icono={MoreHorizontal}
+        etiqueta="Más"
+        onClick={onAbrirMas}
+        botonRef={masBotonRef}
+      />
     </nav>
   );
 }

@@ -34,19 +34,29 @@ export default function MenuSecundario({
   oscuro,
   onAlternarModoOscuro,
   onCerrarSesion,
+  botonRef,
 }) {
   const contenedorRef = useRef(null);
 
   useEffect(() => {
     if (!abierto) return;
     function manejarClickFuera(e) {
-      if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
+      // El botón "More" que abre este panel vive en BarraInferiorMovil.jsx,
+      // fuera de contenedorRef: sin excluirlo aquí, su propio click cuenta
+      // como "click fuera" (el mousedown de ese click llega primero y
+      // cierra el panel; luego el onClick del botón lo volvía a abrir),
+      // así que tocarlo para cerrar no hacía nada visible.
+      if (
+        contenedorRef.current &&
+        !contenedorRef.current.contains(e.target) &&
+        !botonRef?.current?.contains(e.target)
+      ) {
         onCerrar();
       }
     }
     document.addEventListener("mousedown", manejarClickFuera);
     return () => document.removeEventListener("mousedown", manejarClickFuera);
-  }, [abierto, onCerrar]);
+  }, [abierto, onCerrar, botonRef]);
 
   if (!abierto) return null;
 
