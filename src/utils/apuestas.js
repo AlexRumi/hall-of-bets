@@ -10,11 +10,17 @@ export function calcularCuotaTotal(selecciones) {
 // stake puesto; con freebet, el importe recibido es ganancia entera (el stake
 // nunca fue dinero propio).
 export function calcularBeneficio(apuesta) {
-  const { resultado, stake, selecciones, tipoFondos, cashoutImporte } = apuesta;
+  const { resultado, stake, selecciones, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
   if (resultado === "pendiente") return 0;
 
   const cuotaTotal = calcularCuotaTotal(selecciones);
-  if (resultado === "ganada") return stake * (cuotaTotal - 1);
+  if (resultado === "ganada") {
+    const base = stake * (cuotaTotal - 1);
+    // Aumento de cuota: la casa añade un % sobre la ganancia neta, no
+    // sobre el retorno total (comprobado con una captura real de Bet365:
+    // cuota 4,00, 5€, 30% de aumento → 15€ base × 1,30 = 19,50€, no 20€×1,30).
+    return aumentoPct ? base * (1 + aumentoPct / 100) : base;
+  }
   if (resultado === "perdida") return tipoFondos === "freebet" ? 0 : -stake;
   if (resultado === "cashout") {
     return tipoFondos === "freebet" ? cashoutImporte : cashoutImporte - stake;

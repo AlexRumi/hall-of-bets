@@ -6,6 +6,7 @@ import { useCasas } from "./hooks/useCasas";
 import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
+import { useBonosPendientes } from "./hooks/useBonosPendientes";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
@@ -89,6 +90,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     borrarTodosMovimientos,
   } = useMovimientos(userId);
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
+  const { bonos, agregarBono, borrarBono } = useBonosPendientes(userId);
   const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -143,6 +145,24 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   function manejarBorrarTodo() {
     borrarTodoBankroll(seccionActiva);
     setConfirmandoBorrarTodo(false);
+  }
+
+  // Si la apuesta tenía "seguro" (freebet si pierde) y se marca como
+  // Perdida, se crea el bono pendiente solo — sin este paso habría que
+  // añadirlo a mano en Casas de apuestas.
+  function manejarMarcarResultado(id, resultado, cashoutImporte) {
+    marcarResultado(id, resultado, cashoutImporte);
+    if (resultado === "perdida") {
+      const apuesta = apuestas.find((a) => a.id === id);
+      if (apuesta?.seguroFreebetImporte) {
+        agregarBono({
+          casa: apuesta.casa,
+          importe: apuesta.seguroFreebetImporte,
+          motivo: "Apuesta asegurada",
+          fecha: apuesta.fecha,
+        });
+      }
+    }
   }
 
   // "Bets" y "+" de la barra inferior móvil: si no se estaba ya en un
@@ -220,7 +240,8 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 apuestas={apuestas}
                 casas={casas}
                 movimientos={movimientos}
-                onMarcarResultado={marcarResultado}
+                bonos={bonos}
+                onMarcarResultado={manejarMarcarResultado}
                 onBorrar={borrarApuesta}
                 onEditar={editarApuesta}
                 onIrASeccion={setSeccionActiva}
@@ -264,6 +285,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                     casas={casas}
                     movimientos={movimientos}
                     apuestas={apuestas}
+                    bonos={bonos}
                   />
                 </div>
 
@@ -307,7 +329,8 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                     casas={casas}
                     movimientos={movimientos}
                     todasApuestas={apuestas}
-                    onMarcarResultado={marcarResultado}
+                    bonos={bonos}
+                    onMarcarResultado={manejarMarcarResultado}
                     onBorrar={borrarApuesta}
                     onEditar={editarApuesta}
                   />
@@ -333,6 +356,9 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 onAgregarMovimiento={agregarMovimiento}
                 onBorrarMovimiento={borrarMovimiento}
                 onBorrarTodosMovimientos={borrarTodosMovimientos}
+                bonos={bonos}
+                onAgregarBono={agregarBono}
+                onBorrarBono={borrarBono}
               />
             ) : seccionActiva === "informe" ? (
               <InformeProfesional apuestas={apuestas} />

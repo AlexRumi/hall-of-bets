@@ -15,6 +15,9 @@ function desdeFila(fila) {
       fila.cashout_importe === null ? null : Number(fila.cashout_importe),
     // Las apuestas de antes de tener este campo no tienen deporte asignado.
     deporte: fila.deporte ?? "Otro",
+    seguroFreebetImporte:
+      fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
+    aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
   };
 }
 
@@ -71,6 +74,8 @@ export function useApuestas(userId) {
     categoria,
     tipoFondos,
     deporte,
+    seguroFreebetImporte = null,
+    aumentoPct = null,
   }) {
     const { data, error } = await supabase
       .from("apuestas")
@@ -83,6 +88,8 @@ export function useApuestas(userId) {
         categoria,
         deporte,
         resultado: "pendiente",
+        seguro_freebet_importe: seguroFreebetImporte,
+        aumento_pct: aumentoPct,
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
           evento: seleccion.evento,
@@ -105,7 +112,10 @@ export function useApuestas(userId) {
 
   // Actualiza los datos de una apuesta ya creada (para corregir errores al
   // escribirla), sin tocar su resultado ni el bankroll al que pertenece.
-  async function editarApuesta(id, { fecha, casa, stake, selecciones, tipoFondos, deporte }) {
+  async function editarApuesta(
+    id,
+    { fecha, casa, stake, selecciones, tipoFondos, deporte, seguroFreebetImporte = null, aumentoPct = null }
+  ) {
     const { data, error } = await supabase
       .from("apuestas")
       .update({
@@ -114,6 +124,8 @@ export function useApuestas(userId) {
         stake: Number(stake),
         tipo_fondos: tipoFondos,
         deporte,
+        seguro_freebet_importe: seguroFreebetImporte,
+        aumento_pct: aumentoPct,
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
           evento: seleccion.evento,

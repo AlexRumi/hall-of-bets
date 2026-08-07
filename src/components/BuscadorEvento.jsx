@@ -78,7 +78,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             setCompeticionFiltro("");
             setAbierto(true);
           }}
-          className="w-full border border-line rounded-lg px-2 py-1.5 text-xs bg-surface text-ink"
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink"
         >
           <option value="">Seleccionar un país</option>
           <optgroup label="Grandes ligas">
@@ -111,7 +111,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             setAbierto(true);
           }}
           disabled={modoManual}
-          className="w-full border border-line rounded-lg px-2 py-1.5 text-xs bg-surface text-ink disabled:opacity-50"
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink disabled:opacity-50"
         >
           <option value="">Competición</option>
           {competicionesDisponibles.map((competicion) => (

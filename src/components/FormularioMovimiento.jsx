@@ -6,11 +6,12 @@ const hoy = () => new Date().toISOString().slice(0, 10);
 
 // "casaFija" se usa cuando el formulario se abre desde dentro de la ficha
 // de una casa concreta: no hace falta volver a escribirla ni se puede tocar.
-export default function FormularioMovimiento({ onAgregar, casas, casaFija = null }) {
+export default function FormularioMovimiento({ onAgregar, casas, casaFija = null, onAgregarBono }) {
   const [fecha, setFecha] = useState(hoy());
   const [casa, setCasa] = useState(casaFija ?? "");
   const [tipo, setTipo] = useState("ingreso");
   const [cantidad, setCantidad] = useState("");
+  const [bono, setBono] = useState("");
 
   function manejarEnvio(e) {
     e.preventDefault();
@@ -18,10 +19,14 @@ export default function FormularioMovimiento({ onAgregar, casas, casaFija = null
     if (!casaFinal || !cantidad) return;
 
     onAgregar({ fecha, casa: casaFinal, tipo, cantidad });
+    if (tipo === "ingreso" && bono && onAgregarBono) {
+      onAgregarBono({ casa: casaFinal, importe: bono, motivo: "Bono de depósito", fecha });
+    }
 
     setCasa(casaFija ?? "");
     setTipo("ingreso");
     setCantidad("");
+    setBono("");
     setFecha(hoy());
   }
 
@@ -85,6 +90,23 @@ export default function FormularioMovimiento({ onAgregar, casas, casaFija = null
             className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
           />
         </div>
+
+        {tipo === "ingreso" && (
+          <div>
+            <label className="block text-xs text-slate mb-1">
+              Bono recibido con este depósito (€, opcional)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={bono}
+              onChange={(e) => setBono(e.target.value)}
+              placeholder="Ej. 15"
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          </div>
+        )}
       </div>
 
       <button

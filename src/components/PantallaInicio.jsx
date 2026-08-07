@@ -2,15 +2,17 @@ import { calcularEstadisticas, calcularRachaActual, pendientesAntiguas } from ".
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import ListaApuestas from "./ListaApuestas";
 import AvisoPendientes from "./AvisoPendientes";
+import AvisoBonos from "./AvisoBonos";
 
 // Resumen de bienvenida: solo compone datos que ya se calculan en otras
 // secciones (ningún cálculo nuevo), combinando Apuestas + Entretenimiento.
-// El único acceso directo a otra sección es el aviso de pendientes
-// antiguas, porque es una acción, no navegación normal.
+// El único acceso directo a otra sección es el de los avisos (pendientes
+// antiguas, bonos), porque son una acción, no navegación normal.
 export default function PantallaInicio({
   apuestas,
   casas,
   movimientos,
+  bonos,
   onMarcarResultado,
   onBorrar,
   onEditar,
@@ -29,6 +31,7 @@ export default function PantallaInicio({
   return (
     <div className="space-y-4">
       <AvisoPendientes pendientes={pendientes} onIrASeccion={onIrASeccion} />
+      <AvisoBonos bonos={bonos} onIrACasas={() => onIrASeccion("casas")} />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-surface border border-line rounded-xl p-4 text-center">
@@ -82,6 +85,7 @@ export default function PantallaInicio({
           casas={casas}
           movimientos={movimientos}
           todasApuestas={apuestas}
+          bonos={bonos}
           onMarcarResultado={onMarcarResultado}
           onBorrar={onBorrar}
           onEditar={onEditar}

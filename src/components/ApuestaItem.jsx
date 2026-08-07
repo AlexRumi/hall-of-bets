@@ -27,6 +27,7 @@ export default function ApuestaItem({
   casas,
   movimientos,
   todasApuestas,
+  bonos,
   onMarcarResultado,
   onBorrar,
   onEditar,
@@ -49,6 +50,7 @@ export default function ApuestaItem({
         casas={casas}
         movimientos={movimientos}
         apuestas={todasApuestas}
+        bonos={bonos}
         apuestaInicial={apuesta}
         onGuardar={(datos) => onEditar(apuesta.id, datos)}
         onCancelar={() => setEditando(false)}
@@ -97,6 +99,16 @@ export default function ApuestaItem({
           {apuesta.tipoFondos === "freebet" && (
             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
               Freebet
+            </span>
+          )}
+          {apuesta.seguroFreebetImporte > 0 && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
+              Asegurada
+            </span>
+          )}
+          {apuesta.aumentoPct > 0 && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
+              +{apuesta.aumentoPct}% aumento
             </span>
           )}
           <span

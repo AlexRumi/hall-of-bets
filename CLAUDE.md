@@ -412,6 +412,116 @@ antes de pasar a la siguiente.
   nada a la vista. `onAbrirMas` ahora alterna, y `App.jsx` comparte un
   `masBotonRef` entre `BarraInferiorMovil.jsx` (lo pone en el botón) y
   `MenuSecundario.jsx` (lo excluye de su detección de "click fuera").
+- **Bonos pendientes** (no era una fase del guion, petición directa —
+  motivada por promociones tipo "si pierdes, freebet" de Bet365 o "depósito
+  con bono" de Codere). Se descartó automatizarlo desde la apuesta (un
+  checkbox de "seguro" solo cubriría el caso ligado a una apuesta perdida,
+  no el de bono por depósito) y también se descartó resucitar el módulo de
+  Promociones que se eliminó a propósito (ver más abajo). En su lugar,
+  `bonos_pendientes` es un recordatorio suelto e independiente: casa,
+  importe, motivo (texto libre opcional) y fecha, sin ligarlo a ninguna
+  apuesta ni movimiento. Se añade a mano en cualquier momento (al perder un
+  seguro, al hacer un depósito con bono...) y se borra con "Ya lo
+  registré" cuando se convierte en una apuesta real — sin estado
+  "resuelto", igual que `objetivos`: borrar la fila es el único final.
+  `hooks/useBonosPendientes.js` sigue el mismo patrón que
+  `useMovimientos.js`. Se gestiona en `ListadoCasas.jsx` (mismo sitio que
+  los movimientos de cada casa, tiene sentido financiero parecido) con
+  `FormularioBono.jsx`, y un aviso resumen `AvisoBonos.jsx` en
+  `PantallaInicio.jsx` (mismo patrón que `AvisoPendientes.jsx`) para que no
+  pase desapercibido.
+  Ronda de ajuste tras probarlo: al elegir "Freebet" como tipo de fondos en
+  `FormularioApuesta.jsx`, el aviso de bankroll bajo el selector de casa
+  seguía comprobando el dinero real (mensaje "No hay bankroll disponible"
+  aunque la apuesta no fuera a salir de ahí). Ahora se muestran dos líneas
+  siempre: "Dinero real: X€ disponibles" y "Freebets: Y€ pendientes"
+  (sumando los `bonos_pendientes` de esa casa) — el aviso en rojo con
+  icono solo se activa en la línea que corresponde al `tipoFondos`
+  elegido. `bonos` se pasa ahora también a `FormularioApuesta.jsx` (nuevo
+  prop) y de ahí a todos sus puntos de entrada: `App.jsx` (nueva apuesta),
+  y `ListaApuestas.jsx` → `ApuestaItem.jsx` (editar una ya existente),
+  igual que ya se hacía con `movimientos`/`apuestas`.
+- **Apuesta asegurada, aumento de cuota, bono en el ingreso, y desplegable
+  de mercados** (no eran fases del guion, peticiones directas de la misma
+  sesión, para registrar promociones reales de las casas más rápido):
+  - Columnas nuevas en `apuestas`: `seguro_freebet_importe` (si la apuesta
+    tiene seguro, el freebet que da la casa si pierde) y `aumento_pct` (si
+    tiene aumento de cuota, el % de más sobre la ganancia si gana). Ambas
+    opcionales, `null` si no aplican; casillas en `FormularioApuesta.jsx`
+    que revelan el campo numérico al marcarlas, mismo patrón que ya usaba
+    Cash Out.
+  - Al marcar una apuesta con seguro como "Perdida",
+    `manejarMarcarResultado` en `App.jsx` (envuelve a `marcarResultado` de
+    `useApuestas.js`) crea el bono pendiente solo, con `agregarBono` de
+    `useBonosPendientes` — sin este paso habría que añadirlo a mano en
+    Casas de apuestas.
+  - El % de aumento se aplica sobre la **ganancia neta**, no sobre el
+    retorno total — comprobado con una captura real de Bet365 (cuota 4,00,
+    5€, 30% de aumento → 15€ base × 1,30 = 19,50€, no 20€×1,30). Cambio en
+    `calcularBeneficio` (`utils/apuestas.js`), solo en la rama "ganada"; no
+    hizo falta tocar `utils/academia.js` porque la fórmula base que explica
+    no cambia (el aumento es un extra opcional, igual que Cash Out ya
+    tiene su propio concepto aparte sin fórmula fija).
+  - `FormularioMovimiento.jsx` gana un campo opcional "Bono" (solo visible
+    con tipo Ingreso): si el depósito viene con un bono de bienvenida, se
+    registra en el mismo paso (llama también a `onAgregarBono`) en vez de
+    abrir el formulario suelto de "Nuevo bono pendiente"
+    (`FormularioBono.jsx`, que se queda igual para los casos que no vienen
+    de un depósito, como el seguro).
+  - `utils/mercados.js` (nuevo): catálogo `CATEGORIAS_MERCADO` (Resultado,
+    Goles, Hándicap asiático, Córners) y `equiposDesdeEvento`, que separa
+    el nombre de los equipos del campo "Evento" partiendo por " - " (el
+    formato que ya usa el buscador de partidos), con nombres genéricos de
+    repuesto si no encaja ese formato — se usa en todas las categorías
+    (no solo Resultado) para que salga el nombre real del equipo siempre
+    que se pueda. Cada opción ya es un mercado concreto y completo (p.ej.
+    "Over 2.5 goles", generadas con un bucle sobre líneas 0.5–6.5, no
+    escritas una a una); el hándicap asiático genera además las líneas
+    "partidas" (cuartos) intercaladas, p.ej. "-5.0, -5.5" entre las líneas
+    -5.5 y -5.0. Las líneas de córners (6.5 a 14.5) son una interpretación
+    de un pedido algo incompleto en el mensaje original — fácil de ajustar
+    el rango si no es exactamente lo que se quería.
+  - Ronda de ajuste tras probarlo: en vez de un desplegable + un campo de
+    texto "Apuesta" siempre visible al lado (que quedaba redundante en
+    cuanto se elegía un mercado), `SelectorMercado.jsx` pasó a ser el
+    único campo "Apuesta" de cada selección — un `<select>` con
+    `<optgroup>` por categoría (mismo patrón que el desplegable de País en
+    `BuscadorEvento.jsx`, para poder ir bajando hasta la opción en vez de
+    escribir) más una opción "Otro mercado" al final. El campo de texto
+    libre ya no se ve nunca salvo que se elija "Otro mercado" — o, al
+    editar una apuesta ya creada, si su texto no coincide con ninguna
+    opción del catálogo para ese evento (p.ej. apuestas de antes de este
+    desplegable), en cuyo caso se abre directamente en "Otro mercado" para
+    no esconder lo que ya había escrito.
+  - Ampliación del catálogo, misma sesión: "Resultado al descanso" (con
+    nombre de equipo, como "Resultado") y "Resultado descanso/final" (sin
+    nombre de equipo — "Local/Visitante" es la notación estándar de ese
+    mercado, no se sustituye) se añadieron justo después de "Resultado".
+    Dentro de "Goles" se añadió Ambos marcan de 1ª/2ª mitad junto al de
+    partido completo; "Goles por equipo" salió de dentro de "Goles" a su
+    propia categoría, y se añadieron "Goles 1ª mitad"/"Goles 2ª mitad"
+    (líneas más cortas, 0.5 a 3.5, con su propio generador
+    `opcionesGolesMedioTiempo` en `utils/mercados.js`) entre "Goles" y
+    "Goles por equipo".
+  - Pulido final: "Otro mercado" en negrita en `SelectorMercado.jsx`
+    (mismo patrón que "Otras ligas" en `BuscadorEvento.jsx`), más
+    espaciado en cada tarjeta de selección de `FormularioApuesta.jsx`
+    (`p-3`→`p-4`, `space-y-2`→`space-y-3`) y entre selecciones de una
+    combinada (`space-y-3`→`space-y-4`). Los desplegables de País y
+    Competición en `BuscadorEvento.jsx` tenían `text-xs`/`px-2 py-1.5`,
+    más pequeños que el resto de campos del formulario — se igualaron a
+    `text-sm`/`px-3 py-2`.
+  - "Bankroll total" en `ListadoCasas.jsx` pasa a sumar dinero real +
+    freebets pendientes (antes solo dinero real), con un desglose de dos
+    columnas debajo ("Dinero real" / "Freebets", esta última sumando los
+    `bonos_pendientes` de todas las casas) — mismo dato que ya usa
+    `AvisoBonos.jsx`, solo que aquí sí se refleja en el número grande de
+    arriba.
+  - "Apuesta asegurada" y "Aumento de cuota" pasan a ocupar toda la fila
+    del formulario (`sm:col-span-2`) en vez de ir en paralelo con el resto
+    de campos del grid de 2 columnas — quedan una debajo de la otra en
+    cualquier tamaño de pantalla. Sus campos numéricos limitan el ancho
+    (`sm:max-w-xs`) para no estirarse a todo lo ancho de la fila nueva.
 
 ## Convenciones de código
 

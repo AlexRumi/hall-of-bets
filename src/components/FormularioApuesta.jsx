@@ -4,6 +4,7 @@ import { calcularCuotaTotal } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 import BuscadorEvento from "./BuscadorEvento";
+import SelectorMercado from "./SelectorMercado";
 // "Ver cuotas" (CuotasDialog) se queda comentado, no borrado: al registrar
 // una apuesta la casa ya está decidida (la apuesta ya está hecha), así que
 // comparar cuotas de otras casas aquí tiene poco sentido ahora mismo. Podría
@@ -39,6 +40,7 @@ export default function FormularioApuesta({
   casas,
   movimientos = [],
   apuestas = [],
+  bonos = [],
   apuestaInicial = null,
   onGuardar,
   onCancelar,
@@ -56,6 +58,14 @@ export default function FormularioApuesta({
   const [selecciones, setSelecciones] = useState(
     apuestaInicial ? seleccionesDesdeApuesta(apuestaInicial) : [seleccionVacia()]
   );
+  const [asegurada, setAsegurada] = useState(!!apuestaInicial?.seguroFreebetImporte);
+  const [seguroImporte, setSeguroImporte] = useState(
+    apuestaInicial?.seguroFreebetImporte ? String(apuestaInicial.seguroFreebetImporte) : ""
+  );
+  const [conAumento, setConAumento] = useState(!!apuestaInicial?.aumentoPct);
+  const [aumentoPct, setAumentoPct] = useState(
+    apuestaInicial?.aumentoPct ? String(apuestaInicial.aumentoPct) : ""
+  );
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
   const esCombinada = selecciones.length > 1;
@@ -72,6 +82,14 @@ export default function FormularioApuesta({
   const sinBankroll = bankrollCasa !== null && bankrollCasa <= 0;
   const superaBankroll =
     !sinBankroll && bankrollCasa !== null && stakeNumero > bankrollCasa;
+
+  // Freebets pendientes de esa casa (ver bonos_pendientes/ListadoCasas.jsx):
+  // no es dinero del bankroll, así que se avisa aparte, no como "bankroll".
+  const freebetsCasa = casa
+    ? bonos.filter((b) => b.casa === casa).reduce((suma, b) => suma + b.importe, 0)
+    : 0;
+  const sinFreebets = freebetsCasa <= 0;
+  const superaFreebets = !sinFreebets && stakeNumero > freebetsCasa;
 
   // Cuota total en vivo, solo con las selecciones que ya tienen una cuota válida.
   const cuotasValidas = selecciones
@@ -131,6 +149,8 @@ export default function FormularioApuesta({
       stake: cantidadApostada,
       tipoFondos,
       deporte,
+      seguroFreebetImporte: asegurada ? Number(seguroImporte) : null,
+      aumentoPct: conAumento ? Number(aumentoPct) : null,
       selecciones: selecciones.map((s) => ({
         evento: s.evento.trim(),
         apuesta: s.apuesta.trim(),
@@ -152,6 +172,10 @@ export default function FormularioApuesta({
     setDeporte("Fútbol");
     setSelecciones([seleccionVacia()]);
     setFecha(hoy());
+    setAsegurada(false);
+    setSeguroImporte("");
+    setConAumento(false);
+    setAumentoPct("");
   }
 
   return (
@@ -178,18 +202,36 @@ export default function FormularioApuesta({
         <div>
           <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
           {bankrollCasa !== null && (
-            <p
-              className={`mt-1 text-xs flex items-center gap-1 ${
-                sinBankroll || superaBankroll ? "text-lose" : "text-slate"
-              }`}
-            >
-              {(sinBankroll || superaBankroll) && <AlertTriangle size={12} />}
-              {sinBankroll
-                ? "No hay bankroll disponible en esta casa."
-                : superaBankroll
-                ? `El importe supera el bankroll disponible (${bankrollCasa.toFixed(2)}€).`
-                : `Bankroll disponible: ${bankrollCasa.toFixed(2)}€`}
-            </p>
+            <div className="mt-1 space-y-0.5">
+              <p
+                className={`text-xs flex items-center gap-1 ${
+                  tipoFondos === "real" && (sinBankroll || superaBankroll)
+                    ? "text-lose"
+                    : "text-slate"
+                }`}
+              >
+                {tipoFondos === "real" && (sinBankroll || superaBankroll) && (
+                  <AlertTriangle size={12} />
+                )}
+                {tipoFondos === "real" && superaBankroll
+                  ? `Dinero real: el importe supera lo disponible (${bankrollCasa.toFixed(2)}€).`
+                  : `Dinero real: ${sinBankroll ? "no disponible" : `${bankrollCasa.toFixed(2)}€ disponibles`}.`}
+              </p>
+              <p
+                className={`text-xs flex items-center gap-1 ${
+                  tipoFondos === "freebet" && (sinFreebets || superaFreebets)
+                    ? "text-lose"
+                    : "text-gold"
+                }`}
+              >
+                {tipoFondos === "freebet" && (sinFreebets || superaFreebets) && (
+                  <AlertTriangle size={12} />
+                )}
+                {tipoFondos === "freebet" && superaFreebets
+                  ? `Freebets: el importe supera lo pendiente (${freebetsCasa.toFixed(2)}€).`
+                  : `Freebets: ${sinFreebets ? "no disponibles" : `${freebetsCasa.toFixed(2)}€ pendientes`}.`}
+              </p>
+            </div>
           )}
         </div>
 
@@ -247,9 +289,61 @@ export default function FormularioApuesta({
             ))}
           </div>
         </div>
+
+        <div className="sm:col-span-2">
+          <label className="flex items-center gap-2 text-xs text-slate mb-1">
+            <input
+              type="checkbox"
+              checked={asegurada}
+              onChange={(e) => setAsegurada(e.target.checked)}
+            />
+            Apuesta asegurada (freebet si pierdo)
+          </label>
+          {asegurada && (
+            <>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={seguroImporte}
+                onChange={(e) => setSeguroImporte(e.target.value)}
+                placeholder="Importe del freebet (€)"
+                required
+                className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono"
+              />
+              <p className="mt-1 text-xs text-slate">
+                Se añadirá a Bonos pendientes si la marcas como Perdida.
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="flex items-center gap-2 text-xs text-slate mb-1">
+            <input
+              type="checkbox"
+              checked={conAumento}
+              onChange={(e) => setConAumento(e.target.checked)}
+            />
+            Aumento de cuota (si gano)
+          </label>
+          {conAumento && (
+            <input
+              type="number"
+              step="1"
+              min="1"
+              max="200"
+              value={aumentoPct}
+              onChange={(e) => setAumentoPct(e.target.value)}
+              placeholder="% de aumento"
+              required
+              className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          )}
+        </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <label className="block text-xs text-slate">Selecciones</label>
           {cuotaTotal !== null && (
@@ -262,7 +356,7 @@ export default function FormularioApuesta({
         {selecciones.map((seleccion, index) => (
           <div
             key={index}
-            className="border border-line rounded-lg p-3 space-y-2"
+            className="border border-line rounded-lg p-4 space-y-3"
           >
             <div>
               <label className="block text-xs text-slate mb-1">Evento</label>
@@ -291,22 +385,16 @@ export default function FormularioApuesta({
               )}
             </div>
 
+            <div>
+              <label className="block text-xs text-slate mb-1">Apuesta</label>
+              <SelectorMercado
+                evento={seleccion.evento}
+                valor={seleccion.apuesta}
+                onCambiar={(texto) => actualizarSeleccion(index, "apuesta", texto)}
+              />
+            </div>
+
             <div className="flex gap-2 items-end">
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-slate mb-1">
-                  Apuesta
-                </label>
-                <input
-                  type="text"
-                  value={seleccion.apuesta}
-                  onChange={(e) =>
-                    actualizarSeleccion(index, "apuesta", e.target.value)
-                  }
-                  placeholder="Ej. Gana Real Madrid"
-                  required
-                  className="w-full border border-line rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
               <div className="w-24 shrink-0">
                 <label className="block text-xs text-slate mb-1">Cuota</label>
                 <input

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Landmark, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Landmark, Trash2, ChevronDown, ChevronUp, Gift } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
 import FormularioMovimiento from "./FormularioMovimiento";
+import FormularioBono from "./FormularioBono";
 import ListaMovimientos from "./ListaMovimientos";
 import ConfirmDialog from "./ConfirmDialog";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
@@ -17,6 +18,9 @@ export default function ListadoCasas({
   onAgregarMovimiento,
   onBorrarMovimiento,
   onBorrarTodosMovimientos,
+  bonos,
+  onAgregarBono,
+  onBorrarBono,
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
   const [casaExpandida, setCasaExpandida] = useState(null);
@@ -25,6 +29,10 @@ export default function ListadoCasas({
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
   const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
+  // Freebets pendientes de todas las casas (ver bonos_pendientes más abajo).
+  // "Bankroll total" pasa a ser dinero real + freebets: cuánto tienes en
+  // total para jugar ahora mismo, contando también lo prometido.
+  const freebetsTotal = bonos.reduce((suma, b) => suma + b.importe, 0);
 
   function manejarBorrarTodosMovimientos() {
     onBorrarTodosMovimientos();
@@ -34,13 +42,68 @@ export default function ListadoCasas({
   return (
     <div className="space-y-4">
       {bankrolls.length > 0 && (
-        <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 text-center">
-          <p className="text-xs text-slate">Bankroll total</p>
-          <p className="font-mono text-3xl font-bold text-goldDark">
-            {bankrollTotal.toFixed(2)}€
-          </p>
+        <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 text-center space-y-4">
+          <div>
+            <p className="text-xs text-slate">Bankroll total</p>
+            <p className="font-mono text-3xl font-bold text-goldDark">
+              {(bankrollTotal + freebetsTotal).toFixed(2)}€
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line">
+            <div>
+              <p className="text-xs text-slate">Dinero real</p>
+              <p className="font-mono text-lg font-semibold text-ink">
+                {bankrollTotal.toFixed(2)}€
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate">Freebets</p>
+              <p className="font-mono text-lg font-semibold text-gold">
+                {freebetsTotal.toFixed(2)}€
+              </p>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Bonos pendientes: recordatorio suelto de freebets/bonos prometidos
+          por una promoción (seguro perdido, bono de depósito...) que
+          todavía no se han registrado como apuesta. No depende de expandir
+          ninguna casa en concreto, por eso vive aquí arriba. */}
+      <div className="space-y-3">
+        <h2 className="font-display text-lg font-semibold text-ink">Bonos pendientes</h2>
+        {bonos.length > 0 && (
+          <div className="space-y-2">
+            {bonos.map((bono) => (
+              <div
+                key={bono.id}
+                className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl p-3 sm:p-4"
+              >
+                <Gift size={20} className="text-gold shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ink">
+                    {bono.casa} · {bono.importe.toFixed(2)}€
+                  </p>
+                  <p className="text-xs text-slate">
+                    {bono.motivo ? `${bono.motivo} · ` : ""}
+                    {bono.fecha}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onBorrarBono(bono.id)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gold/40 text-gold hover:bg-gold/10 transition-colors shrink-0"
+                >
+                  Ya lo registré
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {casas.length > 0 && <FormularioBono onAgregar={onAgregarBono} casas={casas} />}
+      </div>
+
       <FormularioCasa onAgregar={onAgregarCasa} />
 
       {casas.length === 0 ? (
@@ -152,6 +215,7 @@ export default function ListadoCasas({
                         onAgregar={onAgregarMovimiento}
                         casas={casas}
                         casaFija={casa.nombre}
+                        onAgregarBono={onAgregarBono}
                       />
 
                       <div>
