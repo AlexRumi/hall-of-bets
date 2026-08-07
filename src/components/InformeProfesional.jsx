@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Sparkles } from "lucide-react";
 import { calcularEstadisticas, filtrarPorPeriodo } from "../utils/apuestas";
 import { avanzarPeriodo } from "../utils/estadisticas";
 import BotonInfoConcepto from "./BotonInfoConcepto";
@@ -155,25 +155,42 @@ export default function InformeProfesional({ apuestas }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-center gap-2">
-        {BANKROLLS.map(({ id, etiqueta }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setBankroll(id)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              bankroll === id
-                ? "bg-felt text-paper border-felt"
-                : "border-line text-slate hover:text-ink"
-            }`}
-          >
-            {etiqueta}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-2 print:hidden">
+        <div className="flex gap-2">
+          {BANKROLLS.map(({ id, etiqueta }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setBankroll(id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                bankroll === id
+                  ? "bg-felt text-paper border-felt"
+                  : "border-line text-slate hover:text-ink"
+              }`}
+            >
+              {etiqueta}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="flex items-center gap-1.5 text-xs font-medium text-slate hover:text-gold transition-colors"
+        >
+          <Download size={14} />
+          Exportar a PDF
+        </button>
       </div>
 
       <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 space-y-5">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="hidden print:block">
+          <h1 className="font-display text-2xl font-bold text-ink">
+            Hall of Bets — Informe · {BANKROLLS.find((b) => b.id === bankroll)?.etiqueta} ·{" "}
+            {formatearPeriodo(granularidad, referencia)}
+          </h1>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-3 print:hidden">
           <div className="flex gap-1">
             {GRANULARIDADES.map(({ id, etiqueta }) => (
               <button

@@ -30,7 +30,7 @@ export default function BarraInferiorMovil({ activa, onCambiar }) {
   const enApuestas = activa === "apuestas" || activa === "entretenimiento";
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-felt border-t border-gold/30 flex items-stretch">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-felt border-t border-gold/30 flex items-stretch print:hidden">
       {/* "Registro": lleva directo al formulario de apuesta. Si ya estabas
           en Apuestas o Entretenimiento, se queda donde estabas — el
           selector Apuestas/Entretenimiento vive arriba del todo, dentro de

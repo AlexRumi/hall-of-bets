@@ -174,6 +174,17 @@ export function calcularDesglosePorCasa(apuestas) {
     .sort((a, b) => b.beneficio - a.beneficio);
 }
 
+// Apuestas pendientes cuyo evento ya pasó (la fecha guardada es la del
+// partido, no la de creación) — candidatas a que el usuario actualice el
+// resultado. No usa un umbral de días: si el partido ya se jugó, ya se
+// puede marcar.
+export function pendientesAntiguas(apuestas, referencia = new Date()) {
+  const hoy = new Date(referencia.getFullYear(), referencia.getMonth(), referencia.getDate());
+  return apuestas.filter(
+    (a) => a.resultado === "pendiente" && fechaLocal(a.fecha) < hoy
+  );
+}
+
 // Racha actual de victorias: cuenta desde la apuesta resuelta más reciente
 // hacia atrás mientras todas sean "ganada". Cualquier perdida o nula la corta.
 // Se calcula siempre sobre todo el bankroll, sin filtros de casa/fondos/periodo,

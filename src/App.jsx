@@ -5,6 +5,7 @@ import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
+import { useObjetivos } from "./hooks/useObjetivos";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
@@ -13,6 +14,7 @@ import ListaApuestas from "./components/ListaApuestas";
 import FiltrosApuestas from "./components/FiltrosApuestas";
 import SelectorPeriodo from "./components/SelectorPeriodo";
 import RachaActual from "./components/RachaActual";
+import ObjetivoPersonal from "./components/ObjetivoPersonal";
 import EstadisticasApuestas from "./components/EstadisticasApuestas";
 import GraficoBeneficio from "./components/GraficoBeneficio";
 import SalaTrofeos from "./components/SalaTrofeos";
@@ -86,6 +88,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     borrarMovimiento,
     borrarTodosMovimientos,
   } = useMovimientos(userId);
+  const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
@@ -141,7 +144,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
           centrado. Escritorio: barra más fina, nombre a la izquierda.
           "sticky" para que se quede fija arriba al hacer scroll, igual que
           el menú lateral. */}
-      <div className="sticky top-0 z-30 bg-felt px-5 sm:px-8 py-8 md:py-4">
+      <div className="sticky top-0 z-30 bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
         <div className="flex items-center md:justify-between">
           <button
             type="button"
@@ -208,6 +211,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 onMarcarResultado={marcarResultado}
                 onBorrar={borrarApuesta}
                 onEditar={editarApuesta}
+                onIrASeccion={setSeccionActiva}
               />
             ) : esBankroll ? (
               <>
@@ -243,6 +247,13 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                   onCambiarFondos={setFiltroFondos}
                 />
                 <RachaActual racha={racha} />
+                <ObjetivoPersonal
+                  categoria={seccionActiva}
+                  apuestasDelBankroll={apuestasDelBankroll}
+                  objetivo={objetivos.find((o) => o.categoria === seccionActiva) ?? null}
+                  onGuardar={guardarObjetivo}
+                  onBorrar={borrarObjetivo}
+                />
                 <SelectorPeriodo activo={periodo} onCambiar={setPeriodo} />
                 <EstadisticasApuestas apuestas={apuestasPeriodo} />
                 <GraficoBeneficio apuestas={apuestasPeriodo} />

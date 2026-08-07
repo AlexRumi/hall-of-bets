@@ -35,7 +35,7 @@ const ITEMS = [
 // ahora también es fija arriba (ver App.jsx).
 export default function SidebarNavegacion({ activa, onCambiar }) {
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 bg-felt px-3 py-6">
+    <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 bg-felt px-3 py-6 print:hidden">
       <nav className="flex flex-col gap-1 md:sticky md:top-20">
         {ITEMS.map(({ id, etiqueta, Icono }) => (
           <button

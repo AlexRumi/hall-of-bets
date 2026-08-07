@@ -71,3 +71,23 @@ alter table public.apuestas add column deporte text;
 -- (solo se rellena cuando resultado = 'cashout'; en cualquier otro caso queda en null).
 alter table public.apuestas add column cashout_importe numeric;
 
+-- Objetivo personal: como mucho uno activo por bankroll (categoria), gracias
+-- al unique(user_id, categoria) — guardar uno nuevo para la misma categoría
+-- sustituye al anterior (upsert desde useObjetivos.js). No guarda "para qué
+-- mes/semana concreto": siempre se evalúa contra el periodo actual.
+create table public.objetivos (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  categoria text not null check (categoria in ('apuestas', 'entretenimiento')),
+  tipo text not null check (tipo in ('beneficio', 'yield', 'num_apuestas', 'acierto')),
+  periodo text not null check (periodo in ('semana', 'mes', 'anio')),
+  valor_objetivo numeric not null,
+  creado_en timestamptz not null default now(),
+  unique (user_id, categoria)
+);
+
+alter table public.objetivos enable row level security;
+create policy "propietario_objetivos" on public.objetivos
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+alter publication supabase_realtime add table public.objetivos;
+

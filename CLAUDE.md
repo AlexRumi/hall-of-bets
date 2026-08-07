@@ -313,6 +313,35 @@ antes de pasar a la siguiente.
     no es la opción inicial). Bélgica (Jupiler Pro League, id 144,
     verificado igual que el resto) se añadió al grupo "Europa" del
     desplegable junto a Portugal y Holanda.
+- **Aviso de pendientes, PDF del Informe y objetivo personal** (no eran
+  fases del guion, tres peticiones directas en la misma sesión):
+  - `AvisoPendientes.jsx` (nuevo, mostrado en `PantallaInicio.jsx`): avisa
+    cuando hay apuestas con `resultado: "pendiente"` cuya `fecha` (la del
+    evento) ya pasó — `pendientesAntiguas` en `utils/apuestas.js`. Sin
+    umbral de días: si el partido ya se jugó, se puede marcar. Con botones
+    para ir directo al bankroll (Apuestas/Entretenimiento) correspondiente.
+  - `InformeProfesional.jsx` gana un botón "Exportar a PDF" que llama a
+    `window.print()` — sin librería nueva, usando la variante `print:` de
+    Tailwind (activada por defecto) para ocultar cabecera, menú lateral,
+    barra inferior y los controles interactivos del informe al imprimir, y
+    mostrar en su lugar un título propio del PDF con bankroll y periodo.
+    Aprovecha que el informe ya se diseñó en la fase 19 como "un único
+    bloque estático" pensando en esto.
+  - Objetivo personal: uno activo por bankroll (Apuestas y Entretenimiento
+    por separado), sin histórico — definir uno nuevo para el mismo
+    bankroll sustituye al anterior. Tabla `objetivos` en Supabase con
+    `unique(user_id, categoria)` (para que el `upsert` sustituya en vez de
+    duplicar); `hooks/useObjetivos.js` sigue el mismo patrón que
+    `useCasas.js`. El objetivo no guarda a qué mes/semana/año concreto
+    pertenece: `utils/objetivos.js` (`calcularProgresoObjetivo`) siempre lo
+    evalúa contra el periodo *actual* de su `periodo`, así que el progreso
+    se reinicia solo al cambiar de mes/semana/año. `ObjetivoPersonal.jsx`
+    se muestra en Apuestas/Entretenimiento justo después de `RachaActual`,
+    con la misma barra de progreso que un trofeo en `SalaTrofeos.jsx`. Se
+    dejó como función independiente en vez de forzarlo por el pipeline de
+    `evaluarTrofeos`/`SalaTrofeos.jsx` (aunque la forma de un trofeo en
+    `utils/trofeos.js` se pensó para eso): un único objetivo por bankroll
+    sin niveles ni desbloqueo no lo necesitaba.
 
 ## Convenciones de código
 
