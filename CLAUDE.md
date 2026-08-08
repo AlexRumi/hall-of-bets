@@ -730,6 +730,27 @@ antes de pasar a la siguiente.
   - **Pendiente**: ejecutar `alter table public.apuestas add column
     cuota_total_manual numeric;` en Supabase antes de usar este campo en
     producción (añadido al final de `supabase-setup.sql`).
+- **Editar apuesta también en picks simples del constructor** (no era una
+  fase del guion, petición directa tras probar la cuota manual: si te
+  equivocas de mercado o de cuota en un pick de 1 mercado dentro de
+  "Apuesta en construcción", antes solo se podía "Quitar partido" entero y
+  rehacer país/competición/partido/mercado/cuota desde cero). El botón
+  "Editar apuesta" de `FormularioApuesta.jsx` deja de estar solo en
+  bloques "multi" (2+ mercados) y aparece en todos — en un pick simple, en
+  vez de la lista de mercados con su ✕ (que solo tiene sentido con varios),
+  se muestra directamente `SelectorMercado.jsx` (mismo componente que ya
+  usa `ConstructorPartido.jsx`, con el `evento` del bloque para generar el
+  catálogo) para poder cambiar el mercado elegido, junto al campo de cuota
+  que ya existía. Nuevo estado `mercadoEditando` (mismo patrón que
+  `cuotaEditando`: texto libre mientras se edita, se aplica al bloque solo
+  al pulsar "Listo"), inicializado con el mercado actual solo si el bloque
+  tiene 1 único mercado (en un "multi" no se toca, ahí se sigue editando
+  mercado a mercado con su ✕).
+  "Quitar partido"/"Editar apuesta"/"Listo" (en cada bloque de "Apuesta en
+  construcción") pasan de texto suelto subrayado al pasar el ratón a
+  píldoras con borde a juego (`rounded-full`, `border-lose/40`/
+  `border-gold/40`, fondo tenue al pasar el ratón) — se veían demasiado
+  discretos para acciones que se usan bastante al construir una combinada.
 
 ## Fases futuras pedidas (5, una a una con confirmación)
 

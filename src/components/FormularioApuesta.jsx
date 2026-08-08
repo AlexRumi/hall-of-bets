@@ -4,6 +4,7 @@ import { agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 import ConstructorPartido from "./ConstructorPartido";
+import SelectorMercado from "./SelectorMercado";
 // "Ver cuotas" (CuotasDialog) se queda comentado, no borrado: al registrar
 // una apuesta la casa ya está decidida (la apuesta ya está hecha), así que
 // comparar cuotas de otras casas aquí tiene poco sentido ahora mismo. Podría
@@ -98,21 +99,26 @@ export default function FormularioApuesta({
 
   const cuotaTotalBloques = bloques.reduce((total, b) => total * b.cuota, 1);
 
-  // Edición de un bloque ya guardado (solo tiene sentido si combina varios
-  // mercados de un partido — un pick simple ya se puede quitar entero con
-  // "Quitar partido"): quitar un mercado suelto si, por ejemplo, el
-  // jugador de esa selección al final no juega, y ajustar la cuota
-  // combinada a mano. "cuotaEditando" es texto libre mientras se edita
-  // (no el número ya redondeado del bloque) para no interferir con la
-  // coma/punto decimal mientras se escribe.
+  // Edición de un bloque ya guardado: cambiar la cuota y, si es un pick
+  // simple (1 mercado), corregir el mercado elegido sin tener que quitar
+  // el partido entero y rehacer país/competición/partido/mercado/cuota
+  // desde cero — solo hacía falta buscar el partido otra vez, no todo el
+  // resto. En un "multi" de varios mercados, en vez de un desplegable se
+  // listan uno por uno con su propia ✕ (quitarMercadoDeBloque), porque no
+  // tendría sentido "elegir un mercado" para sustituir a varios a la vez.
+  // "cuotaEditando"/"mercadoEditando" son texto libre mientras se edita
+  // (no el valor ya guardado del bloque) para no interferir con la
+  // coma/punto decimal, ni perder lo escrito, mientras se edita.
   const [bloqueEditando, setBloqueEditando] = useState(null);
   const [cuotaEditando, setCuotaEditando] = useState("");
+  const [mercadoEditando, setMercadoEditando] = useState("");
 
   function quitarBloque(index) {
     setBloques((actuales) => actuales.filter((_, i) => i !== index));
     if (bloqueEditando === index) {
       setBloqueEditando(null);
       setCuotaEditando("");
+      setMercadoEditando("");
     }
   }
 
@@ -120,13 +126,24 @@ export default function FormularioApuesta({
     if (bloqueEditando === index) {
       const cuotaNueva = Number(cuotaEditando);
       setBloques((actuales) =>
-        actuales.map((b, i) => (i === index && cuotaNueva > 0 ? { ...b, cuota: cuotaNueva } : b))
+        actuales.map((b, i) => {
+          if (i !== index) return b;
+          const mercados =
+            b.mercados.length === 1 && mercadoEditando.trim()
+              ? [mercadoEditando.trim()]
+              : b.mercados;
+          return { ...b, cuota: cuotaNueva > 0 ? cuotaNueva : b.cuota, mercados };
+        })
       );
       setBloqueEditando(null);
       setCuotaEditando("");
+      setMercadoEditando("");
     } else {
       setBloqueEditando(index);
       setCuotaEditando(String(bloques[index].cuota));
+      setMercadoEditando(
+        bloques[index].mercados.length === 1 ? bloques[index].mercados[0] : ""
+      );
     }
   }
 
@@ -418,40 +435,48 @@ export default function FormularioApuesta({
                           </span>
                         )}
                       </div>
-                      <ul className="mt-1.5 space-y-0.5">
-                        {bloque.mercados.map((mercado, i) => (
-                          <li key={i} className="flex items-center justify-between gap-2 text-xs text-slate">
-                            <span>• {mercado}</span>
-                            {editando && (
-                              <button
-                                type="button"
-                                onClick={() => quitarMercadoDeBloque(index, i)}
-                                aria-label="Quitar mercado"
-                                className="text-slate hover:text-lose transition-colors shrink-0"
-                              >
-                                <X size={12} />
-                              </button>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="mt-2 flex items-center gap-3">
+                      {editando && !esMulti ? (
+                        <div className="mt-1.5">
+                          <SelectorMercado
+                            evento={bloque.evento}
+                            valor={mercadoEditando}
+                            onCambiar={setMercadoEditando}
+                          />
+                        </div>
+                      ) : (
+                        <ul className="mt-1.5 space-y-0.5">
+                          {bloque.mercados.map((mercado, i) => (
+                            <li key={i} className="flex items-center justify-between gap-2 text-xs text-slate">
+                              <span>• {mercado}</span>
+                              {editando && (
+                                <button
+                                  type="button"
+                                  onClick={() => quitarMercadoDeBloque(index, i)}
+                                  aria-label="Quitar mercado"
+                                  className="text-slate hover:text-lose transition-colors shrink-0"
+                                >
+                                  <X size={12} />
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div className="mt-2 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => quitarBloque(index)}
-                          className="text-xs font-medium text-lose hover:underline"
+                          className="text-xs font-semibold text-lose border border-lose/40 rounded-full px-2.5 py-1 hover:bg-lose/10 transition-colors"
                         >
                           Quitar partido
                         </button>
-                        {esMulti && (
-                          <button
-                            type="button"
-                            onClick={() => alternarEdicion(index)}
-                            className="text-xs font-medium text-gold hover:underline"
-                          >
-                            {editando ? "Listo" : "Editar apuesta"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => alternarEdicion(index)}
+                          className="text-xs font-semibold text-gold border border-gold/40 rounded-full px-2.5 py-1 hover:bg-gold/10 transition-colors"
+                        >
+                          {editando ? "Listo" : "Editar apuesta"}
+                        </button>
                       </div>
                     </div>
                   );
