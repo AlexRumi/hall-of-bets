@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Landmark, Trash2, ChevronDown, ChevronUp, Gift } from "lucide-react";
+import { Landmark, Trash2, ChevronDown, ChevronUp, Gift, PlusCircle } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
 import FormularioMovimiento from "./FormularioMovimiento";
 import FormularioBono from "./FormularioBono";
@@ -21,18 +21,20 @@ export default function ListadoCasas({
   bonos,
   onAgregarBono,
   onBorrarBono,
+  onAjustarSaldoFreebet,
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
   const [casaExpandida, setCasaExpandida] = useState(null);
+  const [mostrandoBono, setMostrandoBono] = useState(false);
   const [confirmandoBorrarMovimientos, setConfirmandoBorrarMovimientos] = useState(false);
   const bankrolls = calcularBankrollPorCasa(movimientos, apuestas);
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
   const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
-  // Freebets pendientes de todas las casas (ver bonos_pendientes más abajo).
-  // "Bankroll total" pasa a ser dinero real + freebets: cuánto tienes en
-  // total para jugar ahora mismo, contando también lo prometido.
-  const freebetsTotal = bonos.reduce((suma, b) => suma + b.importe, 0);
+  // Saldo de freebet de todas las casas (Fase A: ver useCasas.js). "Bankroll
+  // total" pasa a ser dinero real + freebets: cuánto tienes en total para
+  // jugar ahora mismo, contando también lo prometido.
+  const freebetsTotal = casas.reduce((suma, c) => suma + c.freebetSaldo, 0);
 
   function manejarBorrarTodosMovimientos() {
     onBorrarTodosMovimientos();
@@ -41,7 +43,7 @@ export default function ListadoCasas({
 
   return (
     <div className="space-y-4">
-      {bankrolls.length > 0 && (
+      {casas.length > 0 && (
         <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 text-center space-y-4">
           <div>
             <p className="text-xs text-slate">Bankroll total</p>
@@ -67,43 +69,6 @@ export default function ListadoCasas({
         </div>
       )}
 
-      {/* Bonos pendientes: recordatorio suelto de freebets/bonos prometidos
-          por una promoción (seguro perdido, bono de depósito...) que
-          todavía no se han registrado como apuesta. No depende de expandir
-          ninguna casa en concreto, por eso vive aquí arriba. */}
-      <div className="space-y-3">
-        <h2 className="font-display text-lg font-semibold text-ink">Bonos pendientes</h2>
-        {bonos.length > 0 && (
-          <div className="space-y-2">
-            {bonos.map((bono) => (
-              <div
-                key={bono.id}
-                className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl p-3 sm:p-4"
-              >
-                <Gift size={20} className="text-gold shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-ink">
-                    {bono.casa} · {bono.importe.toFixed(2)}€
-                  </p>
-                  <p className="text-xs text-slate">
-                    {bono.motivo ? `${bono.motivo} · ` : ""}
-                    {bono.fecha}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onBorrarBono(bono.id)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gold/40 text-gold hover:bg-gold/10 transition-colors shrink-0"
-                >
-                  Ya lo registré
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {casas.length > 0 && <FormularioBono onAgregar={onAgregarBono} casas={casas} />}
-      </div>
-
       <FormularioCasa onAgregar={onAgregarCasa} />
 
       {casas.length === 0 ? (
@@ -128,6 +93,7 @@ export default function ListadoCasas({
               const movimientosCasa = movimientos.filter(
                 (m) => m.casa === casa.nombre
               );
+              const bonosCasa = bonos.filter((b) => b.casa === casa.nombre);
 
               return (
                 <div
@@ -136,7 +102,10 @@ export default function ListadoCasas({
                 >
                   <button
                     type="button"
-                    onClick={() => setCasaExpandida(expandida ? null : casa.nombre)}
+                    onClick={() => {
+                      setCasaExpandida(expandida ? null : casa.nombre);
+                      setMostrandoBono(false);
+                    }}
                     className="w-full flex items-center gap-3 p-3 sm:p-4 text-left hover:bg-paperDim transition-colors"
                   >
                     {casa.logo ? (
@@ -166,7 +135,7 @@ export default function ListadoCasas({
 
                   {expandida && (
                     <div className="px-3 sm:px-4 pb-4 space-y-4 border-t border-line pt-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                         <div>
                           <p className="text-xs text-slate">Ingresos</p>
                           <p className="font-mono text-sm font-medium text-ink">
@@ -209,14 +178,81 @@ export default function ListadoCasas({
                             {bankroll.roiPct.toFixed(2)}%
                           </p>
                         </div>
+                        <div>
+                          <p className="text-xs text-slate">Freebet</p>
+                          <p className="font-mono text-sm font-bold text-gold">
+                            {casa.freebetSaldo.toFixed(2)}€
+                          </p>
+                        </div>
                       </div>
 
                       <FormularioMovimiento
                         onAgregar={onAgregarMovimiento}
                         casas={casas}
                         casaFija={casa.nombre}
-                        onAgregarBono={onAgregarBono}
+                        onAjustarSaldoFreebet={onAjustarSaldoFreebet}
                       />
+
+                      {/* Bonos pendientes: recordatorio suelto de freebets/bonos
+                          prometidos por una promoción que no vino de un depósito
+                          ni de un seguro (esos ya suman solos al saldo de
+                          freebet de arriba, ver useCasas.js). Justo debajo del
+                          formulario de movimiento, para seguir el orden: primero
+                          el caso automático (Bono recibido con este depósito),
+                          después el residual (Otro bono). */}
+                      {bonosCasa.length > 0 && (
+                        <div className="space-y-2">
+                          {bonosCasa.map((bono) => (
+                            <div
+                              key={bono.id}
+                              className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl p-3 sm:p-4"
+                            >
+                              <Gift size={20} className="text-gold shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-ink">
+                                  {bono.importe.toFixed(2)}€
+                                </p>
+                                <p className="text-xs text-slate">
+                                  {bono.motivo ? `${bono.motivo} · ` : ""}
+                                  {bono.fecha}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => onBorrarBono(bono.id)}
+                                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gold/40 text-gold hover:bg-gold/10 transition-colors shrink-0"
+                              >
+                                Ya lo registré
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setMostrandoBono((actual) => !actual)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-gold hover:underline"
+                        >
+                          <PlusCircle size={14} />
+                          Otro bono
+                          {mostrandoBono ? (
+                            <ChevronUp size={14} />
+                          ) : (
+                            <ChevronDown size={14} />
+                          )}
+                        </button>
+                        {mostrandoBono && (
+                          <div className="mt-2">
+                            <FormularioBono
+                              onAgregar={onAgregarBono}
+                              casas={casas}
+                              casaFija={casa.nombre}
+                            />
+                          </div>
+                        )}
+                      </div>
 
                       <div>
                         <p className="text-xs font-medium text-slate mb-2">

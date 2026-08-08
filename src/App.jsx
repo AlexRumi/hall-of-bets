@@ -7,6 +7,7 @@ import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
 import { useBonosPendientes } from "./hooks/useBonosPendientes";
+import { useAjustes } from "./hooks/useAjustes";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
@@ -60,6 +61,7 @@ export default function App() {
       ) : (
         <AppAutenticada
           userId={sesion.user.id}
+          fechaAltaCuenta={sesion.user.created_at}
           onCerrarSesion={cerrarSesion}
           oscuro={oscuro}
           onAlternarModoOscuro={alternar}
@@ -69,7 +71,7 @@ export default function App() {
   );
 }
 
-function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }) {
+function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlternarModoOscuro }) {
   const {
     apuestas,
     agregarApuesta,
@@ -77,8 +79,9 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     marcarResultado,
     borrarApuesta,
     borrarTodoBankroll,
+    archivarPorRango: archivarApuestasPorRango,
   } = useApuestas(userId);
-  const { casas, agregarCasa, borrarCasa } = useCasas(userId);
+  const { casas, agregarCasa, borrarCasa, ajustarSaldoFreebet } = useCasas(userId);
   // Los trofeos se calculan sobre todas las apuestas, sin importar la
   // sección que se esté viendo, para que la notificación de un trofeo nuevo
   // pueda saltar aunque no estés en la pestaña de Trofeos.
@@ -88,12 +91,15 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
     agregarMovimiento,
     borrarMovimiento,
     borrarTodosMovimientos,
+    archivarPorRango: archivarMovimientosPorRango,
   } = useMovimientos(userId);
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const { bonos, agregarBono, borrarBono } = useBonosPendientes(userId);
+  const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
+  const [verArchivadas, setVerArchivadas] = useState(false);
   const [periodo, setPeriodo] = useState("todo");
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
   // Solo tienen efecto visual en móvil (ver BarraInferiorMovil.jsx): en
@@ -119,10 +125,13 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   }, [apuestas, casas, agregarCasa]);
 
   // Cada bankroll (Apuestas/Entretenimiento) es independiente: solo se ven
-  // (y se añaden) apuestas de la pestaña activa.
-  const apuestasDelBankroll = apuestas.filter(
-    (apuesta) => apuesta.categoria === seccionActiva
-  );
+  // (y se añaden) apuestas de la pestaña activa. Las archivadas (Fase C) se
+  // excluyen por defecto salvo que se active "Ver también archivado" — esto
+  // arrastra el archivado a apuestasFiltradas, apuestasPeriodo, la racha y
+  // el listado, sin tener que tocar cada uno por separado.
+  const apuestasDelBankroll = apuestas
+    .filter((apuesta) => apuesta.categoria === seccionActiva)
+    .filter((apuesta) => verArchivadas || !apuesta.archivado);
 
   const apuestasFiltradas = apuestasDelBankroll
     .filter((apuesta) => filtroCasa === "todas" || apuesta.casa === filtroCasa)
@@ -137,8 +146,14 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   const racha = calcularRachaActual(apuestasDelBankroll);
   const esBankroll = seccionActiva === "apuestas" || seccionActiva === "entretenimiento";
 
+  // Al crear una apuesta con fondos Freebet, se descuenta el stake del
+  // saldo de esa casa al momento — gane, pierda o quede pendiente (ver
+  // Fase A: el freebet se da por gastado en cuanto se juega).
   function manejarAgregar(datos) {
     agregarApuesta({ ...datos, categoria: seccionActiva });
+    if (datos.tipoFondos === "freebet") {
+      ajustarSaldoFreebet(datos.casa, -Number(datos.stake));
+    }
     setMostrandoFormulario(false);
   }
 
@@ -148,20 +163,31 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
   }
 
   // Si la apuesta tenía "seguro" (freebet si pierde) y se marca como
-  // Perdida, se crea el bono pendiente solo — sin este paso habría que
-  // añadirlo a mano en Casas de apuestas.
+  // Perdida, el freebet se suma solo al saldo de esa casa — sin este paso
+  // habría que añadirlo a mano en Casas de apuestas. Si se marca como
+  // Nula y era una apuesta de fondos Freebet, el stake que se descontó al
+  // crearla se devuelve (una nula no "gasta" el freebet de verdad).
   function manejarMarcarResultado(id, resultado, cashoutImporte) {
+    const apuesta = apuestas.find((a) => a.id === id);
     marcarResultado(id, resultado, cashoutImporte);
-    if (resultado === "perdida") {
-      const apuesta = apuestas.find((a) => a.id === id);
-      if (apuesta?.seguroFreebetImporte) {
-        agregarBono({
-          casa: apuesta.casa,
-          importe: apuesta.seguroFreebetImporte,
-          motivo: "Apuesta asegurada",
-          fecha: apuesta.fecha,
-        });
-      }
+    if (resultado === "perdida" && apuesta?.seguroFreebetImporte) {
+      ajustarSaldoFreebet(apuesta.casa, apuesta.seguroFreebetImporte);
+    }
+    if (resultado === "nula" && apuesta?.tipoFondos === "freebet") {
+      ajustarSaldoFreebet(apuesta.casa, apuesta.stake);
+    }
+  }
+
+  // Si se borra una apuesta de fondos Freebet que seguía Pendiente, se
+  // devuelve el stake al saldo (el freebet nunca llegó a gastarse de
+  // verdad). Si ya estaba resuelta (ganada/perdida/cash out) el freebet sí
+  // se gastó, así que no se devuelve; si estaba Nula, ya se había
+  // devuelto al marcarla, tampoco hace falta devolverlo otra vez.
+  function manejarBorrarApuesta(id) {
+    const apuesta = apuestas.find((a) => a.id === id);
+    borrarApuesta(id);
+    if (apuesta?.tipoFondos === "freebet" && apuesta.resultado === "pendiente") {
+      ajustarSaldoFreebet(apuesta.casa, apuesta.stake);
     }
   }
 
@@ -242,7 +268,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 movimientos={movimientos}
                 bonos={bonos}
                 onMarcarResultado={manejarMarcarResultado}
-                onBorrar={borrarApuesta}
+                onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
                 onIrASeccion={setSeccionActiva}
               />
@@ -299,6 +325,8 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                     onCambiarCasa={setFiltroCasa}
                     filtroFondos={filtroFondos}
                     onCambiarFondos={setFiltroFondos}
+                    verArchivadas={verArchivadas}
+                    onCambiarVerArchivadas={setVerArchivadas}
                   />
                   <RachaActual racha={racha} />
                   <ObjetivoPersonal
@@ -331,7 +359,7 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                     todasApuestas={apuestas}
                     bonos={bonos}
                     onMarcarResultado={manejarMarcarResultado}
-                    onBorrar={borrarApuesta}
+                    onBorrar={manejarBorrarApuesta}
                     onEditar={editarApuesta}
                   />
                 </div>
@@ -359,11 +387,21 @@ function AppAutenticada({ userId, onCerrarSesion, oscuro, onAlternarModoOscuro }
                 bonos={bonos}
                 onAgregarBono={agregarBono}
                 onBorrarBono={borrarBono}
+                onAjustarSaldoFreebet={ajustarSaldoFreebet}
               />
             ) : seccionActiva === "informe" ? (
               <InformeProfesional apuestas={apuestas} />
             ) : seccionActiva === "ajustes" ? (
-              <Ajustes userId={userId} />
+              <Ajustes
+                userId={userId}
+                fechaAltaCuenta={fechaAltaCuenta}
+                apuestas={apuestas}
+                movimientos={movimientos}
+                onArchivarApuestas={archivarApuestasPorRango}
+                onArchivarMovimientos={archivarMovimientosPorRango}
+                ultimaCopia={ultimaCopia}
+                onCopiaRealizada={registrarCopiaRealizada}
+              />
             ) : seccionActiva === "academia" ? (
               <Academia />
             ) : (

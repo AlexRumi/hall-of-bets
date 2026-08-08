@@ -65,6 +65,11 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
         <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-gold/15 text-gold mb-1.5">
           {esCombinada ? "Combinada" : "Simple"}
         </span>
+        {apuesta.archivado && (
+          <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-void/15 text-void mb-1.5 ml-1.5">
+            Archivada
+          </span>
+        )}
         <p className="text-base font-bold text-ink truncate">{textoEvento(apuesta)}</p>
       </div>
 

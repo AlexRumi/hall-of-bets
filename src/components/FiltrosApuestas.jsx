@@ -4,9 +4,11 @@ export default function FiltrosApuestas({
   onCambiarCasa,
   filtroFondos,
   onCambiarFondos,
+  verArchivadas,
+  onCambiarVerArchivadas,
 }) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       {casas.length > 0 && (
         <select
           value={filtroCasa}
@@ -31,6 +33,16 @@ export default function FiltrosApuestas({
         <option value="real">Real</option>
         <option value="freebet">Freebet</option>
       </select>
+
+      <label className="flex items-center gap-1.5 text-sm text-slate cursor-pointer">
+        <input
+          type="checkbox"
+          checked={verArchivadas}
+          onChange={(e) => onCambiarVerArchivadas(e.target.checked)}
+          className="accent-gold"
+        />
+        Ver también archivado
+      </label>
     </div>
   );
 }

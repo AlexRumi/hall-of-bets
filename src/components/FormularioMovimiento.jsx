@@ -6,7 +6,12 @@ const hoy = () => new Date().toISOString().slice(0, 10);
 
 // "casaFija" se usa cuando el formulario se abre desde dentro de la ficha
 // de una casa concreta: no hace falta volver a escribirla ni se puede tocar.
-export default function FormularioMovimiento({ onAgregar, casas, casaFija = null, onAgregarBono }) {
+export default function FormularioMovimiento({
+  onAgregar,
+  casas,
+  casaFija = null,
+  onAjustarSaldoFreebet,
+}) {
   const [fecha, setFecha] = useState(hoy());
   const [casa, setCasa] = useState(casaFija ?? "");
   const [tipo, setTipo] = useState("ingreso");
@@ -19,8 +24,8 @@ export default function FormularioMovimiento({ onAgregar, casas, casaFija = null
     if (!casaFinal || !cantidad) return;
 
     onAgregar({ fecha, casa: casaFinal, tipo, cantidad });
-    if (tipo === "ingreso" && bono && onAgregarBono) {
-      onAgregarBono({ casa: casaFinal, importe: bono, motivo: "Bono de depósito", fecha });
+    if (tipo === "ingreso" && bono && onAjustarSaldoFreebet) {
+      onAjustarSaldoFreebet(casaFinal, Number(bono));
     }
 
     setCasa(casaFija ?? "");

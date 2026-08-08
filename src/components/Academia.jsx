@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { GraduationCap, Search, ChevronDown, ChevronUp } from "lucide-react";
-import { CONCEPTOS } from "../utils/academia";
+import { CONCEPTOS, CATEGORIAS_ACADEMIA } from "../utils/academia";
 
-// Sección educativa: acordeón con los 12 conceptos, buscador de texto libre.
+// Sección educativa: acordeón con los conceptos agrupados por categoría
+// (de fundamentos a avanzado, ver CATEGORIAS_ACADEMIA en utils/academia.js
+// — mismo patrón que las categorías de Sala de Trofeos), con buscador de
+// texto libre. Con solo ~17 conceptos y este buscador ya no hacía falta un
+// filtro alfabético aparte: agrupar por tema ayuda más a encontrar algo
+// relacionado que ir letra por letra.
 export default function Academia() {
   const [busqueda, setBusqueda] = useState("");
   const [expandido, setExpandido] = useState(null);
@@ -37,61 +42,75 @@ export default function Academia() {
           Ningún concepto coincide con "{busqueda}".
         </p>
       ) : (
-        <div className="space-y-3">
-          {conceptosFiltrados.map((concepto) => {
-            const abierto = expandido === concepto.id;
+        <div className="space-y-6">
+          {CATEGORIAS_ACADEMIA.map(({ id: categoriaId, etiqueta: categoriaEtiqueta }) => {
+            const conceptosCategoria = conceptosFiltrados.filter(
+              (c) => c.categoria === categoriaId
+            );
+            if (conceptosCategoria.length === 0) return null;
+
             return (
-              <div
-                key={concepto.id}
-                className="bg-surface border border-line rounded-xl overflow-hidden"
-              >
-                <button
-                  type="button"
-                  onClick={() => setExpandido(abierto ? null : concepto.id)}
-                  className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-paperDim transition-colors"
-                >
-                  <span className="font-display text-base font-semibold text-ink">
-                    {concepto.nombre}
-                  </span>
-                  {abierto ? (
-                    <ChevronUp size={18} className="text-slate shrink-0" />
-                  ) : (
-                    <ChevronDown size={18} className="text-slate shrink-0" />
-                  )}
-                </button>
+              <div key={categoriaId} className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-gold px-1">
+                  {categoriaEtiqueta}
+                </h3>
+                {conceptosCategoria.map((concepto) => {
+                  const abierto = expandido === concepto.id;
+                  return (
+                    <div
+                      key={concepto.id}
+                      className="bg-surface border border-line rounded-xl overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandido(abierto ? null : concepto.id)}
+                        className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-paperDim transition-colors"
+                      >
+                        <span className="font-display text-base font-semibold text-ink">
+                          {concepto.nombre}
+                        </span>
+                        {abierto ? (
+                          <ChevronUp size={18} className="text-slate shrink-0" />
+                        ) : (
+                          <ChevronDown size={18} className="text-slate shrink-0" />
+                        )}
+                      </button>
 
-                {abierto && (
-                  <div className="px-4 pb-4 space-y-3 border-t border-line pt-4">
-                    <p className="text-sm text-ink">{concepto.definicion}</p>
+                      {abierto && (
+                        <div className="px-4 pb-4 space-y-3 border-t border-line pt-4">
+                          <p className="text-sm text-ink">{concepto.definicion}</p>
 
-                    <div>
-                      <p className="text-xs font-medium text-slate mb-1">En cristiano</p>
-                      <p className="text-sm text-ink">{concepto.explicacion}</p>
+                          <div>
+                            <p className="text-xs font-medium text-slate mb-1">En cristiano</p>
+                            <p className="text-sm text-ink">{concepto.explicacion}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-slate mb-1">Fórmula</p>
+                            <p className="font-mono text-sm text-goldDark bg-paperDim rounded-lg px-3 py-2">
+                              {concepto.formula}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-slate mb-1">Ejemplo</p>
+                            <p className="text-sm text-ink">{concepto.ejemplo}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-slate mb-1">Cómo interpretarlo</p>
+                            <p className="text-sm text-ink">{concepto.interpretacion}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-lose mb-1">Errores frecuentes</p>
+                            <p className="text-sm text-ink">{concepto.erroresFrecuentes}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    <div>
-                      <p className="text-xs font-medium text-slate mb-1">Fórmula</p>
-                      <p className="font-mono text-sm text-goldDark bg-paperDim rounded-lg px-3 py-2">
-                        {concepto.formula}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-medium text-slate mb-1">Ejemplo</p>
-                      <p className="text-sm text-ink">{concepto.ejemplo}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-medium text-slate mb-1">Cómo interpretarlo</p>
-                      <p className="text-sm text-ink">{concepto.interpretacion}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-medium text-lose mb-1">Errores frecuentes</p>
-                      <p className="text-sm text-ink">{concepto.erroresFrecuentes}</p>
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             );
           })}

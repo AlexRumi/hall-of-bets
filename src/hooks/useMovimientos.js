@@ -8,6 +8,7 @@ function desdeFila(fila) {
     casa: fila.casa,
     tipo: fila.tipo,
     cantidad: Number(fila.cantidad),
+    archivado: fila.archivado ?? false,
   };
 }
 
@@ -80,10 +81,30 @@ export function useMovimientos(userId) {
     if (!error) setMovimientos([]);
   }
 
+  // Fase C: archiva (o desarchiva) los movimientos de un rango de fechas
+  // (mismo patrón que archivarPorRango de useApuestas.js).
+  async function archivarPorRango(desde, hasta, archivado) {
+    const { error } = await supabase
+      .from("movimientos")
+      .update({ archivado })
+      .eq("user_id", userId)
+      .gte("fecha", desde)
+      .lte("fecha", hasta);
+
+    if (!error) {
+      setMovimientos((actuales) =>
+        actuales.map((m) =>
+          m.fecha >= desde && m.fecha <= hasta ? { ...m, archivado } : m
+        )
+      );
+    }
+  }
+
   return {
     movimientos,
     agregarMovimiento,
     borrarMovimiento,
     borrarTodosMovimientos,
+    archivarPorRango,
   };
 }

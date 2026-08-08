@@ -83,11 +83,10 @@ export default function FormularioApuesta({
   const superaBankroll =
     !sinBankroll && bankrollCasa !== null && stakeNumero > bankrollCasa;
 
-  // Freebets pendientes de esa casa (ver bonos_pendientes/ListadoCasas.jsx):
-  // no es dinero del bankroll, así que se avisa aparte, no como "bankroll".
-  const freebetsCasa = casa
-    ? bonos.filter((b) => b.casa === casa).reduce((suma, b) => suma + b.importe, 0)
-    : 0;
+  // Saldo de freebet de esa casa (Fase A: se ajusta solo, ver App.jsx —
+  // sube con bonos de depósito/seguro, baja al crear una apuesta Freebet).
+  // No es dinero del bankroll, así que se avisa aparte, no como "bankroll".
+  const freebetsCasa = casa ? casas.find((c) => c.nombre === casa)?.freebetSaldo ?? 0 : 0;
   const sinFreebets = freebetsCasa <= 0;
   const superaFreebets = !sinFreebets && stakeNumero > freebetsCasa;
 
@@ -228,8 +227,8 @@ export default function FormularioApuesta({
                   <AlertTriangle size={12} />
                 )}
                 {tipoFondos === "freebet" && superaFreebets
-                  ? `Freebets: el importe supera lo pendiente (${freebetsCasa.toFixed(2)}€).`
-                  : `Freebets: ${sinFreebets ? "no disponibles" : `${freebetsCasa.toFixed(2)}€ pendientes`}.`}
+                  ? `Freebets: el importe supera el saldo disponible (${freebetsCasa.toFixed(2)}€).`
+                  : `Freebets: ${sinFreebets ? "no disponibles" : `${freebetsCasa.toFixed(2)}€ disponibles`}.`}
               </p>
             </div>
           )}

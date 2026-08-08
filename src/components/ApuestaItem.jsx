@@ -111,6 +111,11 @@ export default function ApuestaItem({
               +{apuesta.aumentoPct}% aumento
             </span>
           )}
+          {apuesta.archivado && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-void/10 text-void">
+              Archivada
+            </span>
+          )}
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               ESTILOS_RESULTADO[apuesta.resultado]

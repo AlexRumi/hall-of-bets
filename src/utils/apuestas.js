@@ -145,6 +145,19 @@ export function filtrarPorPeriodo(apuestas, periodo, referencia = new Date()) {
   });
 }
 
+// Filtra por un rango de fechas libre (ambos límites opcionales) — a
+// diferencia de filtrarPorPeriodo, no está atado al calendario (hoy/semana/
+// mes/año): se usa para consultar un periodo histórico concreto (Fase C,
+// archivado) que puede cruzar datos archivados y activos a la vez.
+export function filtrarPorRango(apuestas, desde, hasta) {
+  return apuestas.filter((apuesta) => {
+    const fecha = fechaLocal(apuesta.fecha);
+    if (desde && fecha < fechaLocal(desde)) return false;
+    if (hasta && fecha > fechaLocal(hasta)) return false;
+    return true;
+  });
+}
+
 // Agrupa las apuestas por mes ("YYYY-MM") y calcula las mismas estadísticas
 // que calcularEstadisticas para cada mes, del más reciente al más antiguo.
 export function calcularInformeMensual(apuestas) {

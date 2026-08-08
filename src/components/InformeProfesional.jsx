@@ -106,8 +106,12 @@ export default function InformeProfesional({ apuestas }) {
   const [bankroll, setBankroll] = useState("apuestas");
   const [granularidad, setGranularidad] = useState("mes");
   const [referencia, setReferencia] = useState(new Date());
+  // Fase C: archivado, excluido por defecto también en el informe.
+  const [incluirArchivado, setIncluirArchivado] = useState(false);
 
-  const apuestasBankroll = apuestas.filter((a) => a.categoria === bankroll);
+  const apuestasBankroll = apuestas
+    .filter((a) => a.categoria === bankroll)
+    .filter((a) => incluirArchivado || !a.archivado);
   const hoy = new Date();
   const enPeriodoActual = esPeriodoActual(granularidad, referencia, hoy);
   const referenciaAnterior = avanzarPeriodo(granularidad, referencia, -1);
@@ -155,22 +159,33 @@ export default function InformeProfesional({ apuestas }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2 print:hidden">
-        <div className="flex gap-2">
-          {BANKROLLS.map(({ id, etiqueta }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setBankroll(id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                bankroll === id
-                  ? "bg-felt text-paper border-felt"
-                  : "border-line text-slate hover:text-ink"
-              }`}
-            >
-              {etiqueta}
-            </button>
-          ))}
+      <div className="flex items-center justify-between gap-2 flex-wrap print:hidden">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-2">
+            {BANKROLLS.map(({ id, etiqueta }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setBankroll(id)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  bankroll === id
+                    ? "bg-felt text-paper border-felt"
+                    : "border-line text-slate hover:text-ink"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+          <label className="flex items-center gap-1.5 text-sm text-slate cursor-pointer">
+            <input
+              type="checkbox"
+              checked={incluirArchivado}
+              onChange={(e) => setIncluirArchivado(e.target.checked)}
+              className="accent-gold"
+            />
+            Ver también archivado
+          </label>
         </div>
         <button
           type="button"

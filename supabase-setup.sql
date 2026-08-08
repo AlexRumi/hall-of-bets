@@ -119,3 +119,38 @@ alter table public.apuestas add column seguro_freebet_importe numeric;
 -- gana (null si no tiene aumento). Ver calcularBeneficio en utils/apuestas.js.
 alter table public.apuestas add column aumento_pct numeric;
 
+-- Saldo de freebet por casa (Fase A): sustituye a "bonos_pendientes" como
+-- forma de saber cuánto freebet tienes disponible — se ajusta solo desde
+-- App.jsx (sube al registrar un bono de depósito o un seguro perdido, baja
+-- al crear una apuesta con fondos Freebet, se devuelve si esa apuesta se
+-- anula o se borra estando pendiente). "bonos_pendientes" no se borra, se
+-- queda solo para el caso residual de "Otro bono" (ver Fase B).
+alter table public.casas add column freebet_saldo numeric not null default 0;
+
+-- Migración de un solo uso: arranca el saldo de cada casa con lo que ya
+-- tuviera acumulado en bonos_pendientes, para no perder ese seguimiento.
+update public.casas c set freebet_saldo = coalesce((
+  select sum(b.importe) from public.bonos_pendientes b
+  where b.user_id = c.user_id and b.casa = c.nombre
+), 0);
+
+-- Archivado por rango de fechas (Fase C): no borra nada, solo oculta de
+-- las vistas normales (Apuestas/Entretenimiento, Estadísticas, Informe).
+-- El dinero real (Casas de apuestas) y los trofeos siguen contando estas
+-- filas igual, archivadas o no. Se gestiona desde Ajustes > Archivar datos.
+alter table public.apuestas add column archivado boolean not null default false;
+alter table public.movimientos add column archivado boolean not null default false;
+
+-- Fase D: fecha de la última copia de seguridad exportada, para el aviso en
+-- Ajustes. A diferencia de "trofeos-vistos" (solo local), esto sí se quiere
+-- ver igual en todos los dispositivos: una fila por usuario.
+create table public.ajustes (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  ultima_copia timestamptz
+);
+
+alter table public.ajustes enable row level security;
+create policy "propietario_ajustes" on public.ajustes
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+alter publication supabase_realtime add table public.ajustes;
+

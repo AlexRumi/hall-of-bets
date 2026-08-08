@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 function desdeFila(fila) {
-  return { nombre: fila.nombre, logo: fila.logo };
+  return {
+    nombre: fila.nombre,
+    logo: fila.logo,
+    freebetSaldo: Number(fila.freebet_saldo ?? 0),
+  };
 }
 
 export function useCasas(userId) {
@@ -79,11 +83,35 @@ export function useCasas(userId) {
     }
   }
 
+  // Ajusta el saldo de freebet de una casa (Fase A): delta positivo suma
+  // (bono de depósito, seguro perdido, devolución por nula/borrado),
+  // negativo resta (al crear una apuesta con fondos Freebet). Lee el
+  // saldo actual del propio estado en vez de pedirlo a Supabase, así que
+  // dos ajustes seguidos (p.ej. crear apuesta + marcarla nula después) no
+  // se pisan entre sí siempre que no se disparen en el mismo instante.
+  async function ajustarSaldoFreebet(nombre, delta) {
+    const casaActual = casas.find((c) => c.nombre === nombre);
+    if (!casaActual) return;
+    const nuevoSaldo = casaActual.freebetSaldo + delta;
+
+    const { error } = await supabase
+      .from("casas")
+      .update({ freebet_saldo: nuevoSaldo })
+      .eq("user_id", userId)
+      .eq("nombre", nombre);
+
+    if (!error) {
+      setCasas((actuales) =>
+        actuales.map((c) => (c.nombre === nombre ? { ...c, freebetSaldo: nuevoSaldo } : c))
+      );
+    }
+  }
+
   // Siempre en orden alfabético, así que cualquier casa nueva que se añada
   // en el futuro aparece sola en su sitio, sin tener que tocar nada más.
   const casasOrdenadas = [...casas].sort((a, b) =>
     a.nombre.localeCompare(b.nombre, "es")
   );
 
-  return { casas: casasOrdenadas, agregarCasa, borrarCasa };
+  return { casas: casasOrdenadas, agregarCasa, borrarCasa, ajustarSaldoFreebet };
 }

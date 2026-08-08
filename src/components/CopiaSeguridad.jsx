@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, Upload, AlertTriangle, CloudUpload } from "lucide-react";
+import { Download, Upload, AlertTriangle, CloudUpload, Clock } from "lucide-react";
 import {
   exportarDatos,
   importarDatos,
@@ -8,13 +8,36 @@ import {
 } from "../utils/copiaSeguridad";
 import ConfirmDialog from "./ConfirmDialog";
 
-export default function CopiaSeguridad({ userId }) {
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
+
+// Fase D: siempre se ve cuándo fue la última copia (sincronizado entre
+// dispositivos vía Supabase, ver useAjustes.js — no localStorage, que solo
+// se ve en este aparato). Si nunca se ha exportado, la referencia es la
+// fecha de alta de la cuenta. Pasados 7 días, el texto pasa a aviso (dorado)
+// — no bloquea nada, solo recuerda.
+export default function CopiaSeguridad({ userId, fechaAltaCuenta, ultimaCopia, onCopiaRealizada }) {
   const inputRef = useRef(null);
   const [archivoPendiente, setArchivoPendiente] = useState(null);
   const [confirmandoMigracion, setConfirmandoMigracion] = useState(false);
   const [migrando, setMigrando] = useState(false);
   const [migrado, setMigrado] = useState(false);
   const [error, setError] = useState("");
+
+  const referencia = ultimaCopia ?? fechaAltaCuenta;
+  const diasSinCopia = referencia
+    ? Math.floor((Date.now() - new Date(referencia).getTime()) / MS_POR_DIA)
+    : 0;
+  const avisoVisible = diasSinCopia > 7;
+  const textoEstado = ultimaCopia
+    ? diasSinCopia === 0
+      ? "Última copia de seguridad realizada hoy."
+      : `Última copia de seguridad realizada hace ${diasSinCopia} día${diasSinCopia === 1 ? "" : "s"}.`
+    : "Todavía no se ha hecho ninguna copia de seguridad.";
+
+  async function manejarExportar() {
+    await exportarDatos();
+    onCopiaRealizada();
+  }
 
   function manejarSeleccion(e) {
     const file = e.target.files[0];
@@ -85,10 +108,20 @@ export default function CopiaSeguridad({ userId }) {
           </p>
         </div>
 
+        <p
+          className={`flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 ${
+            avisoVisible ? "text-gold bg-gold/10 border border-gold/30" : "text-slate"
+          }`}
+        >
+          <Clock size={14} className="shrink-0" />
+          {textoEstado}
+          {avisoVisible && " Conviene hacer una nueva."}
+        </p>
+
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={exportarDatos}
+            onClick={manejarExportar}
             className="flex items-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors"
           >
             <Download size={16} />

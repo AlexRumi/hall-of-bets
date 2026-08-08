@@ -640,6 +640,219 @@ antes de pasar a la siguiente.
     aviso de "Elige una competición" ya no hacía falta (siempre era falso
     dentro de ese bloque) y se quitó.
 
+## Fases futuras pedidas (5, una a una con confirmación)
+
+Petición directa de una tanda de 5 cambios grandes (freebets, archivado,
+copia de seguridad, desplegables), a abordar en fases separadas,
+confirmando cada una antes de la siguiente.
+
+- **Fase A — Saldo de freebet por casa** — ✅ hecho. Sustituye el sistema
+  de `bonos_pendientes` (lista de avisos que se borraban a mano con "Ya lo
+  registré") por un **saldo numérico por casa** (`casas.freebet_saldo`)
+  que se ajusta solo: sube al registrar un bono de depósito
+  (`FormularioMovimiento.jsx`) o un seguro perdido (`manejarMarcarResultado`
+  en `App.jsx`), baja al crear una apuesta con fondos Freebet
+  (`manejarAgregar`) — pase lo que pase después con esa apuesta —, y se
+  devuelve si esa apuesta se anula (`manejarMarcarResultado`, resultado
+  "nula") o se borra estando aún Pendiente (`manejarBorrarApuesta`, nueva).
+  Si ya estaba resuelta (ganada/perdida/cash out) no se devuelve al
+  borrarla: el freebet ya se gastó de verdad. `useCasas.js` gana
+  `ajustarSaldoFreebet(nombre, delta)`, que lee el saldo actual del propio
+  estado local y hace un `update` en Supabase.
+  **A propósito, sin tocar en esta fase**: `FormularioBono.jsx`,
+  `useBonosPendientes.js` y el listado de "Bonos pendientes"/"Ya lo
+  registré" en `ListadoCasas.jsx` — sus dos disparadores automáticos
+  (depósito, seguro) ya no crean bonos pendientes, así que a partir de
+  ahora esa lista solo recibe el caso residual ("Otro bono"), que es
+  justo lo que pide la Fase B — así que esa fase ya queda más pequeña de
+  lo que parecía. Se hizo también una migración de datos de un solo uso
+  (sin borrar `bonos_pendientes`) que sumó lo que ya hubiera pendiente de
+  cada casa dentro de su saldo inicial, para no perder ese seguimiento.
+- **Fase B — Ajuste de "Nuevo bono pendiente"** — ✅ hecho.
+  `FormularioBono.jsx` pasa a llamarse "Otro bono", con un botón ℹ️ junto
+  al título (`useState` local, alterna un texto explicativo debajo, mismo
+  patrón sencillo que ya usa `BuscadorEvento.jsx`/`SelectorMercado.jsx`
+  para paneles que se abren/cierran) aclarando que es solo para bonos que
+  no vienen de un depósito ni de una apuesta asegurada — esos ya suman
+  solos al saldo de freebet desde la Fase A. Más discreto que el resto de
+  formularios de la app a propósito (se usará raramente): borde
+  `border-dashed` en vez de sólido, título más pequeño, botón "Añadir"
+  más pequeño. La lista de "Bonos pendientes" y su botón "Ya lo registré"
+  en `ListadoCasas.jsx` no cambian — a partir de ahora solo mostrarán lo
+  que se añada desde aquí.
+  Ronda de ajuste tras Fase B (petición directa, misma sesión): tanto la
+  lista de "Bonos pendientes" como el formulario "Otro bono" se sacan del
+  bloque suelto arriba del todo de `ListadoCasas.jsx` y pasan a vivir
+  dentro de cada tarjeta de casa (junto al resto de sus datos:
+  Ingresos/Retiradas/Beneficio/ROI/Freebet), filtrados a esa casa —
+  ya no hace falta elegir casa en el formulario (`FormularioBono.jsx`
+  gana un prop `casaFija`, mismo patrón que `FormularioMovimiento.jsx`).
+  El formulario se abre con un botón discreto "+ Otro bono" (`useState`
+  `mostrandoBono` en `ListadoCasas.jsx`, se cierra solo al cambiar de casa
+  expandida), colocado justo debajo de `FormularioMovimiento` (con sus
+  campos Cantidad/Bono recibido con este depósito) — para seguir el orden
+  lógico: primero el caso automático (bono con el depósito), después el
+  residual (Otro bono). Y "Bankroll total" (la caja de arriba del todo) pasa a
+  mostrarse siempre que haya al menos una casa registrada, aunque no
+  tenga ningún movimiento todavía (antes solo aparecía si alguna casa
+  tenía movimientos o apuestas) — mismo cambio de condición ya usado en
+  la tarjeta de cada casa individual (`SIN_MOVIMIENTOS` como valor por
+  defecto).
+- **Fase C — Archivado por rango de fechas** — ✅ hecho. `apuestas` y
+  `movimientos` ganan una columna `archivado` (boolean, `false` por
+  defecto) — no se toca `promociones` (ya sin uso) ni `casas`/`objetivos`/
+  `bonos_pendientes` (sin un rango de fechas con sentido). Nada se borra:
+  archivar solo oculta esas filas de las vistas normales.
+  - `useApuestas.js`/`useMovimientos.js` ganan `archivarPorRango(desde, hasta, archivado)`
+    (mismo patrón que `borrarTodoBankroll`, pero `.update({archivado})` en
+    vez de `.delete()` — sirve tanto para archivar como para desarchivar
+    según el booleano). `utils/apuestas.js` gana `filtrarPorRango(apuestas, desde, hasta)`,
+    un rango libre (a diferencia de `filtrarPorPeriodo`, que solo conoce
+    los bloques de calendario hoy/semana/mes/año).
+  - **Lo que nunca cambia al archivar**: "Casas de apuestas"
+    (`ListadoCasas.jsx` — bankroll por casa, saldo de freebet) sigue
+    recibiendo `apuestas`/`movimientos` sin filtrar, así que el dinero real
+    no se mueve ni un céntimo, se archive lo que se archive. Los trofeos
+    tampoco — `useTrofeos(apuestas)` en `App.jsx` ya recibía (y sigue
+    recibiendo) el array completo sin filtrar por bankroll/casa/periodo,
+    así que archivar apuestas antiguas nunca "quita" un trofeo ya
+    conseguido.
+  - **Lo que sí se oculta por defecto**: en `App.jsx`, `apuestasDelBankroll`
+    (la base de la que cuelgan `apuestasFiltradas`, `apuestasPeriodo`, la
+    racha actual y el listado de Apuestas/Entretenimiento) excluye lo
+    archivado salvo que el nuevo checkbox "Ver también archivado" de
+    `FiltrosApuestas.jsx` (estado `verArchivadas`) esté marcado.
+    `EstadisticasDashboard.jsx` e `InformeProfesional.jsx` reciben el
+    array completo como siempre y hacen su propio filtrado local (mismo
+    patrón que ya usaban para su filtro de casa/bankroll/periodo), cada
+    uno con su propio checkbox "Ver también archivado".
+  - **Rango libre en Estadísticas**: además del checkbox,
+    `EstadisticasDashboard.jsx` gana una pastilla "Rango de fechas" que
+    sustituye a las pastillas de casa mientras está activa — dos
+    `<input type="date">` (desde/hasta) que usan `filtrarPorRango` y
+    **siempre** cruzan archivado + activo (es su propósito: consultar un
+    periodo histórico completo, p.ej. un año ya archivado entero, en un
+    solo vistazo), sin depender del checkbox.
+  - Apuestas archivadas se distinguen con una pastilla gris "Archivada"
+    (`bg-void/10 text-void`, para no confundirla con las doradas de
+    promoción) en `ApuestaItem.jsx` y `TarjetaApuestaResumen.jsx` — solo
+    se llega a ver con "Ver también archivado" activado.
+  - **Ajustes** gana una tarjeta nueva `ArchivarDatos.jsx` (bajo
+    `CopiaSeguridad`): interruptor Archivar/Desarchivar, dos fechas
+    (desde/hasta), un recuento en vivo ("X apuestas y Y movimientos"),
+    un botón "Exportar JSON de este rango" (recomendado, no obligatorio —
+    nueva función `exportarRango(desde, hasta)` en `utils/copiaSeguridad.js`,
+    mismo patrón que `exportarDatos()` pero solo `apuestas`/`movimientos`
+    filtrados por fecha) y el botón de confirmar la acción con
+    `ConfirmDialog`. El mismo panel sirve para desarchivar (mismo rango,
+    mismo botón, solo cambia el interruptor) para que quede totalmente
+    reversible, sin necesitar una pantalla aparte.
+- **Fase D — Aviso de copia de seguridad** — ✅ hecho. `CopiaSeguridad.jsx`
+  muestra siempre una línea de estado ("Última copia de seguridad
+  realizada hace X días" / "hoy" / "Todavía no se ha hecho ninguna copia
+  de seguridad" si nunca se ha exportado) — pasados 7 días desde esa
+  fecha, el texto cambia a estilo de aviso (dorado) y añade "Conviene
+  hacer una nueva", pero nunca bloquea nada. Cuenta tanto una exportación
+  completa como una de un rango (Fase C, `ArchivarDatos.jsx`) — cualquiera
+  de las dos "renueva" la fecha. Si nunca se ha exportado, la referencia
+  es la fecha de alta de la cuenta (`sesion.user.created_at`, la da
+  Supabase Auth sin guardar nada nuevo — prop `fechaAltaCuenta` desde
+  `App.jsx` hasta `CopiaSeguridad.jsx`).
+  A diferencia de "trofeos-vistos" (solo local), esta fecha sí se quiso
+  ver igual en todos los dispositivos (petición directa tras probarlo):
+  nueva tabla `ajustes` en Supabase (una fila por usuario, columna
+  `ultima_copia timestamptz`) y `hooks/useAjustes.js` (mismo patrón que
+  `useCasas.js`: fetch inicial + canal realtime + `upsert` con
+  `onConflict: "user_id"`) en vez de `localStorage`. `registrarCopiaRealizada()`
+  se llama desde `App.jsx` (vía prop `onCopiaRealizada`) al terminar
+  `exportarDatos()`/`exportarRango()`, no dentro de esas funciones — así
+  quedan como utilidades puras, sin depender de la sesión.
+  Bug real encontrado al probarlo: exportar justo al entrar en Ajustes no
+  actualizaba el texto hasta la siguiente exportación (y el archivo se
+  descargaba duplicado, "...(1).json", porque el segundo intento generaba
+  el mismo nombre de archivo del mismo día). Causa: una carrera entre el
+  fetch inicial del hook (`select` disparado al montar) y el `upsert` de
+  `registrarCopiaRealizada` — si el fetch inicial tardaba más en responder,
+  su resultado (la fila de antes de exportar) llegaba después y pisaba el
+  valor ya puesto por el upsert. `useAjustes.js` añade `masReciente(a, b)`
+  (compara las dos fechas ISO como texto, igual que ya se comparan las
+  `fecha` de apuestas/movimientos en otros sitios) y lo usa en los tres
+  puntos que tocan `ultimaCopia` (fetch inicial, canal realtime, upsert),
+  para que una respuesta que llega tarde nunca pueda retroceder el valor.
+- **Fase E — Desplegables en responsive (casa/país/competición +
+  desplegable de mercados cortado en móvil)** — ✅ hecho. Nuevo
+  `SelectorDesplegable.jsx`: mismo patrón que ya tenía `SelectorMercado.jsx`
+  (botón + panel propio, no `<select>` nativo — en móvil un `<select>` con
+  `<optgroup>` lo pinta el sistema operativo entero, sin dejar aplicar
+  ningún estilo), pero genérico (`grupos: [{ etiqueta?, opciones: [{valor,
+  texto, destacado?}] }]`, grupo sin `etiqueta` = lista plana sin
+  cabecera), para no repetir la misma lógica de abrir/cerrar y "click
+  fuera cierra" en cada sitio. `CampoCasa.jsx` (antes `<select>` liso) y
+  "País"/"Competición" en `BuscadorEvento.jsx` (antes `<select>` con
+  `<optgroup>`) pasan a usarlo — `SelectorMercado.jsx` no se tocó por
+  dentro (ya funcionaba bien), solo se corrigió el bug de abajo.
+  Bug real corregido de paso: el desplegable de mercados "se cortaba" en
+  móvil y no llegaba a verse "Otro mercado". Causa: su panel tenía `z-20`,
+  por debajo de la barra inferior móvil (`z-40`, `BarraInferiorMovil.jsx`)
+  — si se abría cerca del final de la pantalla, la barra (opaca) tapaba la
+  parte de abajo del panel. Se sube a `z-50` (mismo nivel que el resto de
+  overlays de la app — `ConfirmDialog.jsx` y similares) tanto en
+  `SelectorMercado.jsx` como en `SelectorDesplegable.jsx` y en los otros
+  dos paneles de `BuscadorEvento.jsx` (aviso de "fuera de rango" y lista de
+  partidos, mismo problema potencial). De paso, `max-h-80` (320px fijos)
+  pasa a `max-h-[50vh]` en los tres, para que la altura máxima del panel se
+  ajuste a la pantalla en vez de a un valor fijo que podía no caber en
+  móviles pequeños.
+  Ronda de ajuste (petición directa, misma sesión): los cuatro paneles
+  (`SelectorDesplegable.jsx`, `SelectorMercado.jsx`, y los dos de
+  `BuscadorEvento.jsx`) ganan posición inteligente con el nuevo
+  `hooks/usePosicionDesplegable.js`: al abrirse, mide con
+  `getBoundingClientRect()` el hueco libre encima y debajo del campo y
+  decide abrir hacia abajo (de toda la vida) o hacia arriba si hay poco
+  sitio debajo y más arriba — así encaja bien tanto si el campo está al
+  principio del formulario como si está pegado abajo del todo. La altura
+  máxima del panel (antes fija en `max-h-[50vh]`) pasa a ajustarse también
+  al hueco real disponible en cada caso (mínimo 120px), vía un
+  `style={{ maxHeight }}` en vez de una clase de Tailwind. Solo se mide al
+  abrir, no en cada scroll con el panel ya abierto. En `SelectorMercado.jsx`
+  hizo falta además quitar `space-y-2` del contenedor y poner los márgenes
+  a mano (`mt-2` en el campo de texto de "Otro mercado"): ese margen
+  automático se aplicaba también al panel aunque estuviera en `absolute`,
+  y al abrir hacia arriba lo empujaba en la dirección contraria a la que
+  debía ir.
+- **Ampliación de Academia y ℹ️ en "Otro bono"** (no era una fase del
+  guion, petición directa tras la fase E). `utils/academia.js` gana 5
+  conceptos nuevos, mismo formato que los 12 de la fase 20 (definición,
+  "en cristiano", fórmula, ejemplo, interpretación, errores frecuentes):
+  **Bono / Freebet**, **Apuesta asegurada (seguro)**, **Aumento de cuota
+  (odds boost)**, **Promociones de casas de apuestas** (aclara que esta
+  app ya no tiene una sección propia de Promociones — se registran como
+  apuesta normal con seguro/aumento/bono) y **Matched Betting** (con las
+  fórmulas del importe a apostar en contra —"lay"— en un exchange como
+  Betfair Exchange, tanto con dinero real como con un freebet, y un
+  ejemplo completo). "Cuota" ya existía desde la fase 20, no se duplica.
+  `FormularioBono.jsx` ("Otro bono") cambia su ℹ️ de un texto propio
+  (`useState` local que alternaba una frase) al `BotonInfoConcepto.jsx`
+  estándar que ya usa el resto de la app, enlazado al concepto "Bono /
+  Freebet" — la aclaración de que ese formulario es solo para el caso
+  residual pasa a vivir dentro del concepto de Academia, sin duplicarla en
+  dos sitios.
+  Ronda de orden (petición directa, misma sesión): con 17 conceptos ya no
+  bastaba la lista plana de la fase 20. `utils/academia.js` gana
+  `CATEGORIAS_ACADEMIA` (mismo patrón que `CATEGORIAS` de `utils/
+  trofeos.js`: un `id`/`etiqueta` por categoría) y cada concepto una
+  `categoria` — de lo más básico a lo más avanzado: Fundamentos (Stake,
+  Bankroll, Cuota, Probabilidad implícita, Apuesta simple, Apuesta
+  combinada), Rendimiento y evaluación (ROI, Yield, Win Rate, EV),
+  Resultados especiales (Cash Out, Void) y Bonos, promociones y matched
+  betting (Bono, Apuesta asegurada, Aumento de cuota, Promociones, Matched
+  Betting). `Academia.jsx` agrupa por esa categoría (cabecera dorada por
+  grupo, se oculta si el buscador la deja sin conceptos) en vez de la
+  lista plana de antes — se descartó a propósito un filtro alfabético
+  aparte: con solo ~17 conceptos y el buscador de texto ya existente,
+  agrupar por tema ayuda más a encontrar algo relacionado que ir letra por
+  letra.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

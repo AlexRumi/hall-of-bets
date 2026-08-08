@@ -103,6 +103,36 @@ export async function exportarDatos() {
   URL.revokeObjectURL(url);
 }
 
+// Igual que exportarDatos(), pero solo apuestas y movimientos (las únicas
+// tablas con fecha) y acotado a un rango — pensado como copia recomendada
+// (no obligatoria) antes de archivar ese mismo rango desde Ajustes.
+export async function exportarRango(desde, hasta) {
+  const tablasConFecha = ["apuestas", "movimientos"];
+  const resultados = await Promise.all(
+    tablasConFecha.map((tabla) =>
+      supabase.from(tabla).select("*").gte("fecha", desde).lte("fecha", hasta)
+    )
+  );
+
+  const datos = {};
+  tablasConFecha.forEach((tabla, i) => {
+    datos[tabla] = resultados[i].data ?? [];
+  });
+
+  const contenido = JSON.stringify(
+    { version: 2, fecha: new Date().toISOString(), rango: { desde, hasta }, datos },
+    null,
+    2
+  );
+  const blob = new Blob([contenido], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = `hall-of-bets-rango-${desde}-a-${hasta}.json`;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
+
 function filasDe(datos, tabla) {
   return datos[tabla] ?? datos[CLAVES_LOCALSTORAGE[tabla]] ?? [];
 }

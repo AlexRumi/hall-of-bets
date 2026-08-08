@@ -18,6 +18,7 @@ function desdeFila(fila) {
     seguroFreebetImporte:
       fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
     aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
+    archivado: fila.archivado ?? false,
   };
 }
 
@@ -188,6 +189,26 @@ export function useApuestas(userId) {
     }
   }
 
+  // Fase C: archiva (o desarchiva) todas las apuestas de un rango de
+  // fechas, sin importar el bankroll — no se borra nada, solo se marcan
+  // para que las vistas normales dejen de mostrarlas por defecto.
+  async function archivarPorRango(desde, hasta, archivado) {
+    const { error } = await supabase
+      .from("apuestas")
+      .update({ archivado })
+      .eq("user_id", userId)
+      .gte("fecha", desde)
+      .lte("fecha", hasta);
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) =>
+          a.fecha >= desde && a.fecha <= hasta ? { ...a, archivado } : a
+        )
+      );
+    }
+  }
+
   return {
     apuestas,
     agregarApuesta,
@@ -195,5 +216,6 @@ export function useApuestas(userId) {
     marcarResultado,
     borrarApuesta,
     borrarTodoBankroll,
+    archivarPorRango,
   };
 }

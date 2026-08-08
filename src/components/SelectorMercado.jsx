@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { CATEGORIAS_MERCADO, equiposDesdeEvento } from "../utils/mercados";
+import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
 
 const OTRO = "otro";
 
@@ -35,11 +36,16 @@ function etiquetaSeleccion(seleccion, equipos) {
 // cabecera de cada categoría de sus opciones — un <select> con <optgroup>
 // en móvil lo pinta el sistema operativo entero, sin dejar aplicar ningún
 // estilo. Mismo patrón de "click fuera para cerrar" que BuscadorEvento.jsx.
+// z-50 (Fase E): con z-20 el panel quedaba tapado por la barra inferior
+// móvil (z-40, BarraInferiorMovil.jsx) al abrirse cerca del final de la
+// pantalla — no llegaba a verse "Otro mercado". usePosicionDesplegable.js
+// decide además si abre hacia abajo o hacia arriba según el hueco libre.
 export default function SelectorMercado({ evento, valor, onCambiar }) {
   const equipos = equiposDesdeEvento(evento);
   const [seleccion, setSeleccion] = useState(() => seleccionInicial(valor, equipos));
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
+  const posicion = usePosicionDesplegable(abierto, contenedorRef);
 
   useEffect(() => {
     function manejarClickFuera(e) {
@@ -60,7 +66,7 @@ export default function SelectorMercado({ evento, valor, onCambiar }) {
   }
 
   return (
-    <div ref={contenedorRef} className="relative space-y-2">
+    <div ref={contenedorRef} className="relative">
       <button
         type="button"
         onClick={() => setAbierto((actual) => !actual)}
@@ -78,7 +84,12 @@ export default function SelectorMercado({ evento, valor, onCambiar }) {
       </button>
 
       {abierto && (
-        <div className="absolute z-20 w-full bg-surface border border-line rounded-lg shadow-lg max-h-80 overflow-y-auto">
+        <div
+          className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg overflow-y-auto ${
+            posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
+          }`}
+          style={{ maxHeight: posicion.maxAltura }}
+        >
           {CATEGORIAS_MERCADO.map((categoria) => (
             <div key={categoria.id}>
               <p className="sticky top-0 z-10 bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold">
@@ -122,7 +133,7 @@ export default function SelectorMercado({ evento, valor, onCambiar }) {
           onChange={(e) => onCambiar(e.target.value)}
           placeholder="Ej. Gana Real Madrid"
           required
-          className="w-full border border-line rounded-lg px-3 py-2 text-sm"
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mt-2"
         />
       )}
     </div>

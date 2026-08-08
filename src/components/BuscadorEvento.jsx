@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { usePartidos } from "../hooks/usePartidos";
 import { PAISES_CONECTADOS, PAISES_GRUPO_EUROPA } from "../utils/ligasConectadas";
+import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
+import SelectorDesplegable from "./SelectorDesplegable";
 
 // Sentinela para "Otras ligas": no puede coincidir con ningún nombre real
 // de país de PAISES_CONECTADOS.
@@ -20,6 +22,23 @@ const PAISES_INDIVIDUALES = PAISES_CONECTADOS.filter(
 const PAISES_EUROPA = PAISES_CONECTADOS.filter((p) => PAISES_GRUPO_EUROPA.includes(p.pais));
 const COMPETICION_EUROPEA = PAISES_CONECTADOS.find((p) => p.pais === "Competición Europea");
 
+// Grupos para el desplegable de País (ver SelectorDesplegable.jsx): mismas
+// tres secciones que tenía el <select> con <optgroup> de antes (Grandes
+// ligas / Europa / sueltas), con "Competición Europea" y "Otras ligas"
+// destacadas en negrita al final.
+const GRUPOS_PAIS = [
+  { etiqueta: "Grandes ligas", opciones: PAISES_INDIVIDUALES.map(({ pais }) => ({ valor: pais, texto: pais })) },
+  { etiqueta: "Europa", opciones: PAISES_EUROPA.map(({ pais }) => ({ valor: pais, texto: pais })) },
+  {
+    opciones: [
+      ...(COMPETICION_EUROPEA
+        ? [{ valor: COMPETICION_EUROPEA.pais, texto: COMPETICION_EUROPEA.pais, destacado: true }]
+        : []),
+      { valor: OTRAS_LIGAS, texto: "Otras ligas", destacado: true },
+    ],
+  },
+];
+
 // Campo "Evento" con autocompletado, con dos modos según el desplegable de
 // País:
 // - Sin elegir país todavía, o "Otras ligas": modo manual de toda la vida,
@@ -37,6 +56,8 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   const [paisFiltro, setPaisFiltro] = useState("");
   const [competicionFiltro, setCompeticionFiltro] = useState("");
   const contenedorRef = useRef(null);
+  const inputWrapRef = useRef(null);
+  const posicion = usePosicionDesplegable(abierto, inputWrapRef);
   const { partidos, fueraDeRango } = usePartidos(fecha);
 
   useEffect(() => {
@@ -74,59 +95,30 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   return (
     <div ref={contenedorRef} className="space-y-1.5">
       <div className="grid grid-cols-2 gap-2">
-        <select
-          value={paisFiltro}
-          onChange={(e) => {
-            setPaisFiltro(e.target.value);
+        <SelectorDesplegable
+          valor={paisFiltro}
+          placeholder="País"
+          grupos={GRUPOS_PAIS}
+          onElegir={(nuevoPais) => {
+            setPaisFiltro(nuevoPais);
             setCompeticionFiltro("");
             setAbierto(true);
           }}
-          className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink"
-        >
-          <option value="">País</option>
-          <optgroup label="Grandes ligas">
-            {PAISES_INDIVIDUALES.map(({ pais }) => (
-              <option key={pais} value={pais}>
-                {pais}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Europa">
-            {PAISES_EUROPA.map(({ pais }) => (
-              <option key={pais} value={pais}>
-                {pais}
-              </option>
-            ))}
-          </optgroup>
-          {COMPETICION_EUROPEA && (
-            <option value={COMPETICION_EUROPEA.pais} className="font-bold">
-              {COMPETICION_EUROPEA.pais}
-            </option>
-          )}
-          <option value={OTRAS_LIGAS} className="font-bold">
-            Otras ligas
-          </option>
-        </select>
-        <select
-          value={competicionFiltro}
-          onChange={(e) => {
-            setCompeticionFiltro(e.target.value);
+        />
+        <SelectorDesplegable
+          valor={competicionFiltro}
+          placeholder="Competición"
+          grupos={[{ opciones: competicionesDisponibles.map((c) => ({ valor: c, texto: c })) }]}
+          onElegir={(nuevaCompeticion) => {
+            setCompeticionFiltro(nuevaCompeticion);
             setAbierto(true);
           }}
           disabled={modoManual}
-          className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink disabled:opacity-50"
-        >
-          <option value="">Competición</option>
-          {competicionesDisponibles.map((competicion) => (
-            <option key={competicion} value={competicion}>
-              {competicion}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {(paisFiltro || valor) && !necesitaCompeticion && (
-        <div className="relative">
+        <div ref={inputWrapRef} className="relative">
           <input
             type="text"
             value={valor}
@@ -143,7 +135,11 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           />
 
           {abierto && !modoManual && fueraDeRango && (
-            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
+            <div
+              className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg text-left ${
+                posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
+              }`}
+            >
               <p className="px-3 py-2 text-xs text-slate">
                 El plan gratuito de API-Football solo permite buscar partidos
                 de ayer, hoy o mañana. Para esta fecha, escribe el evento a
@@ -153,7 +149,12 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           )}
 
           {abierto && coincidencias.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto text-left">
+            <div
+              className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg overflow-y-auto text-left ${
+                posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
+              }`}
+              style={{ maxHeight: posicion.maxAltura }}
+            >
               {coincidencias.map((partido) => (
                 <button
                   key={partido.id}
