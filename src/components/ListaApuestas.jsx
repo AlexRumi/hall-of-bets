@@ -73,13 +73,32 @@ export default function ListaApuestas({
           </button>
 
           {expandido && (
-            <div className="space-y-2 mt-2">
-              {mes.dias.flatMap((dia) => dia.apuestas).map((apuesta) => (
-                <TarjetaApuestaResumen
-                  key={apuesta.id}
-                  apuesta={apuesta}
-                  onAbrir={setApuestaAbiertaId}
-                />
+            <div className="space-y-3 mt-2">
+              {mes.dias.map((dia) => (
+                <div key={dia.fecha} className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-sm font-semibold text-ink">{dia.etiqueta}</span>
+                    <span
+                      className={`font-mono text-xs font-bold px-2 py-0.5 rounded-lg ${
+                        dia.beneficio > 0
+                          ? "bg-win/10 text-win"
+                          : dia.beneficio < 0
+                          ? "bg-lose/10 text-lose"
+                          : "bg-paperDim text-slate"
+                      }`}
+                    >
+                      {dia.beneficio > 0 ? "+" : ""}
+                      {dia.beneficio.toFixed(2)}€
+                    </span>
+                  </div>
+                  {dia.apuestas.map((apuesta) => (
+                    <TarjetaApuestaResumen
+                      key={apuesta.id}
+                      apuesta={apuesta}
+                      onAbrir={setApuestaAbiertaId}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           )}

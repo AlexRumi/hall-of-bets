@@ -1,5 +1,4 @@
 import { calcularBeneficio } from "../utils/apuestas";
-import { etiquetaDia } from "../utils/agrupado";
 
 // No hay iconos de fútbol/baloncesto/tenis en lucide-react (comprobado):
 // un emoji por deporte es lo más parecido al icono del ejemplo.
@@ -45,7 +44,6 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
       </span>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-slate">{etiquetaDia(apuesta.fecha)}</p>
         <p className="text-sm font-semibold text-ink truncate">{textoEvento(apuesta)}</p>
       </div>
 

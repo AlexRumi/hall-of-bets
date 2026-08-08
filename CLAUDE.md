@@ -574,17 +574,16 @@ antes de pasar a la siguiente.
     border-line rounded-lg`), con su beneficio en pastilla de color
     (verde/rojo/gris) — para que se note claramente como una fila propia
     del listado, no solo una etiqueta más.
-  - Ronda siguiente: la cabecera de cada día (texto + pastilla de
-    beneficio, encima del grupo de tarjetas de ese día) desaparece del
-    todo — el día pasa a vivir dentro de cada tarjeta individual
-    (`TarjetaApuestaResumen.jsx` ahora pinta `etiquetaDia(apuesta.fecha)`
-    encima del evento), para que día y apuesta queden juntos en el mismo
-    recuadro en vez de en dos elementos separados. `etiquetaDia` se
-    exporta desde `utils/agrupado.js` (antes privada) para poder
-    reutilizarla ahí. `ListaApuestas.jsx` ya no pinta un `<div>` por día:
-    aplana `mes.dias` a una sola lista de tarjetas por mes
-    (`mes.dias.flatMap((dia) => dia.apuestas)`), aprovechando que ya
-    vienen ordenadas.
+  - Se probó fusionar el día dentro de cada tarjeta (quitando la cabecera
+    de día) y se descartó tras ver una captura de referencia (Bet
+    Analityx): el día va como cabecera propia — texto simple ("Domingo
+    11") + su beneficio del día en pastilla de color — justo encima del
+    grupo de tarjetas de ese día, no dentro de la tarjeta de cada apuesta.
+    Vuelta al diseño con `<div>` por día en `ListaApuestas.jsx` (cabecera +
+    sus tarjetas), sin la línea de fecha dentro de
+    `TarjetaApuestaResumen.jsx`. `etiquetaDia` se quedó exportada desde
+    `utils/agrupado.js` por si hace falta en otro sitio, aunque ya no se
+    usa fuera de ahí.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
