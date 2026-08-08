@@ -668,6 +668,20 @@ antes de pasar a la siguiente.
     acertar 4 de 5 y que se vea), y solo en una apuesta simple (1 único
     partido, sin mini-selector propio) el punto sigue el resultado general
     porque ahí son la misma cosa.
+  - Ronda de pulido tras probarlo (peticiones directas, misma sesión): los
+    mercados de cada partido (antes en una sola línea separados por "·")
+    pasan a listarse uno debajo de otro, más fáciles de leer con varios
+    mercados. Textos y logo de la cabecera del detalle, que se veían
+    pequeños, suben de tamaño (logo de la casa de `w-5 h-5` a `w-10 h-10`;
+    el resto de textos un escalón de Tailwind por encima de donde estaban).
+    "Eliminar apuesta" deja de vivir como botón grande al final de la
+    tarjeta y pasa a ser un icono (papelera, `lucide-react` `Trash2`) junto
+    al lápiz de "Editar" en la cabecera — mismo sitio, mismo tamaño. Con
+    los dos únicos botones grandes de abajo ya movidos arriba (Editar y
+    Eliminar), el bloque de acciones del final (antes siempre presente)
+    pasa a existir solo si la apuesta sigue pendiente (Ganada/Perdida/Nula
+    + Cash Out) — si ya está resuelta, no queda nada que mostrar ahí y el
+    bloque entero desaparece en vez de dejar un hueco vacío.
 
 ## Fases futuras pedidas (5, una a una con confirmación)
 

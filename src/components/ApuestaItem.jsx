@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Pencil } from "lucide-react";
+import { X, Pencil, Trash2 } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
@@ -150,6 +150,14 @@ export default function ApuestaItem({
           >
             <Pencil size={16} />
           </button>
+          <button
+            type="button"
+            onClick={() => setConfirmandoBorrado(true)}
+            aria-label="Eliminar apuesta"
+            className="text-slate hover:text-lose transition-colors"
+          >
+            <Trash2 size={16} />
+          </button>
           {onCerrar && (
             <button
               type="button"
@@ -260,8 +268,8 @@ export default function ApuestaItem({
         })}
       </div>
 
-      <div className="p-4 sm:p-5 border-t border-line space-y-2">
-        {esPendiente && (
+      {esPendiente && (
+        <div className="p-4 sm:p-5 border-t border-line space-y-2">
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -285,27 +293,16 @@ export default function ApuestaItem({
               Nula
             </button>
           </div>
-        )}
 
-        <div className={`grid gap-2 ${esPendiente ? "grid-cols-2" : "grid-cols-1"}`}>
-          {esPendiente && (
-            <button
-              type="button"
-              onClick={() => setMostrandoCashOut(true)}
-              className="py-2 rounded-lg text-sm font-semibold bg-gold text-felt hover:bg-goldDark transition-colors"
-            >
-              Cash Out
-            </button>
-          )}
           <button
             type="button"
-            onClick={() => setConfirmandoBorrado(true)}
-            className="py-2 rounded-lg text-sm font-semibold border border-lose text-lose hover:bg-lose/10 transition-colors"
+            onClick={() => setMostrandoCashOut(true)}
+            className="w-full py-2 rounded-lg text-sm font-semibold bg-gold text-felt hover:bg-goldDark transition-colors"
           >
-            Eliminar apuesta
+            Cash Out
           </button>
         </div>
-      </div>
+      )}
 
       <ConfirmDialog
         abierto={confirmandoBorrado}
