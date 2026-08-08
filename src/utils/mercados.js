@@ -12,7 +12,7 @@ export function equiposDesdeEvento(evento) {
   const partes = (evento ?? "").split(" - ");
   return partes.length === 2 && partes[0].trim() && partes[1].trim()
     ? { local: partes[0].trim(), visitante: partes[1].trim() }
-    : { local: "el equipo local", visitante: "el equipo visitante" };
+    : { local: "Equipo Local", visitante: "Equipo Visitante" };
 }
 
 const LINEAS_GOLES = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
@@ -133,7 +133,7 @@ export const CATEGORIAS_MERCADO = [
     opciones: [
       { id: "ht-1", texto: (eq) => `${eq.local} gana al descanso` },
       { id: "ht-2", texto: (eq) => `${eq.visitante} gana al descanso` },
-      { id: "ht-x", texto: () => "Empate al descanso" },
+      { id: "ht-x", texto: () => "Empate" },
     ],
   },
   {

@@ -549,6 +549,13 @@ antes de pasar a la siguiente.
     resaltan en dorado la que está elegida). "Otro mercado" al final,
     separado con un borde superior doble. La lógica de guardar/leer la
     selección (`seleccionInicial`, `buscarOpcion`) no cambia.
+  - Nombres genéricos de equipo (cuando "Evento" no tiene el formato
+    "Local - Visitante") pasan de "el equipo local"/"el equipo visitante"
+    a "Equipo Local"/"Equipo Visitante" en `equiposDesdeEvento`
+    (`utils/mercados.js`) — se nota en todo el catálogo a la vez, al ser
+    un único sitio. "Empate al descanso" en "Resultado al descanso" pasa
+    a ser solo "Empate" (ese cambio sí es texto literal de esa opción, no
+    del nombre genérico).
 
 ## Convenciones de código
 
