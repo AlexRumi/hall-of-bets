@@ -639,6 +639,35 @@ antes de pasar a la siguiente.
     partidos) no se pinta hasta que `necesitaCompeticion` es `false`; el
     aviso de "Elige una competición" ya no hacía falta (siempre era falso
     dentro de ese bloque) y se quitó.
+  - **Simplificación del detalle** (petición directa, misma sesión): el modo
+    "✎ Editar" inline de `ApuestaItem.jsx` (quitar mercados sueltos con ✕
+    sin salir del detalle) se quitó del todo — quitar un mercado de un
+    partido ya se puede hacer desde el formulario completo (el bet builder
+    de `FormularioApuesta.jsx` ya deja borrar mercados de un bloque), así
+    que tener dos formas distintas de "editar" en la misma pantalla no
+    aportaba, solo confundía. Ahora hay un único botón "Editar" (icono
+    lápiz, cabecera) que abre siempre el formulario completo — y de paso
+    la fila de acciones de abajo queda solo con lo que pedía el usuario:
+    Ganada/Perdida/Nula (si está pendiente), Cash Out y Eliminar apuesta.
+    Se borraron `quitarSelecciones` y `actualizarSelecciones` de
+    `useApuestas.js` (y el hilo de props `onQuitarSelecciones`/
+    `onActualizarSelecciones` por `App.jsx` → `PantallaInicio.jsx`/
+    `ListaApuestas.jsx` → `ApuestaItem.jsx`) por quedarse sin ningún punto
+    de entrada tras este cambio.
+    El mini-selector Ganada/Perdida/Nula por partido (solo en combinadas,
+    2 o más partidos) pasa a verse siempre, sin depender de ningún modo de
+    edición — y se corrigió el bug real que motivó todo esto: marcar el
+    resultado final de la apuesta completa (p.ej. "Perdida") ya NO pinta
+    todos los partidos de rojo. Antes `colorResultado` se calculaba como
+    `!esPendiente ? apuesta.resultado : grupo.resultado`, así que en
+    cuanto la apuesta se resolvía, el resultado propio de cada partido
+    quedaba oculto detrás del resultado general. Ahora es
+    `esCombinada ? grupo.resultado : apuesta.resultado` — cada partido de
+    una combinada conserva su propio punto/etiqueta de color
+    independientemente de si la apuesta entera ganó o perdió (se puede
+    acertar 4 de 5 y que se vea), y solo en una apuesta simple (1 único
+    partido, sin mini-selector propio) el punto sigue el resultado general
+    porque ahí son la misma cosa.
 
 ## Fases futuras pedidas (5, una a una con confirmación)
 
@@ -944,6 +973,108 @@ confirmando cada una antes de la siguiente.
   grueso) al mismo aspecto que las cabeceras de categoría (`bg-felt`,
   dorado, mayúsculas) pero sin chevron ni desplegarse — sigue siendo un
   botón que elige "Otro mercado" directamente al tocarlo, sin acordeón.
+- **Editar un bloque ya guardado en el constructor de apuesta** (petición
+  directa, misma sesión — caso real: una combinada con un "multi" de un
+  partido donde luego resulta que un jugador de una de las selecciones no
+  juega, así que hay que quitar esa selección y bajar la cuota conjunta).
+  En la tarjeta "Apuesta en construcción" de `FormularioApuesta.jsx`, cada
+  bloque con más de un mercado gana un botón "Editar apuesta" junto a
+  "Quitar partido" (los picks simples, de un solo mercado, no lo llevan —
+  para eso ya está "Quitar partido" entero). En modo edición, cada mercado
+  del bloque muestra una "X" para quitarlo suelto y la cuota pasa a un
+  campo editable; "Listo" cierra la edición y guarda la cuota nueva. Si se
+  quita el único mercado que quedaba, el bloque entero desaparece solo. La
+  cuota en edición se guarda en un estado de texto aparte
+  (`cuotaEditando`), no en el número ya redondeado del bloque, para no
+  interferir con la coma/punto decimal mientras se escribe — mismo motivo
+  por el que `ConstructorPartido.jsx` ya usaba texto libre para sus cuotas.
+- **Detalle de combinada agrupado por partido, y resultado por partido**
+  (petición directa, misma sesión — el detalle de una combinada con varios
+  "multi" se veía muy saturado, una fila suelta por mercado repitiendo el
+  nombre del partido; y no había forma de marcar que una pata concreta ya
+  se había ganado/perdido/anulado sin resolver toda la apuesta). Nueva
+  `agruparSeleccionesPorPartido(selecciones)` en `utils/apuestas.js` (mismo
+  criterio de agrupado que ya usaba `bloquesDesdeApuesta` en
+  `FormularioApuesta.jsx` — selecciones consecutivas del mismo evento con
+  cuota exactamente 1 son mercados extra del bloque anterior — ahora
+  compartido entre los dos sitios en vez de duplicado) devuelve, por cada
+  partido, su cuota, sus mercados y el índice de la selección "líder" (la
+  que lleva la cuota real). `ApuestaItem.jsx` pinta cada partido como su
+  propia caja (evento + cuota arriba, mercados en píldoras debajo) en vez
+  de una lista plana.
+  Cada caja gana botones Ganada/Perdida/Nula (mientras la apuesta entera
+  siga Pendiente — igual que los botones de toda la apuesta) que marcan el
+  resultado de ESE partido, independiente del resultado final de toda la
+  combinada — pulsar el mismo botón otra vez lo vuelve a dejar en
+  Pendiente. Se guarda en la propia selección líder (`resultado`, dentro
+  del jsonb de `selecciones` — sin migración de esquema) vía la función
+  nueva `marcarResultadoSeleccion(id, indice, resultado)` de
+  `useApuestas.js`, que reescribe el array completo (no hay columna propia
+  por selección). Importante: marcar un partido aquí **no** cambia
+  automáticamente el resultado final de toda la apuesta (eso lo sigue
+  decidiendo el usuario a mano con los botones de arriba) — es solo un
+  seguimiento por partido, para no meterse en la complejidad de qué pasa
+  con el freebet/seguro/cash out si se intentara automatizar también el
+  resultado final.
+  La excepción es "Nula": `calcularCuotaTotal` (`utils/apuestas.js`) ahora
+  ignora en el producto las selecciones marcadas `resultado: "nula"` (como
+  si su cuota fuera 1), así que anular un partido ajusta solo la cuota
+  total real de la combinada — y por tanto el beneficio si se marca la
+  apuesta como Ganada — sin tener que editar la cuota a mano como hasta
+  ahora. Compatible con datos antiguos: las selecciones de apuestas ya
+  guardadas no tienen `resultado`, así que no se descarta ninguna (se
+  comportan exactamente igual que antes de este cambio).
+  Rediseño completo del detalle (`ApuestaItem.jsx`), misma sesión — el
+  primer intento con una caja por partido se veía saturado con combinadas
+  grandes (9 selecciones), y el usuario pidió partir de una maqueta HTML
+  de referencia en vez de seguir puliendo a ciegas. Cabecera con
+  fecha/casa/deporte en una línea + badge de tipo ("Combinada · N
+  selecciones" / "Simple"); resumen de 3 columnas (Stake, Cuota total,
+  Ganancia potencial si está pendiente o Beneficio si ya se resolvió);
+  lista de selecciones ligera con separadores finos en vez de tarjetas
+  (punto de color según su estado, partido + competición/país, sus
+  mercados en una sola línea separados por "·"); y al final, siempre
+  visibles, tres botones grandes Ganada/Perdida/Nula para toda la apuesta
+  y una fila con Cash Out/Eliminar apuesta.
+  El botón "✎ Editar" de la cabecera (solo en combinadas) activa un modo
+  de edición ligero — sin abrir el formulario completo — donde cada
+  selección gana una "✕" para quitarla de la apuesta (nueva
+  `quitarSelecciones(id, idsAQuitar)` en `useApuestas.js`, reescribe el
+  array `selecciones` sin las que coincidan; nunca deja la apuesta sin
+  ninguna) y un mini-selector Ganada/Perdida/Nula para marcar esa
+  selección en concreto (reutiliza `marcarResultadoSeleccion`, ya
+  existente). La maqueta no incluía ningún botón para editar fecha/casa/
+  stake/etc. — se mantuvo igualmente un botón discreto "Editar todo" junto
+  a "Eliminar apuesta" para no perder esa función del todo, ya que no
+  había ningún otro sitio desde el que editar esos datos.
+  El modal que abre el detalle (`ListaApuestas.jsx`) pasa de `max-w-3xl` a
+  `max-w-xl`: el diseño anterior necesitaba ese ancho por su layout de
+  escritorio en fila (`sm:flex-row`), que este rediseño ya no tiene — es
+  una lista vertical siempre, se ve mejor más estrecha, tipo tarjeta.
+  Ronda de ajuste tras probarlo con datos reales: "Combinada" pasa a
+  contar partidos, no mercados sueltos — un "multi" de un solo partido con
+  varios mercados (un bet builder) se veía como "Combinada · 4
+  selecciones" cuando en realidad es 1 partido, y el mini-selector
+  Ganada/Perdida/Nula por partido no aportaba nada ahí (ya es lo mismo que
+  marcar la apuesta entera). `esCombinada` en `ApuestaItem.jsx` pasa a
+  `gruposPartido.length > 1` (mismo cambio en `TarjetaApuestaResumen.jsx`
+  y en el trofeo "Combinada ganadora" de `utils/trofeos.js`, con su
+  descripción actualizada a "2 o más partidos"); el badge dice ahora
+  "Combinada · N partidos". El botón "✎ Editar" y el aviso de ayuda pasan
+  a depender de un criterio distinto, `hayVariosMercados` (más de una
+  selección suelta, sea o no combinada), porque quitar mercados de un
+  "multi" de un solo partido también hace falta aunque no sea combinada.
+  Bug real corregido de paso: la única forma de quitar un mercado suelto
+  de un "multi" (ej. "Luis Suárez anota 2+" si al final no juega) era
+  "Editar todo" → abrir la selección → borrarla — demasiados pasos. Ahora,
+  en modo edición, un partido con varios mercados los lista uno por línea
+  con su propia ✕ (en vez de una única ✕ para todo el partido); la ✕ de
+  todo el partido se queda solo para partidos de un único mercado. Nueva
+  `quitarMercado` en `ApuestaItem.jsx` + `actualizarSelecciones(id, nuevasSelecciones)`
+  en `useApuestas.js` (sustituye el array entero, a diferencia de
+  `quitarSelecciones` que solo filtra por id): si el mercado quitado era
+  el que llevaba la cuota real del grupo (el primero), esa cuota pasa al
+  que quede primero, para no perder el valor combinado del resto.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

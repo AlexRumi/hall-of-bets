@@ -2,6 +2,7 @@ import {
   calcularBeneficio,
   calcularCuotaTotal,
   ordenarCronologicamente,
+  agruparSeleccionesPorPartido,
 } from "./apuestas";
 
 function calcularMejorRacha(apuestasCronologicas) {
@@ -48,7 +49,9 @@ function construirContexto(apuestas) {
       (max, a) => Math.max(max, calcularCuotaTotal(a.selecciones)),
       0
     ),
-    combinadaGanada: ganadas.some((a) => a.selecciones.length > 1),
+    // Cuenta partidos, no mercados sueltos: un "multi" de un solo partido
+    // (un bet builder) no es una combinada, aunque tenga varios mercados.
+    combinadaGanada: ganadas.some((a) => agruparSeleccionesPorPartido(a.selecciones).length > 1),
     remontada: hayRemontada(cronologicas),
     aciertoPerfecto:
       decididas.length >= 10 && decididas.every((a) => a.resultado === "ganada"),
@@ -184,7 +187,7 @@ export const TROFEOS = [
   {
     id: "combinada-ganada",
     nombre: "Combinada ganadora",
-    descripcion: "Acierta una combinada de 2 o más selecciones",
+    descripcion: "Acierta una combinada de 2 o más partidos",
     tier: "bronce",
     categoria: "combinadas",
     comprobar: (ctx) => ctx.combinadaGanada,

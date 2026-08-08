@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PlusCircle, Save, X, AlertTriangle, Globe } from "lucide-react";
+import { agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
 import ConstructorPartido from "./ConstructorPartido";
@@ -14,32 +15,21 @@ const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 
 // Reconstruye los "bloques" (un partido, con uno o varios mercados y una
 // única cuota) a partir de las selecciones ya guardadas de una apuesta, para
-// poder editarla con ConstructorPartido.jsx. Selecciones consecutivas del
-// mismo partido con cuota exactamente 1 se consideran mercados extra del
-// mismo bloque (así se guardan las que vienen de un "multi" — la cuota real
-// vive en la primera); el resto son bloques de un único mercado.
+// poder editarla con ConstructorPartido.jsx — sobre el agrupado que ya hace
+// agruparSeleccionesPorPartido (utils/apuestas.js), compartido con el
+// detalle de ApuestaItem.jsx para no repetir la misma lógica dos veces.
 function bloquesDesdeApuesta(apuestaInicial) {
   if (!apuestaInicial) return [];
-  const bloques = [];
-  for (const s of apuestaInicial.selecciones) {
-    const anterior = bloques[bloques.length - 1];
-    const siguePartido = anterior && s.evento === anterior.evento && Number(s.cuota) === 1;
-    if (siguePartido) {
-      anterior.mercados.push(s.apuesta);
-    } else {
-      bloques.push({
-        evento: s.evento,
-        // Las apuestas de antes de conectar el buscador de partidos no
-        // tienen país/competición/id de partido guardados.
-        pais: s.pais ?? "",
-        competicion: s.competicion ?? "",
-        partidoId: s.partidoId ?? null,
-        cuota: Number(s.cuota),
-        mercados: [s.apuesta],
-      });
-    }
-  }
-  return bloques;
+  return agruparSeleccionesPorPartido(apuestaInicial.selecciones).map((grupo) => ({
+    evento: grupo.evento,
+    // Las apuestas de antes de conectar el buscador de partidos no tienen
+    // país/competición/id de partido guardados.
+    pais: grupo.pais ?? "",
+    competicion: grupo.competicion ?? "",
+    partidoId: grupo.partidoId ?? null,
+    cuota: grupo.cuota,
+    mercados: grupo.selecciones.map((s) => s.apuesta),
+  }));
 }
 
 // Mismo formulario para crear una apuesta nueva y para editar una ya
@@ -99,8 +89,49 @@ export default function FormularioApuesta({
 
   const cuotaTotalBloques = bloques.reduce((total, b) => total * b.cuota, 1);
 
+  // Edición de un bloque ya guardado (solo tiene sentido si combina varios
+  // mercados de un partido — un pick simple ya se puede quitar entero con
+  // "Quitar partido"): quitar un mercado suelto si, por ejemplo, el
+  // jugador de esa selección al final no juega, y ajustar la cuota
+  // combinada a mano. "cuotaEditando" es texto libre mientras se edita
+  // (no el número ya redondeado del bloque) para no interferir con la
+  // coma/punto decimal mientras se escribe.
+  const [bloqueEditando, setBloqueEditando] = useState(null);
+  const [cuotaEditando, setCuotaEditando] = useState("");
+
   function quitarBloque(index) {
     setBloques((actuales) => actuales.filter((_, i) => i !== index));
+    if (bloqueEditando === index) {
+      setBloqueEditando(null);
+      setCuotaEditando("");
+    }
+  }
+
+  function alternarEdicion(index) {
+    if (bloqueEditando === index) {
+      const cuotaNueva = Number(cuotaEditando);
+      setBloques((actuales) =>
+        actuales.map((b, i) => (i === index && cuotaNueva > 0 ? { ...b, cuota: cuotaNueva } : b))
+      );
+      setBloqueEditando(null);
+      setCuotaEditando("");
+    } else {
+      setBloqueEditando(index);
+      setCuotaEditando(String(bloques[index].cuota));
+    }
+  }
+
+  function quitarMercadoDeBloque(bloqueIndex, mercadoIndex) {
+    const quedanMercados = bloques[bloqueIndex].mercados.length - 1;
+    setBloques((actuales) => {
+      const mercados = actuales[bloqueIndex].mercados.filter((_, mi) => mi !== mercadoIndex);
+      if (mercados.length === 0) return actuales.filter((_, i) => i !== bloqueIndex);
+      return actuales.map((b, i) => (i === bloqueIndex ? { ...b, mercados } : b));
+    });
+    if (quedanMercados === 0) {
+      setBloqueEditando(null);
+      setCuotaEditando("");
+    }
   }
 
   function manejarEnvio(e) {
@@ -346,33 +377,69 @@ export default function FormularioApuesta({
           ) : (
             <>
               <div className="space-y-2">
-                {bloques.map((bloque, index) => (
-                  <div key={index} className="bg-surface border border-line rounded-lg p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-sm font-semibold text-ink min-w-0">
-                        <Globe size={14} className="text-gold shrink-0" />
-                        <span className="truncate">{bloque.evento}</span>
-                      </span>
-                      <span className="font-mono text-sm font-bold text-gold shrink-0">
-                        {bloque.cuota.toFixed(2)}
-                      </span>
+                {bloques.map((bloque, index) => {
+                  const editando = bloqueEditando === index;
+                  const esMulti = bloque.mercados.length > 1;
+                  return (
+                    <div key={index} className="bg-surface border border-line rounded-lg p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-ink min-w-0">
+                          <Globe size={14} className="text-gold shrink-0" />
+                          <span className="truncate">{bloque.evento}</span>
+                        </span>
+                        {editando ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="1.01"
+                            value={cuotaEditando}
+                            onChange={(e) => setCuotaEditando(e.target.value)}
+                            className="w-20 shrink-0 border border-line rounded px-2 py-0.5 text-sm font-mono font-bold text-gold text-right"
+                          />
+                        ) : (
+                          <span className="font-mono text-sm font-bold text-gold shrink-0">
+                            {bloque.cuota.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <ul className="mt-1.5 space-y-0.5">
+                        {bloque.mercados.map((mercado, i) => (
+                          <li key={i} className="flex items-center justify-between gap-2 text-xs text-slate">
+                            <span>• {mercado}</span>
+                            {editando && (
+                              <button
+                                type="button"
+                                onClick={() => quitarMercadoDeBloque(index, i)}
+                                aria-label="Quitar mercado"
+                                className="text-slate hover:text-lose transition-colors shrink-0"
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mt-2 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => quitarBloque(index)}
+                          className="text-xs font-medium text-lose hover:underline"
+                        >
+                          Quitar partido
+                        </button>
+                        {esMulti && (
+                          <button
+                            type="button"
+                            onClick={() => alternarEdicion(index)}
+                            className="text-xs font-medium text-gold hover:underline"
+                          >
+                            {editando ? "Listo" : "Editar apuesta"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <ul className="mt-1.5 space-y-0.5">
-                      {bloque.mercados.map((mercado, i) => (
-                        <li key={i} className="text-xs text-slate">
-                          • {mercado}
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={() => quitarBloque(index)}
-                      className="mt-2 text-xs font-medium text-lose hover:underline"
-                    >
-                      Quitar partido
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <p className="text-xs font-mono text-slate">
                 Cuota total combinada: {cuotaTotalBloques.toFixed(2)} · {bloques.length}{" "}

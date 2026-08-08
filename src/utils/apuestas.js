@@ -1,6 +1,47 @@
-// En una combinada, la cuota total es el producto de la cuota de cada selección.
+// En una combinada, la cuota total es el producto de la cuota de cada
+// selección — salvo las marcadas "nula" por partido (ver
+// agruparSeleccionesPorPartido / ApuestaItem.jsx), que no cuentan (como si
+// su cuota fuera 1): esa pata se anuló y no debe afectar al resultado
+// final, igual que anularía esa cuota en un ticket real. Las selecciones
+// de apuestas creadas antes de esta función no tienen "resultado" — se
+// tratan igual que antes (ninguna se descarta).
 export function calcularCuotaTotal(selecciones) {
-  return selecciones.reduce((total, seleccion) => total * seleccion.cuota, 1);
+  return selecciones.reduce(
+    (total, seleccion) => (seleccion.resultado === "nula" ? total : total * seleccion.cuota),
+    1
+  );
+}
+
+// Agrupa las selecciones de una apuesta por partido (mismo criterio que usa
+// el constructor de apuesta al crearla, ConstructorPartido.jsx: selecciones
+// consecutivas del mismo evento con cuota exactamente 1 son mercados extra
+// de un "multi" de ese partido). Cada grupo lleva el índice de la selección
+// que tiene la cuota real, la propia cuota, y su "resultado" por partido
+// (Ganada/Perdida/Nula, independiente del resultado final de toda la
+// apuesta) — pensado para reconstruir tanto la edición del formulario como
+// el detalle de ApuestaItem.jsx sin repetir la misma lógica dos veces.
+export function agruparSeleccionesPorPartido(selecciones) {
+  const grupos = [];
+  selecciones.forEach((seleccion, indice) => {
+    const anterior = grupos[grupos.length - 1];
+    const siguePartido =
+      anterior && seleccion.evento === anterior.evento && Number(seleccion.cuota) === 1;
+    if (siguePartido) {
+      anterior.selecciones.push(seleccion);
+    } else {
+      grupos.push({
+        indiceLider: indice,
+        evento: seleccion.evento,
+        pais: seleccion.pais ?? null,
+        competicion: seleccion.competicion ?? null,
+        partidoId: seleccion.partidoId ?? null,
+        cuota: Number(seleccion.cuota),
+        resultado: seleccion.resultado ?? "pendiente",
+        selecciones: [seleccion],
+      });
+    }
+  });
+  return grupos;
 }
 
 // Ganancia real: si gana, stake x (cuota total - 1) tanto en real como en freebet.

@@ -1,4 +1,4 @@
-import { calcularBeneficio } from "../utils/apuestas";
+import { calcularBeneficio, agruparSeleccionesPorPartido } from "../utils/apuestas";
 
 // No hay iconos de fútbol/baloncesto/tenis en lucide-react (comprobado):
 // un emoji por deporte es lo más parecido al icono del ejemplo.
@@ -33,9 +33,12 @@ const ETIQUETAS_RESULTADO = {
   cashout: "CASH OUT",
 };
 
-function textoEvento(apuesta) {
-  const primera = apuesta.selecciones[0].evento;
-  const restantes = apuesta.selecciones.length - 1;
+// Cuenta partidos, no mercados sueltos: un "multi" de un solo partido con
+// varios mercados (un bet builder) es 1 partido, no "+3 más" — mismo
+// criterio que ApuestaItem.jsx y utils/trofeos.js.
+function textoEvento(gruposPartido) {
+  const primera = gruposPartido[0].evento;
+  const restantes = gruposPartido.length - 1;
   return restantes > 0 ? `${primera} +${restantes} más` : primera;
 }
 
@@ -47,7 +50,8 @@ function textoEvento(apuesta) {
 // tocar la tarjeta. No hay badge de hora: la app no guarda la hora del
 // partido, solo la fecha (ver conversación — se descartó a propósito).
 export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
-  const esCombinada = apuesta.selecciones.length > 1;
+  const gruposPartido = agruparSeleccionesPorPartido(apuesta.selecciones);
+  const esCombinada = gruposPartido.length > 1;
 
   return (
     <button
@@ -70,7 +74,7 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
             Archivada
           </span>
         )}
-        <p className="text-base font-bold text-ink truncate">{textoEvento(apuesta)}</p>
+        <p className="text-base font-bold text-ink truncate">{textoEvento(gruposPartido)}</p>
       </div>
 
       <span

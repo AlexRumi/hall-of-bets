@@ -16,6 +16,7 @@ export default function ListaApuestas({
   movimientos,
   todasApuestas,
   onMarcarResultado,
+  onMarcarResultadoSeleccion,
   onBorrar,
   onEditar,
   agrupada = true,
@@ -126,13 +127,15 @@ export default function ListaApuestas({
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
           onClick={() => setApuestaAbiertaId(null)}
         >
-          {/* max-w-3xl: mismo ancho que el contenedor del listado normal
-              (ver App.jsx, "max-w-3xl mx-auto"), donde ApuestaItem ya se ve
-              bien — con un modal más estrecho, "sm:flex-row" se activaba
-              igual (depende del ancho de la ventana, no del contenedor) y
-              apretaba el evento a una columna demasiado estrecha. */}
+          {/* max-w-xl: el detalle rediseñado ya no tiene un layout de
+              escritorio en fila (era lo que necesitaba max-w-3xl antes) —
+              es una lista vertical siempre, así que se ve mejor más
+              estrecha, tipo tarjeta. Se deja algo más de margen que los
+              ~420px de la maqueta para que "Editar" (FormularioApuesta, con
+              campos a 2 columnas en pantallas anchas) no quede demasiado
+              apretado. */}
           <div
-            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <ApuestaItem
@@ -141,6 +144,7 @@ export default function ListaApuestas({
               movimientos={movimientos}
               todasApuestas={todasApuestas}
               onMarcarResultado={onMarcarResultado}
+              onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
               onBorrar={onBorrar}
               onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}

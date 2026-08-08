@@ -168,6 +168,35 @@ export function useApuestas(userId) {
     }
   }
 
+  // Resultado de una selección concreta dentro de una combinada (Ganada/
+  // Perdida/Nula por partido, independiente del resultado final de toda la
+  // apuesta — ver agruparSeleccionesPorPartido en utils/apuestas.js). Solo
+  // se marca en la selección "líder" de ese partido (la que lleva la cuota
+  // real); calcularCuotaTotal ya sabe ignorar las marcadas "nula" al
+  // calcular el total. Al no haber una columna propia por selección
+  // (jsonb), se reescribe el array completo con esa selección actualizada.
+  async function marcarResultadoSeleccion(id, indice, resultado) {
+    const apuestaActual = apuestas.find((a) => a.id === id);
+    if (!apuestaActual) return;
+
+    const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
+      i === indice ? { ...seleccion, resultado } : seleccion
+    );
+
+    const { data, error } = await supabase
+      .from("apuestas")
+      .update({ selecciones: nuevasSelecciones })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) => (a.id === id ? desdeFila(data) : a))
+      );
+    }
+  }
+
   async function borrarApuesta(id) {
     const { error } = await supabase.from("apuestas").delete().eq("id", id);
     if (!error) {
@@ -214,6 +243,7 @@ export function useApuestas(userId) {
     agregarApuesta,
     editarApuesta,
     marcarResultado,
+    marcarResultadoSeleccion,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango,
