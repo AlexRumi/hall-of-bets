@@ -535,6 +535,18 @@ antes de pasar a la siguiente.
   - "Resultado" gana las 6 apuestas de Betfair Exchange (a favor/en
     contra de cada resultado — local, empate, visitante — en vez de solo
     elegir un ganador), al final de esa misma categoría.
+  - **`SelectorMercado.jsx` deja de usar un `<select>` nativo con
+    `<optgroup>`**: probado en móvil, las cabeceras de categoría se veían
+    casi igual que las opciones porque el `<select>` en Android/iOS lo
+    pinta el sistema operativo entero — ningún CSS nuestro llega ahí, ni
+    siquiera `font-bold`. Pasa a ser un desplegable propio (botón +
+    panel absoluto con scroll, mismo patrón de "click fuera cierra" que
+    `BuscadorEvento.jsx`): cabeceras de categoría con fondo `bg-felt`
+    (`sticky top-0`, se quedan fijas mientras se hace scroll dentro de esa
+    categoría) claramente distintas de las opciones (fondo normal, se
+    resaltan en dorado la que está elegida). "Otro mercado" al final,
+    separado con un borde superior doble. La lógica de guardar/leer la
+    selección (`seleccionInicial`, `buscarOpcion`) no cambia.
 
 ## Convenciones de código
 
