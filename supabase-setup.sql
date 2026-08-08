@@ -166,3 +166,12 @@ update public.casas c set freebet_saldo = freebet_saldo + coalesce((
   where b.user_id = c.user_id and b.casa = c.nombre
 ), 0);
 
+-- Cuota total "manual": en combinadas de varias patas, multiplicar cuotas
+-- ya redondeadas a 2 decimales acumula un pequeño error de redondeo frente
+-- a la cuota real de la casa (que calcula con más precisión interna) — con
+-- 4-5 patas puede notarse unos céntimos. Si el usuario introduce el
+-- importe real que le paga la casa, se guarda aquí la cuota que sale de
+-- ahí (importe / stake) y manda sobre el producto calculado — ver
+-- calcularCuotaTotal en utils/apuestas.js.
+alter table public.apuestas add column cuota_total_manual numeric;
+

@@ -688,6 +688,48 @@ antes de pasar a la siguiente.
     a `text-ink font-medium`: se distingue mejor del evento sin llegar al
     `font-semibold` de este (probado primero en semibold, un paso de más
     según el usuario).
+- **Cuota total ajustada a mano en combinadas** (no era una fase del guion,
+  petición directa: el usuario detectó que una combinada de 5 partidos en
+  Bet365 le pagaba con cuota 8,00 y la app calculaba 7,60/7,92). Causa: la
+  app guarda la cuota de cada selección redondeada a 2 decimales (la que
+  se ve en el ticket) y calcula la cuota total multiplicándolas —
+  Bet365 (y cualquier casa) calcula internamente con más precisión y solo
+  redondea el resultado final, así que con 4-5 patas el error de redondeo
+  de cada cuota se acumula y se nota en unos céntimos. No hay forma de que
+  cuadre exacto sin conocer la cuota real sin redondear de cada selección
+  (que la casa no enseña), así que en vez de intentar arreglarlo, se dio
+  una vía de escape manual.
+  - `calcularCuotaTotal` (`utils/apuestas.js`) cambia de firma —
+    `(selecciones)` a `({ selecciones, cuotaTotalManual })`, así que ahora
+    recibe la apuesta entera (todos los sitios que la llamaban con
+    `a.selecciones` pasan a llamarla con `a`: `calcularBeneficio`,
+    `calcularEstadisticas`, `calcularBeneficioPorRangoCuota`
+    en `utils/estadisticas.js`, el trofeo "Cazador de cuotas" en
+    `utils/trofeos.js`, y `ApuestaItem.jsx`). Si `cuotaTotalManual` tiene
+    valor, manda sobre el producto calculado.
+  - Columna nueva `cuota_total_manual numeric` en `apuestas` (Supabase).
+    En combinadas de 2 o más partidos, `FormularioApuesta.jsx` muestra un
+    campo opcional "Importe que paga la casa si aciertas todo" debajo de
+    "Cuota total combinada" — confirmado con el usuario que este importe
+    es el retorno total (incluye el stake, lo que la casa muestra como "a
+    cobrar"), no solo la ganancia neta. Al guardar, se convierte a cuota
+    (`importe / stake`) y esa es la que se guarda en `cuotaTotalManual`;
+    vacío, sigue funcionando exactamente igual que antes (producto de las
+    cuotas). Al editar una apuesta que ya tiene este valor, el campo se
+    precarga reconstruyendo el importe (`cuotaTotalManual × stake`).
+  - `ApuestaItem.jsx` marca "Cuota total *" con una nota al pie cuando hay
+    un valor manual, para que quede claro por qué esa cifra no coincide
+    con multiplicar las cuotas de cada partido de la lista de abajo.
+  - **Trade-off asumido, avisado en el propio código** (comentario en
+    `calcularCuotaTotal`): con un valor manual puesto, deja de aplicarse el
+    ajuste automático por partido anulado (`resultado === "nula"` — ver
+    `agruparSeleccionesPorPartido`), porque no hay forma de saber qué parte
+    del importe manual correspondía a esa pata. Si se anula un partido de
+    una combinada con cuota ajustada a mano, habría que volver a editar el
+    importe manual (o borrarlo, para volver al cálculo automático).
+  - **Pendiente**: ejecutar `alter table public.apuestas add column
+    cuota_total_manual numeric;` en Supabase antes de usar este campo en
+    producción (añadido al final de `supabase-setup.sql`).
 
 ## Fases futuras pedidas (5, una a una con confirmación)
 

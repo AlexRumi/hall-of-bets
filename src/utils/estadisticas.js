@@ -89,7 +89,7 @@ export function calcularBeneficioPorRangoCuota(apuestas) {
 
   return RANGOS_CUOTA.map(({ id, min, max }) => {
     const delRango = resueltas.filter((a) => {
-      const cuota = calcularCuotaTotal(a.selecciones);
+      const cuota = calcularCuotaTotal(a);
       return cuota >= min && cuota < max;
     });
     return {

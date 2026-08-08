@@ -19,6 +19,10 @@ function desdeFila(fila) {
       fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
     aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
     archivado: fila.archivado ?? false,
+    cuotaTotalManual:
+      fila.cuota_total_manual === null || fila.cuota_total_manual === undefined
+        ? null
+        : Number(fila.cuota_total_manual),
   };
 }
 
@@ -77,6 +81,7 @@ export function useApuestas(userId) {
     deporte,
     seguroFreebetImporte = null,
     aumentoPct = null,
+    cuotaTotalManual = null,
   }) {
     const { data, error } = await supabase
       .from("apuestas")
@@ -91,6 +96,7 @@ export function useApuestas(userId) {
         resultado: "pendiente",
         seguro_freebet_importe: seguroFreebetImporte,
         aumento_pct: aumentoPct,
+        cuota_total_manual: cuotaTotalManual,
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
           evento: seleccion.evento,
@@ -115,7 +121,17 @@ export function useApuestas(userId) {
   // escribirla), sin tocar su resultado ni el bankroll al que pertenece.
   async function editarApuesta(
     id,
-    { fecha, casa, stake, selecciones, tipoFondos, deporte, seguroFreebetImporte = null, aumentoPct = null }
+    {
+      fecha,
+      casa,
+      stake,
+      selecciones,
+      tipoFondos,
+      deporte,
+      seguroFreebetImporte = null,
+      aumentoPct = null,
+      cuotaTotalManual = null,
+    }
   ) {
     const { data, error } = await supabase
       .from("apuestas")
@@ -127,6 +143,7 @@ export function useApuestas(userId) {
         deporte,
         seguro_freebet_importe: seguroFreebetImporte,
         aumento_pct: aumentoPct,
+        cuota_total_manual: cuotaTotalManual,
         selecciones: selecciones.map((seleccion) => ({
           id: crypto.randomUUID(),
           evento: seleccion.evento,

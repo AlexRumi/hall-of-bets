@@ -65,6 +65,15 @@ export default function FormularioApuesta({
   const [aumentoPct, setAumentoPct] = useState(
     apuestaInicial?.aumentoPct ? String(apuestaInicial.aumentoPct) : ""
   );
+  // Importe real que paga la casa por toda la combinada (opcional): se
+  // guarda como cuota (importe / stake) en cuotaTotalManual — ver
+  // calcularCuotaTotal en utils/apuestas.js. Al editar, se reconstruye el
+  // importe a partir de esa cuota guardada y el stake de la apuesta.
+  const [importeManual, setImporteManual] = useState(
+    apuestaInicial?.cuotaTotalManual
+      ? String((apuestaInicial.cuotaTotalManual * apuestaInicial.stake).toFixed(2))
+      : ""
+  );
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
   // Bankroll actual de la casa elegida (mismo cálculo que en Casas de
@@ -155,6 +164,11 @@ export default function FormularioApuesta({
       }))
     );
 
+    const cuotaTotalManual =
+      bloques.length > 1 && importeManual && stakeNumero > 0
+        ? Number(importeManual) / stakeNumero
+        : null;
+
     onGuardar({
       fecha,
       casa: casaFinal,
@@ -163,6 +177,7 @@ export default function FormularioApuesta({
       deporte,
       seguroFreebetImporte: asegurada ? Number(seguroImporte) : null,
       aumentoPct: conAumento ? Number(aumentoPct) : null,
+      cuotaTotalManual,
       selecciones,
     });
 
@@ -181,6 +196,7 @@ export default function FormularioApuesta({
     setSeguroImporte("");
     setConAumento(false);
     setAumentoPct("");
+    setImporteManual("");
   }
 
   return (
@@ -445,6 +461,30 @@ export default function FormularioApuesta({
                 Cuota total combinada: {cuotaTotalBloques.toFixed(2)} · {bloques.length}{" "}
                 {bloques.length === 1 ? "partido" : "partidos"}
               </p>
+
+              {bloques.length > 1 && (
+                <div className="pt-2 border-t border-line">
+                  <label className="block text-xs text-slate mb-1">
+                    Importe que paga la casa si aciertas todo (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={importeManual}
+                    onChange={(e) => setImporteManual(e.target.value)}
+                    placeholder={`Ej. ${(cuotaTotalBloques * stakeNumero).toFixed(2)}`}
+                    className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
+                  />
+                  <p className="text-xs text-slate mt-1">
+                    {importeManual && stakeNumero > 0
+                      ? `Cuota total ajustada: ${(Number(importeManual) / stakeNumero).toFixed(
+                          2
+                        )} (en vez de ${cuotaTotalBloques.toFixed(2)}).`
+                      : "Multiplicar las cuotas de arriba (redondeadas a 2 decimales) puede quedar unos céntimos por debajo de lo que calcula la casa. Si pones aquí el importe real, la app ajusta la cuota total sola."}
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>

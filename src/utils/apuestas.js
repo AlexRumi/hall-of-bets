@@ -5,7 +5,20 @@
 // final, igual que anularía esa cuota en un ticket real. Las selecciones
 // de apuestas creadas antes de esta función no tienen "resultado" — se
 // tratan igual que antes (ninguna se descarta).
-export function calcularCuotaTotal(selecciones) {
+//
+// "cuotaTotalManual" (opcional) es una vía de escape para combinadas de
+// varias patas: multiplicar cuotas ya redondeadas a 2 decimales (las que
+// se ven en el ticket) acumula un pequeño error de redondeo frente a la
+// cuota total real que calcula la casa (con más precisión interna), y con
+// 4-5 patas puede notarse en unos céntimos. Si el usuario introduce el
+// importe real que le paga la casa, FormularioApuesta.jsx guarda la cuota
+// que sale de ahí (importe / stake) en este campo, y manda sobre el
+// producto calculado — a cambio, deja de reajustarse sola si luego se
+// marca una pata como nula (ver agruparSeleccionesPorPartido): con un
+// valor manual puesto, ya no hay forma de saber qué parte del importe
+// correspondía a esa pata.
+export function calcularCuotaTotal({ selecciones, cuotaTotalManual }) {
+  if (cuotaTotalManual) return cuotaTotalManual;
   return selecciones.reduce(
     (total, seleccion) => (seleccion.resultado === "nula" ? total : total * seleccion.cuota),
     1
@@ -51,10 +64,10 @@ export function agruparSeleccionesPorPartido(selecciones) {
 // stake puesto; con freebet, el importe recibido es ganancia entera (el stake
 // nunca fue dinero propio).
 export function calcularBeneficio(apuesta) {
-  const { resultado, stake, selecciones, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
+  const { resultado, stake, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
   if (resultado === "pendiente") return 0;
 
-  const cuotaTotal = calcularCuotaTotal(selecciones);
+  const cuotaTotal = calcularCuotaTotal(apuesta);
   if (resultado === "ganada") {
     const base = stake * (cuotaTotal - 1);
     // Aumento de cuota: la casa añade un % sobre la ganancia neta, no
@@ -87,7 +100,7 @@ export function calcularEstadisticas(apuestas) {
     0
   );
   const cuotaMedia = apuestas.length
-    ? apuestas.reduce((suma, a) => suma + calcularCuotaTotal(a.selecciones), 0) /
+    ? apuestas.reduce((suma, a) => suma + calcularCuotaTotal(a), 0) /
       apuestas.length
     : 0;
 

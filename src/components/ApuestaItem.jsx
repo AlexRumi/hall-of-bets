@@ -64,7 +64,7 @@ export default function ApuestaItem({
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
   const [editando, setEditando] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
-  const cuotaTotal = calcularCuotaTotal(apuesta.selecciones);
+  const cuotaTotal = calcularCuotaTotal(apuesta);
   const beneficio = calcularBeneficio(apuesta);
   // Misma agrupación por partido tanto si es combinada como si es una
   // apuesta simple (con 1 solo grupo) — así la lista de selecciones usa
@@ -177,7 +177,9 @@ export default function ApuestaItem({
           <p className="font-mono text-base font-bold text-ink">{apuesta.stake.toFixed(2)}€</p>
         </div>
         <div className="flex-1 text-center py-3">
-          <p className="text-xs uppercase tracking-wide text-slate">Cuota total</p>
+          <p className="text-xs uppercase tracking-wide text-slate">
+            Cuota total{apuesta.cuotaTotalManual ? " *" : ""}
+          </p>
           <p className="font-mono text-base font-bold text-gold">{cuotaTotal.toFixed(2)}</p>
         </div>
         <div className="flex-1 text-center py-3">
@@ -190,6 +192,13 @@ export default function ApuestaItem({
           </p>
         </div>
       </div>
+
+      {apuesta.cuotaTotalManual && (
+        <p className="text-center text-[11px] text-slate px-4 pt-2">
+          * Cuota ajustada a mano al importe real que pagó la casa, no al
+          producto de las cuotas de cada partido.
+        </p>
+      )}
 
       <div className="px-3 sm:px-4">
         {gruposPartido.map((grupo, indice) => {

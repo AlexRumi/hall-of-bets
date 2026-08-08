@@ -46,7 +46,7 @@ function construirContexto(apuestas) {
     totalApuestas: apuestas.length,
     mejorRacha: calcularMejorRacha(cronologicas),
     mejorCuotaAcertada: ganadas.reduce(
-      (max, a) => Math.max(max, calcularCuotaTotal(a.selecciones)),
+      (max, a) => Math.max(max, calcularCuotaTotal(a)),
       0
     ),
     // Cuenta partidos, no mercados sueltos: un "multi" de un solo partido
