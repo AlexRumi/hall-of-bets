@@ -15,7 +15,6 @@ export default function ListaApuestas({
   casas,
   movimientos,
   todasApuestas,
-  bonos,
   onMarcarResultado,
   onBorrar,
   onEditar,
@@ -141,7 +140,6 @@ export default function ListaApuestas({
               casas={casas}
               movimientos={movimientos}
               todasApuestas={todasApuestas}
-              bonos={bonos}
               onMarcarResultado={onMarcarResultado}
               onBorrar={onBorrar}
               onEditar={onEditar}

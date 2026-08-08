@@ -40,7 +40,6 @@ export default function FormularioApuesta({
   casas,
   movimientos = [],
   apuestas = [],
-  bonos = [],
   apuestaInicial = null,
   onGuardar,
   onCancelar,
@@ -316,7 +315,7 @@ export default function FormularioApuesta({
                 className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
               />
               <p className="text-xs text-slate">
-                Se añadirá a Bonos pendientes si la marcas como Perdida.
+                Se sumará al saldo de freebet de la casa si la marcas como Perdida.
               </p>
             </div>
           )}

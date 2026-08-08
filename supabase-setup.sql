@@ -154,3 +154,15 @@ create policy "propietario_ajustes" on public.ajustes
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 alter publication supabase_realtime add table public.ajustes;
 
+-- "Otro bono" (ListadoCasas.jsx) dejó de crear una fila en bonos_pendientes
+-- y pasa a sumar directo al saldo de freebet de la casa, igual que el bono
+-- de depósito y el seguro perdido. Migración de un solo uso: lo que hubiera
+-- quedado sin resolver en bonos_pendientes se suma ahora a freebet_saldo,
+-- para no perderlo — usa "+" (no sobrescribe) porque freebet_saldo ya puede
+-- tener valor por los otros dos caminos. La tabla bonos_pendientes no se
+-- borra, se queda sin uso (mismo criterio que la tabla promociones).
+update public.casas c set freebet_saldo = freebet_saldo + coalesce((
+  select sum(b.importe) from public.bonos_pendientes b
+  where b.user_id = c.user_id and b.casa = c.nombre
+), 0);
+

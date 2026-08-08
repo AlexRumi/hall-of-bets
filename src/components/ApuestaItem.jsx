@@ -27,7 +27,6 @@ export default function ApuestaItem({
   casas,
   movimientos,
   todasApuestas,
-  bonos,
   onMarcarResultado,
   onBorrar,
   onEditar,
@@ -50,7 +49,6 @@ export default function ApuestaItem({
         casas={casas}
         movimientos={movimientos}
         apuestas={todasApuestas}
-        bonos={bonos}
         apuestaInicial={apuesta}
         onGuardar={(datos) => onEditar(apuesta.id, datos)}
         onCancelar={() => setEditando(false)}

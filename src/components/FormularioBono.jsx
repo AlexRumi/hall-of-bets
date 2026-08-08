@@ -3,35 +3,27 @@ import { PlusCircle } from "lucide-react";
 import CampoCasa from "./CampoCasa";
 import BotonInfoConcepto from "./BotonInfoConcepto";
 
-const hoy = () => new Date().toISOString().slice(0, 10);
-
-// Fase B: desde que el bono de depósito (FormularioMovimiento.jsx) y el
-// seguro de una apuesta perdida (App.jsx) suman solos al saldo de freebet
-// de la casa (ver useCasas.js), este formulario queda solo para el caso
-// residual — bonos que no vienen de ninguno de esos dos sitios. Por eso es
-// más pequeño/discreto que el resto de formularios de la app: se usará
-// raramente. "Motivo" es texto libre y opcional, solo para recordar de
-// dónde viene, no afecta a ningún cálculo. El ℹ️ enlaza al concepto "Bono /
-// Freebet" de Academia (mismo patrón que el resto de la app), que ya
-// incluye la aclaración de que este formulario es solo para el caso
-// residual — antes era un texto propio aquí, duplicado con Academia.
-export default function FormularioBono({ onAgregar, casas, casaFija = null }) {
-  const [fecha, setFecha] = useState(hoy());
+// Igual que el bono de depósito (FormularioMovimiento.jsx) y el seguro de
+// una apuesta perdida (App.jsx), este formulario suma directamente al saldo
+// de freebet de la casa (useCasas.js) — antes creaba un "bono pendiente"
+// que había que resolver a mano aparte ("Ya lo registré"), y ese paso
+// intermedio se quedaba sin hacer casi siempre, así que el saldo nunca
+// reflejaba el bono real. Queda solo para el caso residual: bonos que no
+// vienen de un depósito ni de una apuesta asegurada (ej. bono de
+// cumpleaños, compensación de soporte, un bono suelto de la casa).
+export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija = null }) {
   const [casa, setCasa] = useState(casaFija ?? "");
   const [importe, setImporte] = useState("");
-  const [motivo, setMotivo] = useState("");
 
   function manejarEnvio(e) {
     e.preventDefault();
     const casaFinal = (casaFija ?? casa).trim();
     if (!casaFinal || !importe) return;
 
-    onAgregar({ fecha, casa: casaFinal, importe, motivo: motivo.trim() });
+    onAjustarSaldoFreebet(casaFinal, Number(importe));
 
     setCasa(casaFija ?? "");
     setImporte("");
-    setMotivo("");
-    setFecha(hoy());
   }
 
   return (
@@ -45,17 +37,6 @@ export default function FormularioBono({ onAgregar, casas, casaFija = null }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-slate mb-1">Fecha</label>
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            required
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
-          />
-        </div>
-
         {casaFija === null && (
           <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
         )}
@@ -70,17 +51,6 @@ export default function FormularioBono({ onAgregar, casas, casaFija = null }) {
             onChange={(e) => setImporte(e.target.value)}
             required
             className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-slate mb-1">Motivo (opcional)</label>
-          <input
-            type="text"
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ej. Seguro perdido, bono de bienvenida"
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
           />
         </div>
       </div>

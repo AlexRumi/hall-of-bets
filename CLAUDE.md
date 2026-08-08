@@ -852,6 +852,31 @@ confirmando cada una antes de la siguiente.
   aparte: con solo ~17 conceptos y el buscador de texto ya existente,
   agrupar por tema ayuda más a encontrar algo relacionado que ir letra por
   letra.
+- **Bonos pendientes — eliminado por completo, "Otro bono" pasa a sumar
+  directo** (no era una fase del guion, bug real detectado por el usuario:
+  un bono de Betfair añadido desde "Otro bono" no aparecía como freebet
+  disponible al crear una apuesta). Causa: desde la Fase A, el bono de
+  depósito y el seguro perdido suman solos al saldo de freebet de la casa,
+  pero "Otro bono" se quedó sin engancharse a ese sistema — seguía creando
+  una fila en `bonos_pendientes` (el sistema de antes de la Fase A, con un
+  botón "Ya lo registré" que solo borraba el aviso, sin tocar el saldo).
+  `FormularioBono.jsx` ahora llama a `onAjustarSaldoFreebet` directamente
+  (mismo prop que ya usa el campo "Bono recibido con este depósito" de
+  `FormularioMovimiento.jsx`), sin paso intermedio — y de paso pierde los
+  campos "Fecha" y "Motivo", que ya no se guardaban en ningún sitio real
+  (`ajustarSaldoFreebet` solo lleva casa + importe). Con esto,
+  `bonos_pendientes` se queda sin ningún punto de entrada en la app: se
+  borran `AvisoBonos.jsx`, `useBonosPendientes.js` y toda la lista "Bonos
+  pendientes" / botón "Ya lo registré" de `ListadoCasas.jsx`, y el prop
+  `bonos` que se pasaba (sin usarse ya) por `App.jsx` → `PantallaInicio.jsx`
+  / `ListaApuestas.jsx` / `ApuestaItem.jsx` / `FormularioApuesta.jsx`. La
+  tabla `bonos_pendientes` no se borra (mismo criterio que `promociones`),
+  pero una migración de un solo uso suma a `freebet_saldo` lo que hubiera
+  quedado sin resolver ahí, para no perder ningún bono ya registrado antes
+  de este arreglo. De paso, se corrigió un texto suelto y desactualizado en
+  `FormularioApuesta.jsx` ("Apuesta asegurada" decía que el freebet se
+  añadiría a "Bonos pendientes" al marcar Perdida — llevaba así desde antes
+  de la Fase A, cuando en realidad ya sumaba directo al saldo de freebet).
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

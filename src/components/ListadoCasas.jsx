@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Landmark, Trash2, ChevronDown, ChevronUp, Gift, PlusCircle } from "lucide-react";
+import { Landmark, Trash2, ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
 import FormularioMovimiento from "./FormularioMovimiento";
 import FormularioBono from "./FormularioBono";
@@ -18,9 +18,6 @@ export default function ListadoCasas({
   onAgregarMovimiento,
   onBorrarMovimiento,
   onBorrarTodosMovimientos,
-  bonos,
-  onAgregarBono,
-  onBorrarBono,
   onAjustarSaldoFreebet,
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
@@ -93,7 +90,6 @@ export default function ListadoCasas({
               const movimientosCasa = movimientos.filter(
                 (m) => m.casa === casa.nombre
               );
-              const bonosCasa = bonos.filter((b) => b.casa === casa.nombre);
 
               return (
                 <div
@@ -193,42 +189,12 @@ export default function ListadoCasas({
                         onAjustarSaldoFreebet={onAjustarSaldoFreebet}
                       />
 
-                      {/* Bonos pendientes: recordatorio suelto de freebets/bonos
-                          prometidos por una promoción que no vino de un depósito
-                          ni de un seguro (esos ya suman solos al saldo de
-                          freebet de arriba, ver useCasas.js). Justo debajo del
-                          formulario de movimiento, para seguir el orden: primero
-                          el caso automático (Bono recibido con este depósito),
-                          después el residual (Otro bono). */}
-                      {bonosCasa.length > 0 && (
-                        <div className="space-y-2">
-                          {bonosCasa.map((bono) => (
-                            <div
-                              key={bono.id}
-                              className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl p-3 sm:p-4"
-                            >
-                              <Gift size={20} className="text-gold shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-ink">
-                                  {bono.importe.toFixed(2)}€
-                                </p>
-                                <p className="text-xs text-slate">
-                                  {bono.motivo ? `${bono.motivo} · ` : ""}
-                                  {bono.fecha}
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => onBorrarBono(bono.id)}
-                                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gold/40 text-gold hover:bg-gold/10 transition-colors shrink-0"
-                              >
-                                Ya lo registré
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
+                      {/* "Otro bono": suma directo al saldo de freebet de esta
+                          casa (mismo `onAjustarSaldoFreebet` que ya usa el
+                          campo "Bono recibido con este depósito" de abajo) —
+                          justo debajo del formulario de movimiento, para
+                          seguir el orden: primero el caso automático,
+                          después el residual. */}
                       <div>
                         <button
                           type="button"
@@ -246,7 +212,7 @@ export default function ListadoCasas({
                         {mostrandoBono && (
                           <div className="mt-2">
                             <FormularioBono
-                              onAgregar={onAgregarBono}
+                              onAjustarSaldoFreebet={onAjustarSaldoFreebet}
                               casas={casas}
                               casaFija={casa.nombre}
                             />

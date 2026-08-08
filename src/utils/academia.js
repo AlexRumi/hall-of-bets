@@ -211,7 +211,7 @@ export const CONCEPTOS = [
     definicion:
       "Dinero de regalo que da una casa de apuestas — normalmente solo se puede usar para apostar (freebet), no retirar directamente — a cambio de un depósito, una promoción, o como compensación.",
     explicacion:
-      "Es una apuesta \"gratis\": el dinero del bono no es tuyo hasta que lo juegas y ganas. En Hall of Bets, el depósito con bono y la apuesta asegurada perdida suman solas al saldo de freebet de la casa (ver Casas de apuestas) — el formulario \"Otro bono\" es solo para el resto de casos (un bono de cumpleaños, una compensación de soporte...).",
+      "Es una apuesta \"gratis\": el dinero del bono no es tuyo hasta que lo juegas y ganas. En Hall of Bets, el depósito con bono, la apuesta asegurada perdida, y el formulario \"Otro bono\" (para el resto de casos: un bono de cumpleaños, una compensación de soporte, un bono suelto de la casa...) suman todos directamente al saldo de freebet de la casa en cuanto los registras (ver Casas de apuestas) — no hace falta ningún paso más.",
     formula:
       "Si ganas con freebet: beneficio = Stake × (Cuota − 1), igual que con dinero real. Si pierdes con freebet: 0€ perdidos de verdad, porque el stake nunca fue tuyo.",
     ejemplo:

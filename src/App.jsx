@@ -6,7 +6,6 @@ import { useCasas } from "./hooks/useCasas";
 import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
-import { useBonosPendientes } from "./hooks/useBonosPendientes";
 import { useAjustes } from "./hooks/useAjustes";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
 import PantallaLogin from "./components/PantallaLogin";
@@ -94,7 +93,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     archivarPorRango: archivarMovimientosPorRango,
   } = useMovimientos(userId);
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
-  const { bonos, agregarBono, borrarBono } = useBonosPendientes(userId);
   const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState("inicio");
   const [filtroCasa, setFiltroCasa] = useState("todas");
@@ -266,7 +264,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 apuestas={apuestas}
                 casas={casas}
                 movimientos={movimientos}
-                bonos={bonos}
                 onMarcarResultado={manejarMarcarResultado}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
@@ -311,7 +308,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     casas={casas}
                     movimientos={movimientos}
                     apuestas={apuestas}
-                    bonos={bonos}
                   />
                 </div>
 
@@ -357,7 +353,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     casas={casas}
                     movimientos={movimientos}
                     todasApuestas={apuestas}
-                    bonos={bonos}
                     onMarcarResultado={manejarMarcarResultado}
                     onBorrar={manejarBorrarApuesta}
                     onEditar={editarApuesta}
@@ -384,9 +379,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onAgregarMovimiento={agregarMovimiento}
                 onBorrarMovimiento={borrarMovimiento}
                 onBorrarTodosMovimientos={borrarTodosMovimientos}
-                bonos={bonos}
-                onAgregarBono={agregarBono}
-                onBorrarBono={borrarBono}
                 onAjustarSaldoFreebet={ajustarSaldoFreebet}
               />
             ) : seccionActiva === "informe" ? (
