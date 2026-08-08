@@ -877,6 +877,73 @@ confirmando cada una antes de la siguiente.
   `FormularioApuesta.jsx` ("Apuesta asegurada" decía que el freebet se
   añadiría a "Bonos pendientes" al marcar Perdida — llevaba así desde antes
   de la Fase A, cuando en realidad ya sumaba directo al saldo de freebet).
+- **Constructor de apuesta por partidos ("bet builder" v2)** (no era una
+  fase del guion — la v1, un simple colapsado de selecciones consecutivas
+  del mismo partido dentro de la lista plana, se descartó tras probarla: no
+  dejaba ver de un vistazo qué llevaba ya la apuesta, y "Cambiar partido"
+  para combinar varios partidos no era evidente. Rediseño completo a partir
+  de una maqueta HTML interactiva que trajo el usuario como referencia).
+  `FormularioApuesta.jsx` ya no construye `selecciones` como una lista
+  plana editable a mano: la sección "Selecciones" pasa a ser
+  `ConstructorPartido.jsx` (nuevo) + una tarjeta "Apuesta en construcción"
+  con los partidos ya guardados.
+  - **`ConstructorPartido.jsx`**: wizard de 2 pasos por partido. 1) Elegir
+    partido (reutiliza `BuscadorEvento.jsx` tal cual) + botón "Elegir este
+    partido". 2) Con el partido ya fijado (chip dorado arriba, con
+    "Cambiar de partido" para volver al paso 1), elegir modo: **"+ Añadir
+    cuota"** (un mercado + su propia cuota, como una selección normal) o
+    **"Crear multi de este partido"** (varios mercados del mismo partido,
+    sin pedir cuota por mercado — no tiene sentido pedirla, la cuota
+    combinada de varios mercados del mismo partido no es el producto de
+    las cuotas sueltas, es la que da la propia casa — con un único campo
+    "Cuota de este partido" al final que la introduce el usuario a mano).
+    Al guardar cualquiera de los dos modos, se llama a `onGuardarBloque`
+    con `{evento, país, competición, partidoId, cuota, mercados: [...]}`
+    y el wizard se reinicia solo, listo para el siguiente partido.
+    `key={resetId}` en `BuscadorEvento`/`SelectorMercado` los remonta con
+    estado limpio en cada reinicio — su valor inicial se calcula una sola
+    vez al montar (`useState(() => ...)`), así que cambiar el prop "valor"
+    a "" desde fuera no bastaba para vaciarlos visualmente. Un
+    `onKeyDown` en el contenedor raíz evita que pulsar Enter en cualquier
+    campo de aquí dentro (buscador, mercado, cuota) envíe sin querer el
+    formulario completo de la apuesta — el único `type="submit"` de la
+    página vive fuera de este componente.
+  - **`FormularioApuesta.jsx`**: guarda los partidos confirmados en un
+    array `bloques` (uno por partido, con su lista de mercados y su
+    cuota), mostrados en la tarjeta "Apuesta en construcción" (partido +
+    cuota + mercados en viñetas + botón "Quitar partido" cada uno, y
+    "Cuota total combinada" = producto de la cuota de cada bloque). El
+    botón final ("Crear apuesta" / "Guardar cambios" al editar) se
+    deshabilita hasta que haya al menos un bloque. Al enviar, cada bloque
+    se "aplana" a una selección por mercado (mismo formato que antes:
+    `{evento, apuesta, cuota, pais, competicion, partidoId}`) — el primer
+    mercado de cada bloque lleva la cuota real, el resto cuenta como 1 —
+    así el cálculo de cuota total de la apuesta (`utils/apuestas.js`) no
+    cambia ni falta ninguna migración de datos: una apuesta con un único
+    bloque de un mercado se guarda exactamente igual que antes de este
+    rediseño. Al editar una apuesta ya guardada, `bloquesDesdeApuesta`
+    reconstruye los bloques agrupando selecciones consecutivas del mismo
+    partido con cuota exactamente 1 (mismo criterio que ya usaba la v1
+    para no romper combinadas antiguas con selecciones reales de cuota 1
+    por casualidad — caso muy raro, se acepta el riesgo).
+- **Dos mercados nuevos y desplegable de mercados en acordeón** (petición
+  directa, misma sesión). `utils/mercados.js`: dentro de "Goles", justo
+  después de "Ambos equipos marcan en la 2ª mitad: No", se añaden "Gol en
+  ambas mitades: Sí" y "Gol en ambas mitades: No" (si hay gol en la 1ª Y en
+  la 2ª mitad, sin importar qué equipo — distinto de "Ambos equipos
+  marcan", que es sobre qué equipos marcan, no en qué mitad).
+  `SelectorMercado.jsx` pasa de mostrar todas las categorías abiertas a la
+  vez (panel largo, mucho scroll) a un acordeón: solo una categoría
+  expandida cada vez (estado `categoriaAbierta`), tocar una cierra la que
+  estuviera abierta y abre la nueva. Al abrir el desplegable, si la
+  selección ya tenía un mercado elegido, arranca con la categoría de ese
+  mercado ya expandida (para no esconder lo ya elegido). La cabecera de
+  cada categoría sigue siendo `sticky top-0` dentro del panel, ahora
+  también como botón clicable con su propio chevron. "Otro mercado" (al
+  final del panel) pasa del estilo antiguo (texto normal, borde superior
+  grueso) al mismo aspecto que las cabeceras de categoría (`bg-felt`,
+  dorado, mayúsculas) pero sin chevron ni desplegarse — sigue siendo un
+  botón que elige "Otro mercado" directamente al tocarlo, sin acordeón.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

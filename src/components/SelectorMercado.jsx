@@ -44,6 +44,12 @@ export default function SelectorMercado({ evento, valor, onCambiar }) {
   const equipos = equiposDesdeEvento(evento);
   const [seleccion, setSeleccion] = useState(() => seleccionInicial(valor, equipos));
   const [abierto, setAbierto] = useState(false);
+  // Acordeón: una sola categoría abierta a la vez, para que el panel no sea
+  // tan largo — al abrir, empieza expandida la categoría de la selección
+  // actual (si hay una), para no esconder lo ya elegido.
+  const [categoriaAbierta, setCategoriaAbierta] = useState(() =>
+    seleccion && seleccion !== OTRO ? seleccion.split("|")[0] : null
+  );
   const contenedorRef = useRef(null);
   const posicion = usePosicionDesplegable(abierto, contenedorRef);
 
@@ -90,35 +96,49 @@ export default function SelectorMercado({ evento, valor, onCambiar }) {
           }`}
           style={{ maxHeight: posicion.maxAltura }}
         >
-          {CATEGORIAS_MERCADO.map((categoria) => (
-            <div key={categoria.id}>
-              <p className="sticky top-0 z-10 bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold">
-                {categoria.etiqueta}
-              </p>
-              {categoria.opciones.map((opcion) => {
-                const valorOpcion = `${categoria.id}|${opcion.id}`;
-                return (
-                  <button
-                    key={opcion.id}
-                    type="button"
-                    onClick={() => elegir(valorOpcion)}
-                    className={`w-full text-left px-4 py-2 text-sm border-b border-line/60 last:border-b-0 transition-colors ${
-                      seleccion === valorOpcion
-                        ? "bg-gold/10 text-gold font-medium"
-                        : "text-ink hover:bg-paperDim"
-                    }`}
-                  >
-                    {opcion.texto(equipos)}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          {CATEGORIAS_MERCADO.map((categoria) => {
+            const categoriaExpandida = categoriaAbierta === categoria.id;
+            return (
+              <div key={categoria.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCategoriaAbierta((actual) => (actual === categoria.id ? null : categoria.id))
+                  }
+                  className="sticky top-0 z-10 w-full flex items-center justify-between gap-2 bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold"
+                >
+                  {categoria.etiqueta}
+                  <ChevronDown
+                    size={14}
+                    className={`shrink-0 transition-transform ${categoriaExpandida ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {categoriaExpandida &&
+                  categoria.opciones.map((opcion) => {
+                    const valorOpcion = `${categoria.id}|${opcion.id}`;
+                    return (
+                      <button
+                        key={opcion.id}
+                        type="button"
+                        onClick={() => elegir(valorOpcion)}
+                        className={`w-full text-left px-4 py-2 text-sm border-b border-line/60 last:border-b-0 transition-colors ${
+                          seleccion === valorOpcion
+                            ? "bg-gold/10 text-gold font-medium"
+                            : "text-ink hover:bg-paperDim"
+                        }`}
+                      >
+                        {opcion.texto(equipos)}
+                      </button>
+                    );
+                  })}
+              </div>
+            );
+          })}
           <button
             type="button"
             onClick={() => elegir(OTRO)}
-            className={`w-full text-left px-3 py-2.5 text-sm font-bold border-t-2 border-gold/50 transition-colors ${
-              seleccion === OTRO ? "bg-gold/10 text-gold" : "text-ink hover:bg-paperDim"
+            className={`w-full text-left px-3 py-1.5 text-xs font-bold uppercase tracking-wide border-t border-gold/30 transition-colors ${
+              seleccion === OTRO ? "bg-gold text-felt" : "bg-felt text-gold hover:bg-feltDark"
             }`}
           >
             Otro mercado

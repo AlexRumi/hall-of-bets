@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { PlusCircle, Save, X, AlertTriangle } from "lucide-react";
-import { calcularCuotaTotal } from "../utils/apuestas";
+import { PlusCircle, Save, X, AlertTriangle, Globe } from "lucide-react";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
-import BuscadorEvento from "./BuscadorEvento";
-import SelectorMercado from "./SelectorMercado";
+import ConstructorPartido from "./ConstructorPartido";
 // "Ver cuotas" (CuotasDialog) se queda comentado, no borrado: al registrar
 // una apuesta la casa ya está decidida (la apuesta ya está hecha), así que
 // comparar cuotas de otras casas aquí tiene poco sentido ahora mismo. Podría
@@ -12,26 +10,37 @@ import SelectorMercado from "./SelectorMercado";
 // import CuotasDialog from "./CuotasDialog";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
-const seleccionVacia = () => ({
-  evento: "",
-  apuesta: "",
-  cuota: "",
-  pais: "",
-  competicion: "",
-  partidoId: null,
-});
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
-const seleccionesDesdeApuesta = (apuesta) =>
-  apuesta.selecciones.map((s) => ({
-    evento: s.evento,
-    apuesta: s.apuesta,
-    cuota: String(s.cuota),
-    // Las apuestas de antes de conectar el buscador de partidos no tienen
-    // país/competición/id de partido guardados.
-    pais: s.pais ?? "",
-    competicion: s.competicion ?? "",
-    partidoId: s.partidoId ?? null,
-  }));
+
+// Reconstruye los "bloques" (un partido, con uno o varios mercados y una
+// única cuota) a partir de las selecciones ya guardadas de una apuesta, para
+// poder editarla con ConstructorPartido.jsx. Selecciones consecutivas del
+// mismo partido con cuota exactamente 1 se consideran mercados extra del
+// mismo bloque (así se guardan las que vienen de un "multi" — la cuota real
+// vive en la primera); el resto son bloques de un único mercado.
+function bloquesDesdeApuesta(apuestaInicial) {
+  if (!apuestaInicial) return [];
+  const bloques = [];
+  for (const s of apuestaInicial.selecciones) {
+    const anterior = bloques[bloques.length - 1];
+    const siguePartido = anterior && s.evento === anterior.evento && Number(s.cuota) === 1;
+    if (siguePartido) {
+      anterior.mercados.push(s.apuesta);
+    } else {
+      bloques.push({
+        evento: s.evento,
+        // Las apuestas de antes de conectar el buscador de partidos no
+        // tienen país/competición/id de partido guardados.
+        pais: s.pais ?? "",
+        competicion: s.competicion ?? "",
+        partidoId: s.partidoId ?? null,
+        cuota: Number(s.cuota),
+        mercados: [s.apuesta],
+      });
+    }
+  }
+  return bloques;
+}
 
 // Mismo formulario para crear una apuesta nueva y para editar una ya
 // existente: si se recibe apuestaInicial, se precargan sus datos y el envío
@@ -54,9 +63,10 @@ export default function FormularioApuesta({
     apuestaInicial?.tipoFondos ?? "real"
   );
   const [deporte, setDeporte] = useState(apuestaInicial?.deporte ?? "Fútbol");
-  const [selecciones, setSelecciones] = useState(
-    apuestaInicial ? seleccionesDesdeApuesta(apuestaInicial) : [seleccionVacia()]
-  );
+  // Cada bloque = un partido ya guardado, con uno o varios mercados y una
+  // única cuota (ver ConstructorPartido.jsx). Al enviar, se aplanan a la
+  // lista de "selecciones" que espera onGuardar.
+  const [bloques, setBloques] = useState(() => bloquesDesdeApuesta(apuestaInicial));
   const [asegurada, setAsegurada] = useState(!!apuestaInicial?.seguroFreebetImporte);
   const [seguroImporte, setSeguroImporte] = useState(
     apuestaInicial?.seguroFreebetImporte ? String(apuestaInicial.seguroFreebetImporte) : ""
@@ -66,8 +76,6 @@ export default function FormularioApuesta({
     apuestaInicial?.aumentoPct ? String(apuestaInicial.aumentoPct) : ""
   );
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
-
-  const esCombinada = selecciones.length > 1;
 
   // Bankroll actual de la casa elegida (mismo cálculo que en Casas de
   // apuestas: ingresos - retiradas + beneficio de apuestas ya resueltas).
@@ -89,57 +97,32 @@ export default function FormularioApuesta({
   const sinFreebets = freebetsCasa <= 0;
   const superaFreebets = !sinFreebets && stakeNumero > freebetsCasa;
 
-  // Cuota total en vivo, solo con las selecciones que ya tienen una cuota válida.
-  const cuotasValidas = selecciones
-    .map((s) => Number(s.cuota))
-    .filter((cuota) => cuota > 0);
-  const cuotaTotal =
-    cuotasValidas.length === selecciones.length
-      ? calcularCuotaTotal(cuotasValidas.map((cuota) => ({ cuota })))
-      : null;
+  const cuotaTotalBloques = bloques.reduce((total, b) => total * b.cuota, 1);
 
-  function actualizarSeleccion(index, campo, valor) {
-    setSelecciones((actuales) =>
-      actuales.map((s, i) => (i === index ? { ...s, [campo]: valor } : s))
-    );
-  }
-
-  // Al elegir un partido del buscador: rellena evento/país/competición de
-  // esa selección, y pone la fecha de la apuesta a la del partido (la
-  // última selección elegida manda, para el caso normal de una sola fecha).
-  function aplicarPartido(index, partido) {
-    setSelecciones((actuales) =>
-      actuales.map((s, i) =>
-        i === index
-          ? {
-              ...s,
-              evento: partido.evento,
-              pais: partido.pais,
-              competicion: partido.competicion,
-              partidoId: partido.id,
-            }
-          : s
-      )
-    );
-    setFecha(partido.fecha);
-  }
-
-  function añadirSeleccion() {
-    setSelecciones((actuales) => [...actuales, seleccionVacia()]);
-  }
-
-  function quitarSeleccion(index) {
-    setSelecciones((actuales) => actuales.filter((_, i) => i !== index));
+  function quitarBloque(index) {
+    setBloques((actuales) => actuales.filter((_, i) => i !== index));
   }
 
   function manejarEnvio(e) {
     e.preventDefault();
 
     const casaFinal = casa.trim();
-    const seleccionesValidas = selecciones.every(
-      (s) => s.evento.trim() && s.apuesta.trim() && Number(s.cuota) > 0
+    if (!casaFinal || !cantidadApostada || bloques.length === 0) return;
+
+    // Cada bloque se aplana a una selección por mercado: la primera lleva
+    // la cuota real del bloque (la que da la casa por el conjunto si tiene
+    // varios mercados), el resto cuenta como 1 en el producto — así el
+    // cálculo de cuota total de la apuesta (utils/apuestas.js) no cambia.
+    const selecciones = bloques.flatMap((bloque) =>
+      bloque.mercados.map((mercado, i) => ({
+        evento: bloque.evento,
+        apuesta: mercado,
+        cuota: i === 0 ? bloque.cuota : 1,
+        pais: bloque.pais || null,
+        competicion: bloque.competicion || null,
+        partidoId: bloque.partidoId || null,
+      }))
     );
-    if (!casaFinal || !cantidadApostada || !seleccionesValidas) return;
 
     onGuardar({
       fecha,
@@ -149,14 +132,7 @@ export default function FormularioApuesta({
       deporte,
       seguroFreebetImporte: asegurada ? Number(seguroImporte) : null,
       aumentoPct: conAumento ? Number(aumentoPct) : null,
-      selecciones: selecciones.map((s) => ({
-        evento: s.evento.trim(),
-        apuesta: s.apuesta.trim(),
-        cuota: s.cuota,
-        pais: s.pais || null,
-        competicion: s.competicion || null,
-        partidoId: s.partidoId || null,
-      })),
+      selecciones,
     });
 
     if (esEdicion) {
@@ -168,7 +144,7 @@ export default function FormularioApuesta({
     setCantidadApostada("");
     setTipoFondos("real");
     setDeporte("Fútbol");
-    setSelecciones([seleccionVacia()]);
+    setBloques([]);
     setFecha(hoy());
     setAsegurada(false);
     setSeguroImporte("");
@@ -354,102 +330,67 @@ export default function FormularioApuesta({
       </div>
 
       <div className="space-y-4 pt-4 border-t border-line">
-        <div className="flex items-center justify-between">
-          <label className="block text-xs text-slate">Selecciones</label>
-          {cuotaTotal !== null && (
-            <span className="text-xs font-mono text-gold font-medium">
-              Cuota total: {cuotaTotal.toFixed(2)}
-            </span>
-          )}
-        </div>
+        <label className="block text-xs text-slate">Selecciones</label>
 
-        {selecciones.map((seleccion, index) => (
-          <div
-            key={index}
-            className="border border-line rounded-lg p-4 space-y-3"
-          >
-            <div>
-              <label className="block text-xs text-slate mb-1">Evento</label>
-              <BuscadorEvento
-                valor={seleccion.evento}
-                fecha={fecha}
-                onCambiar={(valor) => actualizarSeleccion(index, "evento", valor)}
-                onElegirPartido={(partido) => aplicarPartido(index, partido)}
-              />
-              {seleccion.pais && (
-                <div className="mt-1 flex items-center gap-2">
-                  <p className="text-xs text-slate">
-                    {seleccion.competicion} · {seleccion.pais}
-                  </p>
-                  {/* "Ver cuotas" oculto por ahora, ver comentario junto al import de CuotasDialog */}
-                  {/* {seleccion.partidoId && (
+        <ConstructorPartido
+          fecha={fecha}
+          onFechaPartido={setFecha}
+          onGuardarBloque={(bloque) => setBloques((actuales) => [...actuales, bloque])}
+        />
+
+        <div className="bg-paperDim border border-line rounded-lg p-4 space-y-3">
+          <p className="text-sm font-semibold text-ink">Apuesta en construcción</p>
+
+          {bloques.length === 0 ? (
+            <p className="text-sm text-slate">Todavía no has añadido ningún partido.</p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {bloques.map((bloque, index) => (
+                  <div key={index} className="bg-surface border border-line rounded-lg p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-ink min-w-0">
+                        <Globe size={14} className="text-gold shrink-0" />
+                        <span className="truncate">{bloque.evento}</span>
+                      </span>
+                      <span className="font-mono text-sm font-bold text-gold shrink-0">
+                        {bloque.cuota.toFixed(2)}
+                      </span>
+                    </div>
+                    <ul className="mt-1.5 space-y-0.5">
+                      {bloque.mercados.map((mercado, i) => (
+                        <li key={i} className="text-xs text-slate">
+                          • {mercado}
+                        </li>
+                      ))}
+                    </ul>
                     <button
                       type="button"
-                      onClick={() => setIndiceCuotas(index)}
-                      className="text-xs font-medium text-gold hover:underline"
+                      onClick={() => quitarBloque(index)}
+                      className="mt-2 text-xs font-medium text-lose hover:underline"
                     >
-                      Ver cuotas
+                      Quitar partido
                     </button>
-                  )} */}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate mb-1">Apuesta</label>
-              <SelectorMercado
-                evento={seleccion.evento}
-                valor={seleccion.apuesta}
-                onCambiar={(texto) => actualizarSeleccion(index, "apuesta", texto)}
-              />
-            </div>
-
-            <div className="flex gap-2 items-end">
-              <div className="w-24 shrink-0">
-                <label className="block text-xs text-slate mb-1">Cuota</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1.01"
-                  value={seleccion.cuota}
-                  onChange={(e) =>
-                    actualizarSeleccion(index, "cuota", e.target.value)
-                  }
-                  placeholder="2,10"
-                  required
-                  className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
-                />
+                  </div>
+                ))}
               </div>
-              {selecciones.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => quitarSeleccion(index)}
-                  aria-label="Quitar selección"
-                  className="shrink-0 text-slate hover:text-lose transition-colors p-2"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-
-        <button
-          type="button"
-          onClick={añadirSeleccion}
-          className="text-xs font-medium text-gold hover:underline"
-        >
-          + Añadir cuota
-        </button>
+              <p className="text-xs font-mono text-slate">
+                Cuota total combinada: {cuotaTotalBloques.toFixed(2)} · {bloques.length}{" "}
+                {bloques.length === 1 ? "partido" : "partidos"}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors"
+          disabled={bloques.length === 0}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-50"
         >
           {esEdicion ? <Save size={16} /> : <PlusCircle size={16} />}
-          {esEdicion ? "Guardar cambios" : "Añadir apuesta"}
+          {esEdicion ? "Guardar cambios" : "Crear apuesta"}
         </button>
         {esEdicion && (
           <button

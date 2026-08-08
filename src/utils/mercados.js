@@ -165,6 +165,8 @@ export const CATEGORIAS_MERCADO = [
       { id: "btts-1t-no", texto: () => "Ambos equipos marcan en la 1ª mitad: No" },
       { id: "btts-2t-si", texto: () => "Ambos equipos marcan en la 2ª mitad: Sí" },
       { id: "btts-2t-no", texto: () => "Ambos equipos marcan en la 2ª mitad: No" },
+      { id: "gol-ambas-mitades-si", texto: () => "Gol en ambas mitades: Sí" },
+      { id: "gol-ambas-mitades-no", texto: () => "Gol en ambas mitades: No" },
     ],
   },
   {
