@@ -682,6 +682,12 @@ antes de pasar a la siguiente.
     pasa a existir solo si la apuesta sigue pendiente (Ganada/Perdida/Nula
     + Cash Out) — si ya está resuelta, no queda nada que mostrar ahí y el
     bloque entero desaparece en vez de dejar un hueco vacío.
+    Cada mercado ("Gana PSV", "Over 2.5 goles"...) se quedaba demasiado
+    apagado (`text-slate`, el mismo gris que la competición/país) al lado
+    del evento en negrita — ahora lleva una marca `▸` dorada delante y pasa
+    a `text-ink font-medium`: se distingue mejor del evento sin llegar al
+    `font-semibold` de este (probado primero en semibold, un paso de más
+    según el usuario).
 
 ## Fases futuras pedidas (5, una a una con confirmación)
 

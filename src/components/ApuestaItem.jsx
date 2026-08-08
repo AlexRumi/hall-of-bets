@@ -216,9 +216,13 @@ export default function ApuestaItem({
                         {grupo.competicion} · {grupo.pais}
                       </p>
                     )}
-                    <div className="mt-1 space-y-0.5">
+                    <div className="mt-1.5 space-y-1">
                       {grupo.selecciones.map((s) => (
-                        <p key={s.id} className="text-sm text-slate break-words">
+                        <p
+                          key={s.id}
+                          className="flex items-baseline gap-1.5 text-sm font-medium text-ink break-words"
+                        >
+                          <span className="text-gold">▸</span>
                           {s.apuesta}
                         </p>
                       ))}
