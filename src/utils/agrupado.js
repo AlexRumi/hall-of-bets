@@ -18,7 +18,7 @@ function etiquetaMes(claveMes) {
   return `${MESES[mes - 1]} ${anio}`;
 }
 
-function etiquetaDia(fechaStr) {
+export function etiquetaDia(fechaStr) {
   const fecha = fechaLocal(fechaStr);
   return `${DIAS_SEMANA[fecha.getDay()]} ${fecha.getDate()}`;
 }
