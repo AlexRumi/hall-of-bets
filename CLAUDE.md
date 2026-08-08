@@ -622,6 +622,23 @@ antes de pasar a la siguiente.
     como fondo sólido con texto encima, la versión clara de esos tokens se
     veía descolorida en oscuro — con RGB fijo, la franja se ve igual en
     los dos modos.
+  - Bug real encontrado al usarlo: en `BuscadorEvento.jsx`,
+    `necesitaCompeticion` solo exigía elegir competición si el país tenía
+    más de una conectada — Portugal/Holanda/Bélgica (una sola competición
+    cada uno) se saltaban ese paso y mostraban partidos solo con el país
+    elegido. Si el usuario no llegaba a tocar el desplegable de
+    Competición, la selección podía quedar sin partido de verdad elegido
+    y la apuesta no se guardaba (fallo silencioso, sin aviso — la
+    validación de `FormularioApuesta.jsx` ya existía, esto era la causa).
+    Ahora `necesitaCompeticion` exige competición siempre que hay país
+    elegido, sin importar cuántas tenga conectadas.
+    Ronda de ajuste: con el país elegido pero la competición todavía
+    pendiente, el cuadro de "Escribe para filtrar" (vacío, sin partidos
+    que filtrar todavía) se veía a la vez que el aviso de "Elige una
+    competición" — redundante. Ahora el cuadro entero (input + lista de
+    partidos) no se pinta hasta que `necesitaCompeticion` es `false`; el
+    aviso de "Elige una competición" ya no hacía falta (siempre era falso
+    dentro de ese bloque) y se quitó.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

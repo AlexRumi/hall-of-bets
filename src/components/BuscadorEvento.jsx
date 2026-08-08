@@ -53,8 +53,11 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   const competicionesDisponibles = modoManual
     ? []
     : PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? [];
-  const necesitaCompeticion =
-    !modoManual && competicionesDisponibles.length > 1 && !competicionFiltro;
+  // País + competición son siempre obligatorios antes de ver partidos,
+  // incluso si ese país solo tiene una competición conectada (antes se
+  // saltaba este paso en ese caso, y confundía: parecía que hacía falta
+  // elegir competición para que la apuesta se guardara bien).
+  const necesitaCompeticion = !modoManual && !competicionFiltro;
 
   const coincidencias =
     modoManual || necesitaCompeticion
@@ -122,7 +125,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
         </select>
       </div>
 
-      {(paisFiltro || valor) && (
+      {(paisFiltro || valor) && !necesitaCompeticion && (
         <div className="relative">
           <input
             type="text"
@@ -139,15 +142,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             className="w-full border border-line rounded-lg px-3 py-2 text-sm"
           />
 
-          {abierto && necesitaCompeticion && (
-            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
-              <p className="px-3 py-2 text-xs text-slate">
-                Elige una competición para ver los partidos.
-              </p>
-            </div>
-          )}
-
-          {abierto && !necesitaCompeticion && !modoManual && fueraDeRango && (
+          {abierto && !modoManual && fueraDeRango && (
             <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
               <p className="px-3 py-2 text-xs text-slate">
                 El plan gratuito de API-Football solo permite buscar partidos
@@ -157,7 +152,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             </div>
           )}
 
-          {abierto && !necesitaCompeticion && coincidencias.length > 0 && (
+          {abierto && coincidencias.length > 0 && (
             <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto text-left">
               {coincidencias.map((partido) => (
                 <button
