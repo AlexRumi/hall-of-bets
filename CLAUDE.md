@@ -556,8 +556,26 @@ antes de pasar a la siguiente.
     un único sitio. "Empate al descanso" en "Resultado al descanso" pasa
     a ser solo "Empate" (ese cambio sí es texto literal de esa opción, no
     del nombre genérico).
-
-## Convenciones de código
+  - En `BuscadorEvento.jsx`: el campo "Evento" (con su placeholder "Ej.
+    Real Madrid - FC Barcelona") ya no se ve nunca hasta elegir un país
+    (cualquiera, incluida "Otras ligas") — antes se veía siempre, vacío,
+    antes incluso de elegir nada. Al editar una selección que ya tenía
+    evento escrito de antes, se muestra igual aunque no se haya tocado el
+    desplegable de País en esta sesión (`paisFiltro || valor`), para no
+    esconder un dato ya guardado. El "Seleccionar un país" del desplegable
+    de País se cortaba en móvil (más ancho desde que se igualó su
+    `text-sm`/`px-3` al resto de campos) — pasa a ser solo "País", como ya
+    era "Competición" al lado.
+  - `TarjetaApuestaResumen.jsx` pierde la segunda línea (casa · cuota ·
+    apostado) que solo se veía en `sm:`/`md:` — quedaba redundante porque
+    tocar la tarjeta ya abre el detalle completo con todo eso. En
+    `ListaApuestas.jsx`, el beneficio de cada día pasa de texto suelto a
+    una pastilla de color (verde/rojo/gris, mismo estilo que el badge de
+    resultado de `TarjetaApuestaResumen.jsx`), y la cabecera de cada mes
+    (antes texto suelto con icono) pasa a ser su propia tarjeta con borde
+    (`bg-surface border border-line rounded-lg`), con su beneficio
+    también en pastilla — para que se note claramente como una fila propia
+    del listado, no solo una etiqueta más.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

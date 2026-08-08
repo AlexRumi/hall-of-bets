@@ -80,7 +80,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           }}
           className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface text-ink"
         >
-          <option value="">Seleccionar un país</option>
+          <option value="">País</option>
           <optgroup label="Grandes ligas">
             {PAISES_INDIVIDUALES.map(({ pais }) => (
               <option key={pais} value={pais}>
@@ -122,59 +122,63 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
         </select>
       </div>
 
-      <div className="relative">
-        <input
-          type="text"
-          value={valor}
-          onChange={(e) => {
-            onCambiar(e.target.value);
-            setAbierto(true);
-          }}
-          onFocus={() => setAbierto(true)}
-          placeholder={modoManual ? "Ej. Real Madrid - FC Barcelona" : "Escribe para filtrar"}
-          required
-          className="w-full border border-line rounded-lg px-3 py-2 text-sm"
-        />
+      {(paisFiltro || valor) && (
+        <div className="relative">
+          <input
+            type="text"
+            value={valor}
+            onChange={(e) => {
+              onCambiar(e.target.value);
+              setAbierto(true);
+            }}
+            onFocus={() => setAbierto(true)}
+            placeholder={
+              paisFiltro === OTRAS_LIGAS ? "Ej. Real Madrid - FC Barcelona" : "Escribe para filtrar"
+            }
+            required
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
+          />
 
-        {abierto && necesitaCompeticion && (
-          <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
-            <p className="px-3 py-2 text-xs text-slate">
-              Elige una competición para ver los partidos.
-            </p>
-          </div>
-        )}
+          {abierto && necesitaCompeticion && (
+            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
+              <p className="px-3 py-2 text-xs text-slate">
+                Elige una competición para ver los partidos.
+              </p>
+            </div>
+          )}
 
-        {abierto && !necesitaCompeticion && !modoManual && fueraDeRango && (
-          <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
-            <p className="px-3 py-2 text-xs text-slate">
-              El plan gratuito de API-Football solo permite buscar partidos
-              de ayer, hoy o mañana. Para esta fecha, escribe el evento a
-              mano.
-            </p>
-          </div>
-        )}
+          {abierto && !necesitaCompeticion && !modoManual && fueraDeRango && (
+            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg text-left">
+              <p className="px-3 py-2 text-xs text-slate">
+                El plan gratuito de API-Football solo permite buscar partidos
+                de ayer, hoy o mañana. Para esta fecha, escribe el evento a
+                mano.
+              </p>
+            </div>
+          )}
 
-        {abierto && !necesitaCompeticion && coincidencias.length > 0 && (
-          <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto text-left">
-            {coincidencias.map((partido) => (
-              <button
-                key={partido.id}
-                type="button"
-                onClick={() => {
-                  onElegirPartido(partido);
-                  setAbierto(false);
-                }}
-                className="w-full flex flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-paperDim transition-colors border-b border-line last:border-b-0"
-              >
-                <span className="text-sm font-medium text-ink">{partido.evento}</span>
-                <span className="text-xs text-slate">
-                  {partido.competicion} · {partido.pais}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          {abierto && !necesitaCompeticion && coincidencias.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full bg-surface border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto text-left">
+              {coincidencias.map((partido) => (
+                <button
+                  key={partido.id}
+                  type="button"
+                  onClick={() => {
+                    onElegirPartido(partido);
+                    setAbierto(false);
+                  }}
+                  className="w-full flex flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-paperDim transition-colors border-b border-line last:border-b-0"
+                >
+                  <span className="text-sm font-medium text-ink">{partido.evento}</span>
+                  <span className="text-xs text-slate">
+                    {partido.competicion} · {partido.pais}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

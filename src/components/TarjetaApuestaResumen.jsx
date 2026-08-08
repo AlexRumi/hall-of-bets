@@ -1,4 +1,4 @@
-import { calcularBeneficio, calcularCuotaTotal } from "../utils/apuestas";
+import { calcularBeneficio } from "../utils/apuestas";
 
 // No hay iconos de fútbol/baloncesto/tenis en lucide-react (comprobado):
 // un emoji por deporte es lo más parecido al icono del ejemplo.
@@ -32,7 +32,6 @@ function textoEvento(apuesta) {
 export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
   const esPendiente = apuesta.resultado === "pendiente";
   const beneficio = calcularBeneficio(apuesta);
-  const cuotaTotal = calcularCuotaTotal(apuesta.selecciones);
 
   return (
     <button
@@ -46,9 +45,6 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-ink truncate">{textoEvento(apuesta)}</p>
-        <p className="hidden sm:block text-xs text-slate mt-0.5">
-          {apuesta.casa} · Cuota {cuotaTotal.toFixed(2)} · Apostado {apuesta.stake.toFixed(2)}€
-        </p>
       </div>
 
       <span

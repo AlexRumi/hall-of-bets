@@ -52,15 +52,19 @@ export default function ListaApuestas({
             onClick={() =>
               setOverrides((actuales) => ({ ...actuales, [mes.clave]: !expandido }))
             }
-            className="w-full flex items-center justify-between px-1 py-2"
+            className="w-full flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2.5 hover:border-gold/40 transition-colors"
           >
             <span className="flex items-center gap-1.5 font-display font-semibold text-ink">
               {expandido ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               {mes.etiqueta}
             </span>
             <span
-              className={`font-mono text-sm font-medium ${
-                mes.beneficio > 0 ? "text-win" : mes.beneficio < 0 ? "text-lose" : "text-slate"
+              className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg ${
+                mes.beneficio > 0
+                  ? "bg-win/10 text-win"
+                  : mes.beneficio < 0
+                  ? "bg-lose/10 text-lose"
+                  : "bg-paperDim text-slate"
               }`}
             >
               {mes.beneficio > 0 ? "+" : ""}
@@ -69,12 +73,20 @@ export default function ListaApuestas({
           </button>
 
           {expandido && (
-            <div className="space-y-3 mt-1">
+            <div className="space-y-3 mt-2">
               {mes.dias.map((dia) => (
                 <div key={dia.fecha}>
                   <div className="flex items-center justify-between px-1 py-1 text-xs text-slate">
                     <span>{dia.etiqueta}</span>
-                    <span>
+                    <span
+                      className={`font-mono text-xs font-bold px-2 py-0.5 rounded-lg ${
+                        dia.beneficio > 0
+                          ? "bg-win/10 text-win"
+                          : dia.beneficio < 0
+                          ? "bg-lose/10 text-lose"
+                          : "bg-paperDim text-slate"
+                      }`}
+                    >
                       {dia.beneficio > 0 ? "+" : ""}
                       {dia.beneficio.toFixed(2)}€
                     </span>
