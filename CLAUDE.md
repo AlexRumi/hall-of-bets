@@ -592,6 +592,36 @@ antes de pasar a la siguiente.
     usado en el resto de la app para superficies "recogidas" — en oscuro
     también le sienta bien, no hizo falta un `dark:` aparte). La tarjeta
     de la apuesta en sí (`TarjetaApuestaResumen.jsx`) no se toca.
+  - **Rediseño de fila**, dos vueltas: la primera probó filas pegadas con
+    `divide-y` dentro de la tarjeta del día (prop `comoFila`); tras ver una
+    captura de referencia hecha a medida para esta app, se descartó — cada
+    apuesta vuelve a ser su propia tarjetita (`bg-paperDim border
+    border-line rounded-xl`, sin variante `comoFila`: mismo aspecto en
+    todos los sitios, incluida "Últimas apuestas" de `PantallaInicio.jsx`),
+    con espacio entre ellas dentro de la tarjeta del día (que pasa a
+    `rounded-2xl p-3 sm:p-4 space-y-3`, con cabecera en fuente grande
+    `font-display` y el beneficio en píldora `rounded-full`). Cada tarjeta
+    de apuesta: emoji del deporte dentro de un círculo (`bg-surface`,
+    contraste con el `bg-paperDim` de la tarjeta), badge Simple/Combinada
+    en píldora dorada rellena, evento en negrita más grande, y la franja
+    vertical de resultado (mayúsculas girada,
+    `[writing-mode:vertical-rl] rotate-180`, fondo sólido — sin utilidad
+    de Tailwind para "writing-mode", hace falta la sintaxis arbitraria).
+    Se preguntó por un badge de "hora" (la captura de referencia sí lo
+    llevaba) y se descartó a propósito: es la hora del partido, no la de
+    registro, y la app no guarda ese dato.
+  - Ronda de pulido tras verlo con datos reales: la cabecera del mes
+    (antes sin tamaño explícito) pasa a `text-xl font-bold` y su píldora
+    de beneficio a `rounded-full`/`text-sm`, y la cabecera de cada día baja
+    de `text-lg font-bold` a `text-sm font-semibold` (píldora `text-xs`) —
+    así queda claro que el mes manda visualmente y el día es un nivel por
+    debajo, no al revés. La franja vertical de resultado dejó de usar los
+    tokens `win`/`lose`/... (que se aclaran a propósito en modo oscuro
+    para leerse bien como *texto*) y pasó a colores RGB fijos
+    (`bg-[rgb(...)]`, los mismos valores que ya usa el modo claro) porque
+    como fondo sólido con texto encima, la versión clara de esos tokens se
+    veía descolorida en oscuro — con RGB fijo, la franja se ve igual en
+    los dos modos.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

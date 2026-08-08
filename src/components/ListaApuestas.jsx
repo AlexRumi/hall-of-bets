@@ -54,16 +54,16 @@ export default function ListaApuestas({
             }
             className="w-full flex items-center justify-between gap-2 bg-surface border border-line rounded-lg px-3 py-2.5 hover:border-gold/40 transition-colors"
           >
-            <span className="flex items-center gap-1.5 font-display font-semibold text-ink">
-              {expandido ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <span className="flex items-center gap-1.5 font-display text-xl font-bold text-ink">
+              {expandido ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
               {mes.etiqueta}
             </span>
             <span
-              className={`font-mono text-xs font-bold px-2.5 py-1 rounded-lg ${
+              className={`font-mono text-sm font-bold px-3 py-1 rounded-full ${
                 mes.beneficio > 0
-                  ? "bg-win/10 text-win"
+                  ? "bg-win/15 text-win"
                   : mes.beneficio < 0
-                  ? "bg-lose/10 text-lose"
+                  ? "bg-lose/15 text-lose"
                   : "bg-paperDim text-slate"
               }`}
             >
@@ -75,15 +75,18 @@ export default function ListaApuestas({
           {expandido && (
             <div className="space-y-3 mt-2">
               {mes.dias.map((dia) => (
-                <div key={dia.fecha} className="border border-line bg-paperDim rounded-lg p-2 space-y-2">
+                <div
+                  key={dia.fecha}
+                  className="bg-surface border border-line rounded-2xl p-3 sm:p-4 space-y-3"
+                >
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-sm font-semibold text-ink">{dia.etiqueta}</span>
+                    <span className="font-display text-sm font-semibold text-ink">{dia.etiqueta}</span>
                     <span
-                      className={`font-mono text-xs font-bold px-2 py-0.5 rounded-lg ${
+                      className={`font-mono text-xs font-bold px-2.5 py-1 rounded-full ${
                         dia.beneficio > 0
-                          ? "bg-win/10 text-win"
+                          ? "bg-win/15 text-win"
                           : dia.beneficio < 0
-                          ? "bg-lose/10 text-lose"
+                          ? "bg-lose/15 text-lose"
                           : "bg-paperDim text-slate"
                       }`}
                     >
@@ -91,13 +94,15 @@ export default function ListaApuestas({
                       {dia.beneficio.toFixed(2)}€
                     </span>
                   </div>
-                  {dia.apuestas.map((apuesta) => (
-                    <TarjetaApuestaResumen
-                      key={apuesta.id}
-                      apuesta={apuesta}
-                      onAbrir={setApuestaAbiertaId}
-                    />
-                  ))}
+                  <div className="space-y-2">
+                    {dia.apuestas.map((apuesta) => (
+                      <TarjetaApuestaResumen
+                        key={apuesta.id}
+                        apuesta={apuesta}
+                        onAbrir={setApuestaAbiertaId}
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
