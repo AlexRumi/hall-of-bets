@@ -106,24 +106,25 @@ function opcionesHandicapEquipo(clave) {
 export const CATEGORIAS_MERCADO = [
   {
     id: "resultado",
-    etiqueta: "Resultado",
+    etiqueta: "Resultado Final",
     opciones: [
       { id: "1", texto: (eq) => `Gana ${eq.local}` },
       { id: "x", texto: () => "Empate" },
       { id: "2", texto: (eq) => `Gana ${eq.visitante}` },
+      // Betfair Exchange: se puede apostar a favor (back) o en contra
+      // (lay) de cada resultado, no solo elegir un ganador. Sin nombre de
+      // equipo aquí (Local/Empate/Visitante), pedido así explícitamente.
+      { id: "exchange-1-favor", texto: () => "Local: Favor" },
+      { id: "exchange-1-contra", texto: () => "Local: Contra" },
+      { id: "exchange-x-favor", texto: () => "Empate: Favor" },
+      { id: "exchange-x-contra", texto: () => "Empate: Contra" },
+      { id: "exchange-2-favor", texto: () => "Visitante: Favor" },
+      { id: "exchange-2-contra", texto: () => "Visitante: Contra" },
       { id: "1x", texto: (eq) => `Doble oportunidad: ${eq.local} o empate` },
       { id: "x2", texto: (eq) => `Doble oportunidad: ${eq.visitante} o empate` },
       { id: "12", texto: (eq) => `Doble oportunidad: ${eq.local} o ${eq.visitante}` },
       { id: "dnb-1", texto: (eq) => `Empate no válido: ${eq.local}` },
       { id: "dnb-2", texto: (eq) => `Empate no válido: ${eq.visitante}` },
-      // Betfair Exchange: se puede apostar a favor (back) o en contra
-      // (lay) de cada resultado, no solo elegir un ganador.
-      { id: "exchange-1-favor", texto: (eq) => `${eq.local} a favor` },
-      { id: "exchange-1-contra", texto: (eq) => `${eq.local} en contra` },
-      { id: "exchange-x-favor", texto: () => "Empate a favor" },
-      { id: "exchange-x-contra", texto: () => "Empate en contra" },
-      { id: "exchange-2-favor", texto: (eq) => `${eq.visitante} a favor` },
-      { id: "exchange-2-contra", texto: (eq) => `${eq.visitante} en contra` },
     ],
   },
   {

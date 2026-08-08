@@ -532,9 +532,11 @@ antes de pasar a la siguiente.
     "Selecciones", que antes quedaban pegados. Las etiquetas de las dos
     casillas pierden el paréntesis explicativo ("Apuesta asegurada",
     "Aumento de cuota" a secas) — ya se entienden solas.
-  - "Resultado" gana las 6 apuestas de Betfair Exchange (a favor/en
-    contra de cada resultado — local, empate, visitante — en vez de solo
-    elegir un ganador), al final de esa misma categoría.
+  - "Resultado" (renombrado a "Resultado Final" para distinguirlo de
+    "Resultado al descanso") gana las 6 apuestas de Betfair Exchange
+    justo después de "Gana el equipo visitante" — formato "Local: Favor" /
+    "Local: Contra" / etc., sin nombre de equipo (pedido así
+    explícitamente, a diferencia del resto de la categoría).
   - **`SelectorMercado.jsx` deja de usar un `<select>` nativo con
     `<optgroup>`**: probado en móvil, las cabeceras de categoría se veían
     casi igual que las opciones porque el `<select>` en Android/iOS lo
