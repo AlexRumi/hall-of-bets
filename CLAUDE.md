@@ -584,6 +584,14 @@ antes de pasar a la siguiente.
     `TarjetaApuestaResumen.jsx`. `etiquetaDia` se quedó exportada desde
     `utils/agrupado.js` por si hace falta en otro sitio, aunque ya no se
     usa fuera de ahí.
+  - Ajuste final: el `<div>` de cada día pasa a tener un borde fino propio
+    (`border border-line rounded-lg p-2`) — envuelve la cabecera del día y
+    su(s) tarjeta(s) de apuesta en un único recuadro, para que se note que
+    van juntos. En modo claro, sin fondo propio no se distinguía del
+    crema de la página, así que se le añadió `bg-paperDim` (mismo token ya
+    usado en el resto de la app para superficies "recogidas" — en oscuro
+    también le sienta bien, no hizo falta un `dark:` aparte). La tarjeta
+    de la apuesta en sí (`TarjetaApuestaResumen.jsx`) no se toca.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

@@ -75,7 +75,7 @@ export default function ListaApuestas({
           {expandido && (
             <div className="space-y-3 mt-2">
               {mes.dias.map((dia) => (
-                <div key={dia.fecha} className="space-y-2">
+                <div key={dia.fecha} className="border border-line bg-paperDim rounded-lg p-2 space-y-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-sm font-semibold text-ink">{dia.etiqueta}</span>
                     <span
