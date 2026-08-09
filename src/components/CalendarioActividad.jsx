@@ -1,24 +1,8 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { calcularBeneficio } from "../utils/apuestas";
 
 const DIAS_SEMANA = ["L", "M", "X", "J", "V", "S", "D"];
-const CLASES_NIVEL = [
-  "bg-paperDim",
-  "bg-gold/25",
-  "bg-gold/50",
-  "bg-gold/70",
-  "bg-gold/90",
-];
-
-function nivelIntensidad(cantidad, maxCantidad) {
-  if (cantidad === 0) return 0;
-  if (maxCantidad <= 1) return 4;
-  const proporcion = cantidad / maxCantidad;
-  if (proporcion > 0.75) return 4;
-  if (proporcion > 0.5) return 3;
-  if (proporcion > 0.25) return 2;
-  return 1;
-}
 
 function formatearMesAnio(fecha) {
   const texto = fecha.toLocaleDateString("es-ES", {
@@ -26,6 +10,20 @@ function formatearMesAnio(fecha) {
     year: "numeric",
   });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// Color de cada día según su beneficio neto (suma de calcularBeneficio de
+// todas sus apuestas, pendientes incluidas — que aportan 0), no según
+// cuántas apuestas hubo (a diferencia del mapa de calor por volumen de
+// antes): verde con beneficio, rojo con pérdidas, un tercer color neutral
+// si el día tiene apuestas pero se queda justo en 0 (p.ej. solo pendientes,
+// o ganancias y pérdidas que se cancelan). Sin apuestas ese día, gris claro
+// como siempre.
+function clasesDia(cantidad, beneficio) {
+  if (cantidad === 0) return "bg-paperDim text-slate";
+  if (beneficio > 0) return "bg-win/20 text-win font-semibold";
+  if (beneficio < 0) return "bg-lose/20 text-lose font-semibold";
+  return "bg-void/20 text-void font-semibold";
 }
 
 // Calendario mensual normal (no la tira estilo GitHub de antes): más fácil
@@ -43,10 +41,13 @@ export default function CalendarioActividad({ apuestas }) {
   const esMesActual = anio === hoy.getFullYear() && mes === hoy.getMonth();
   const prefijo = `${anio}-${String(mes + 1).padStart(2, "0")}`;
 
-  const conteo = new Map();
+  const porDia = new Map();
   for (const apuesta of apuestas) {
     if (apuesta.fecha.startsWith(prefijo)) {
-      conteo.set(apuesta.fecha, (conteo.get(apuesta.fecha) ?? 0) + 1);
+      const actual = porDia.get(apuesta.fecha) ?? { cantidad: 0, beneficio: 0 };
+      actual.cantidad += 1;
+      actual.beneficio += calcularBeneficio(apuesta);
+      porDia.set(apuesta.fecha, actual);
     }
   }
 
@@ -57,9 +58,7 @@ export default function CalendarioActividad({ apuestas }) {
     ...Array.from({ length: diasEnMes }, (_, i) => i + 1),
   ];
 
-  const cantidades = [...conteo.values()];
-  const maxCantidad = Math.max(...cantidades, 1);
-  const totalMes = cantidades.reduce((suma, c) => suma + c, 0);
+  const totalMes = [...porDia.values()].reduce((suma, d) => suma + d.cantidad, 0);
 
   return (
     <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
@@ -106,21 +105,39 @@ export default function CalendarioActividad({ apuestas }) {
         {celdas.map((dia, i) => {
           if (dia === null) return <div key={i} />;
           const clave = `${prefijo}-${String(dia).padStart(2, "0")}`;
-          const cantidad = conteo.get(clave) ?? 0;
+          const datosDia = porDia.get(clave);
+          const cantidad = datosDia?.cantidad ?? 0;
+          const beneficio = datosDia?.beneficio ?? 0;
           return (
             <div
               key={i}
-              title={`${clave}: ${cantidad} ${
-                cantidad === 1 ? "apuesta" : "apuestas"
+              title={`${clave}: ${cantidad} ${cantidad === 1 ? "apuesta" : "apuestas"}${
+                cantidad > 0 ? ` · ${beneficio > 0 ? "+" : ""}${beneficio.toFixed(2)}€` : ""
               }`}
-              className={`aspect-square rounded-md flex items-center justify-center text-xs font-mono ${
-                CLASES_NIVEL[nivelIntensidad(cantidad, maxCantidad)]
-              } ${cantidad > 0 ? "text-ink font-medium" : "text-slate"}`}
+              className={`aspect-square rounded-md flex items-center justify-center text-xs font-mono ${clasesDia(
+                cantidad,
+                beneficio
+              )}`}
             >
               {dia}
             </div>
           );
         })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-line">
+        <span className="flex items-center gap-1.5 text-xs text-slate">
+          <span className="w-3 h-3 rounded bg-win/50" />
+          Beneficio
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-slate">
+          <span className="w-3 h-3 rounded bg-lose/50" />
+          Pérdida
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-slate">
+          <span className="w-3 h-3 rounded bg-void/50" />
+          Neutral
+        </span>
       </div>
     </div>
   );

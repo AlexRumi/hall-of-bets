@@ -41,10 +41,15 @@ export default function FormularioApuesta({
   movimientos = [],
   apuestas = [],
   apuestaInicial = null,
+  categoria = null,
   onGuardar,
   onCancelar,
 }) {
   const esEdicion = apuestaInicial !== null;
+  // Al editar, el bankroll a comprobar es el de la apuesta ya guardada
+  // (nunca cambia de bankroll desde aquí); al crear, el de la sección
+  // donde se está (prop "categoria", ver App.jsx).
+  const categoriaEfectiva = apuestaInicial?.categoria ?? categoria;
   const [fecha, setFecha] = useState(apuestaInicial?.fecha ?? hoy());
   const [casa, setCasa] = useState(apuestaInicial?.casa ?? "");
   const [cantidadApostada, setCantidadApostada] = useState(
@@ -77,23 +82,30 @@ export default function FormularioApuesta({
   );
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
-  // Bankroll actual de la casa elegida (mismo cálculo que en Casas de
-  // apuestas: ingresos - retiradas + beneficio de apuestas ya resueltas).
-  // Ojo: no descuenta el stake de apuestas todavía pendientes en esa casa,
-  // igual que el resto de la app.
+  // Bankroll actual de la casa elegida, del bankroll que corresponda
+  // (Apuestas/Entretenimiento — mismo cálculo que en Casas de apuestas:
+  // ingresos - retiradas + beneficio de apuestas ya resueltas, filtrado por
+  // categoría). Ojo: no descuenta el stake de apuestas todavía pendientes
+  // en esa casa, igual que el resto de la app.
   const bankrollCasa = casa
-    ? calcularBankrollPorCasa(movimientos, apuestas).find((b) => b.casa === casa)
-        ?.bankroll ?? 0
+    ? calcularBankrollPorCasa(movimientos, apuestas, categoriaEfectiva).find(
+        (b) => b.casa === casa
+      )?.bankroll ?? 0
     : null;
   const stakeNumero = Number(cantidadApostada) || 0;
   const sinBankroll = bankrollCasa !== null && bankrollCasa <= 0;
   const superaBankroll =
     !sinBankroll && bankrollCasa !== null && stakeNumero > bankrollCasa;
 
-  // Saldo de freebet de esa casa (Fase A: se ajusta solo, ver App.jsx —
-  // sube con bonos de depósito/seguro, baja al crear una apuesta Freebet).
-  // No es dinero del bankroll, así que se avisa aparte, no como "bankroll".
-  const freebetsCasa = casa ? casas.find((c) => c.nombre === casa)?.freebetSaldo ?? 0 : 0;
+  // Saldo de freebet de esa casa Y de ese bankroll (Fase A: se ajusta solo,
+  // ver App.jsx — sube con bonos de depósito/seguro, baja al crear una
+  // apuesta Freebet; separado por bankroll igual que el dinero real, para
+  // que un freebet de Entretenimiento no se pueda gastar sin querer en
+  // Apuestas). No es dinero del bankroll de dinero real, así que se avisa
+  // aparte, no como "bankroll".
+  const campoFreebet =
+    categoriaEfectiva === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
+  const freebetsCasa = casa ? casas.find((c) => c.nombre === casa)?.[campoFreebet] ?? 0 : 0;
   const sinFreebets = freebetsCasa <= 0;
   const superaFreebets = !sinFreebets && stakeNumero > freebetsCasa;
 

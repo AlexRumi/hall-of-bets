@@ -175,3 +175,24 @@ update public.casas c set freebet_saldo = freebet_saldo + coalesce((
 -- calcularCuotaTotal en utils/apuestas.js.
 alter table public.apuestas add column cuota_total_manual numeric;
 
+-- Bankroll separado por bankroll (Apuestas/Entretenimiento), no solo por
+-- casa: hasta ahora el dinero de una casa era el mismo para las dos
+-- categorías (compartido), pero el usuario quiere llevarlas separadas de
+-- verdad (p.ej. Bet365 usado para las dos a la vez). "movimientos" gana la
+-- misma columna "categoria" que ya tenía "apuestas" — sin valor por
+-- defecto: los movimientos ya registrados se borran y se vuelven a meter
+-- (eran solo 3), así que no hace falta rellenar nada con un valor
+-- adivinado. calcularBankrollPorCasa (utils/movimientos.js) filtra por
+-- categoria cuando se le pasa una.
+alter table public.movimientos add column categoria text check (categoria in ('apuestas', 'entretenimiento'));
+
+-- Freebet separado por bankroll, mismo motivo que el dinero real de arriba:
+-- un freebet dado por una promo de Entretenimiento no debería poder
+-- gastarse sin querer en una apuesta de Apuestas. "freebet_saldo" (un solo
+-- número por casa) se sustituye por dos columnas — sin migrar el valor
+-- antiguo (el usuario solo tenía 2€ sueltos, los vuelve a meter a mano con
+-- el selector nuevo); "freebet_saldo" se queda en la tabla sin usar, mismo
+-- criterio que con "promociones"/"bonos_pendientes".
+alter table public.casas add column freebet_saldo_apuestas numeric not null default 0;
+alter table public.casas add column freebet_saldo_entretenimiento numeric not null default 0;
+

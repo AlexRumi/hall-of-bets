@@ -3,13 +3,18 @@ import {
   calcularCuotaTotal,
   ordenarCronologicamente,
   agruparSeleccionesPorPartido,
+  cuentaComoGanada,
+  cuentaComoPerdida,
 } from "./apuestas";
 
+// Un cash out con beneficio cuenta como victoria para la racha (mismo
+// criterio que calcularRachaActual en utils/apuestas.js) — cerraste con más
+// dinero del que arriesgaste, igual que ganar la apuesta entera.
 function calcularMejorRacha(apuestasCronologicas) {
   let mejor = 0;
   let actual = 0;
   for (const apuesta of apuestasCronologicas) {
-    if (apuesta.resultado === "ganada") {
+    if (cuentaComoGanada(apuesta)) {
       actual++;
       mejor = Math.max(mejor, actual);
     } else {
@@ -19,13 +24,15 @@ function calcularMejorRacha(apuestasCronologicas) {
   return mejor;
 }
 
-// Detecta una victoria justo después de 3 o más derrotas seguidas (una remontada).
+// Detecta una victoria (o cash out con beneficio) justo después de 3 o más
+// derrotas seguidas (una remontada) — un cash out con pérdida también
+// cuenta como derrota para esto.
 function hayRemontada(apuestasCronologicas) {
   let derrotasSeguidas = 0;
   for (const apuesta of apuestasCronologicas) {
-    if (apuesta.resultado === "perdida") {
+    if (cuentaComoPerdida(apuesta)) {
       derrotasSeguidas++;
-    } else if (apuesta.resultado === "ganada") {
+    } else if (cuentaComoGanada(apuesta)) {
       if (derrotasSeguidas >= 3) return true;
       derrotasSeguidas = 0;
     }
@@ -36,10 +43,16 @@ function hayRemontada(apuestasCronologicas) {
 // Todos los datos que necesitan los trofeos, calculados una sola vez.
 function construirContexto(apuestas) {
   const cronologicas = ordenarCronologicamente(apuestas);
+  // "ganadas" se queda como victorias literales: los trofeos de cuota
+  // acertada, combinada ganada y beneficio de freebet no tienen sentido
+  // aplicados a un cash out (no hay una cuota que se haya "acertado", ni
+  // una freebet jugada hasta el final).
   const ganadas = apuestas.filter((a) => a.resultado === "ganada");
-  const decididas = apuestas.filter(
-    (a) => a.resultado === "ganada" || a.resultado === "perdida"
-  );
+  // "decididas" sí cuenta los cash out con beneficio o pérdida (mismo
+  // criterio que aciertoPct en calcularEstadisticas), para que
+  // "Perfeccionista" no se quede corto ni se pase de listo frente al %
+  // de acierto real.
+  const decididas = apuestas.filter((a) => cuentaComoGanada(a) || cuentaComoPerdida(a));
   const freebetsGanadas = ganadas.filter((a) => a.tipoFondos === "freebet");
 
   return {
@@ -53,8 +66,7 @@ function construirContexto(apuestas) {
     // (un bet builder) no es una combinada, aunque tenga varios mercados.
     combinadaGanada: ganadas.some((a) => agruparSeleccionesPorPartido(a.selecciones).length > 1),
     remontada: hayRemontada(cronologicas),
-    aciertoPerfecto:
-      decididas.length >= 10 && decididas.every((a) => a.resultado === "ganada"),
+    aciertoPerfecto: decididas.length >= 10 && decididas.every((a) => cuentaComoGanada(a)),
     casasDistintas: new Set(apuestas.map((a) => a.casa)).size,
     mejorBeneficioFreebet: freebetsGanadas.reduce(
       (max, a) => Math.max(max, calcularBeneficio(a)),

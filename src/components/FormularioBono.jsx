@@ -13,6 +13,7 @@ import BotonInfoConcepto from "./BotonInfoConcepto";
 // cumpleaños, compensación de soporte, un bono suelto de la casa).
 export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija = null }) {
   const [casa, setCasa] = useState(casaFija ?? "");
+  const [categoria, setCategoria] = useState("apuestas");
   const [importe, setImporte] = useState("");
 
   function manejarEnvio(e) {
@@ -20,9 +21,10 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
     const casaFinal = (casaFija ?? casa).trim();
     if (!casaFinal || !importe) return;
 
-    onAjustarSaldoFreebet(casaFinal, Number(importe));
+    onAjustarSaldoFreebet(casaFinal, Number(importe), categoria);
 
     setCasa(casaFija ?? "");
+    setCategoria("apuestas");
     setImporte("");
   }
 
@@ -40,6 +42,29 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
         {casaFija === null && (
           <CampoCasa casas={casas} valor={casa} onCambiar={setCasa} />
         )}
+
+        <div>
+          <label className="block text-xs text-slate mb-1">Bankroll</label>
+          <div className="flex gap-2">
+            {[
+              { valor: "apuestas", etiqueta: "Apuestas" },
+              { valor: "entretenimiento", etiqueta: "Entretenimiento" },
+            ].map(({ valor, etiqueta }) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setCategoria(valor)}
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  categoria === valor
+                    ? "bg-felt text-paper border-felt"
+                    : "border-line text-slate hover:text-ink"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div>
           <label className="block text-xs text-slate mb-1">Importe (€)</label>

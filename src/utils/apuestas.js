@@ -85,9 +85,11 @@ export function calcularBeneficio(apuesta) {
 // Estadísticas del conjunto de apuestas recibido (ya filtrado por bankroll/casa/fondos fuera de aquí).
 // El stake de las freebets no cuenta como dinero invertido: se excluye del stake total y del yield.
 export function calcularEstadisticas(apuestas) {
-  const decididas = apuestas.filter(
-    (a) => a.resultado === "ganada" || a.resultado === "perdida"
-  );
+  // "Decididas" (para el % de acierto) son las ganadas/perdidas de
+  // siempre, más los cash out con beneficio o pérdida (cuentaComoGanada/
+  // cuentaComoPerdida, definidas más abajo). Un cash out que recupera
+  // justo el stake (ni gana ni pierde) se queda fuera, igual que una nula.
+  const decididas = apuestas.filter((a) => cuentaComoGanada(a) || cuentaComoPerdida(a));
   const resueltas = apuestas.filter((a) => a.resultado !== "pendiente");
   const pendientes = apuestas.filter((a) => a.resultado === "pendiente");
   const reales = apuestas.filter((a) => a.tipoFondos === "real");
@@ -118,9 +120,7 @@ export function calcularEstadisticas(apuestas) {
     beneficio,
     yieldPct: stakeTotalReal ? (beneficio / stakeTotalReal) * 100 : 0,
     aciertoPct: decididas.length
-      ? (decididas.filter((a) => a.resultado === "ganada").length /
-          decididas.length) *
-        100
+      ? (decididas.filter((a) => cuentaComoGanada(a)).length / decididas.length) * 100
       : 0,
   };
 }
@@ -258,15 +258,36 @@ export function pendientesAntiguas(apuestas, referencia = new Date()) {
   );
 }
 
+// Para rachas y % de acierto (aquí, utils/trofeos.js y
+// utils/estadisticas.js): un cash out se juzga por si dejó beneficio o no,
+// igual que ganar o perder la apuesta entera. Con beneficio cuenta como
+// victoria; con pérdida (cerraste por menos de lo apostado), como derrota.
+// Solo el caso exacto de "recuperar justo el stake, ni más ni menos" se
+// queda neutral, igual que una apuesta nula — no hubo ni acierto ni fallo.
+export function cuentaComoGanada(apuesta) {
+  return (
+    apuesta.resultado === "ganada" ||
+    (apuesta.resultado === "cashout" && calcularBeneficio(apuesta) > 0)
+  );
+}
+
+export function cuentaComoPerdida(apuesta) {
+  return (
+    apuesta.resultado === "perdida" ||
+    (apuesta.resultado === "cashout" && calcularBeneficio(apuesta) < 0)
+  );
+}
+
 // Racha actual de victorias: cuenta desde la apuesta resuelta más reciente
-// hacia atrás mientras todas sean "ganada". Cualquier perdida o nula la corta.
+// hacia atrás mientras todas cuenten como victoria (ganada, o cash out con
+// beneficio). Cualquier otra cosa la corta.
 // Se calcula siempre sobre todo el bankroll, sin filtros de casa/fondos/periodo,
 // para que no cambie según lo que el usuario esté viendo en cada momento.
 export function calcularRachaActual(apuestas) {
   const resueltas = apuestas.filter((a) => a.resultado !== "pendiente");
   let racha = 0;
   for (const apuesta of resueltas) {
-    if (apuesta.resultado !== "ganada") break;
+    if (!cuentaComoGanada(apuesta)) break;
     racha++;
   }
   return racha;

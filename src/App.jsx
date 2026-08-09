@@ -8,6 +8,7 @@ import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
 import { useAjustes } from "./hooks/useAjustes";
 import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
+import { calcularBankrollPorCasa } from "./utils/movimientos";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
 import FormularioApuesta from "./components/FormularioApuesta";
@@ -15,6 +16,7 @@ import ListaApuestas from "./components/ListaApuestas";
 import FiltrosApuestas from "./components/FiltrosApuestas";
 import SelectorPeriodo from "./components/SelectorPeriodo";
 import RachaActual from "./components/RachaActual";
+import TarjetaBankroll from "./components/TarjetaBankroll";
 import ObjetivoPersonal from "./components/ObjetivoPersonal";
 import EstadisticasApuestas from "./components/EstadisticasApuestas";
 import GraficoBeneficio from "./components/GraficoBeneficio";
@@ -145,13 +147,30 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const racha = calcularRachaActual(apuestasDelBankroll);
   const esBankroll = seccionActiva === "apuestas" || seccionActiva === "entretenimiento";
 
+  // Bankroll de este bankroll en concreto (dinero real de todas las casas +
+  // freebets), para la tarjeta de arriba de Apuestas/Entretenimiento — ya
+  // se puede calcular de verdad ahora que movimientos y freebet_saldo
+  // también distinguen categoría (antes solo existía combinado, ver
+  // Casas de apuestas).
+  const bankrollCategoria = esBankroll
+    ? calcularBankrollPorCasa(movimientos, apuestas, seccionActiva).reduce(
+        (suma, b) => suma + b.bankroll,
+        0
+      )
+    : 0;
+  const campoFreebetCategoria =
+    seccionActiva === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
+  const freebetsCategoria = esBankroll
+    ? casas.reduce((suma, c) => suma + c[campoFreebetCategoria], 0)
+    : 0;
+
   // Al crear una apuesta con fondos Freebet, se descuenta el stake del
   // saldo de esa casa al momento — gane, pierda o quede pendiente (ver
   // Fase A: el freebet se da por gastado en cuanto se juega).
   function manejarAgregar(datos) {
     agregarApuesta({ ...datos, categoria: seccionActiva });
     if (datos.tipoFondos === "freebet") {
-      ajustarSaldoFreebet(datos.casa, -Number(datos.stake));
+      ajustarSaldoFreebet(datos.casa, -Number(datos.stake), seccionActiva);
     }
     setMostrandoFormulario(false);
   }
@@ -170,10 +189,10 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     const apuesta = apuestas.find((a) => a.id === id);
     marcarResultado(id, resultado, cashoutImporte);
     if (resultado === "perdida" && apuesta?.seguroFreebetImporte) {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.seguroFreebetImporte);
+      ajustarSaldoFreebet(apuesta.casa, apuesta.seguroFreebetImporte, apuesta.categoria);
     }
     if (resultado === "nula" && apuesta?.tipoFondos === "freebet") {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.stake);
+      ajustarSaldoFreebet(apuesta.casa, apuesta.stake, apuesta.categoria);
     }
   }
 
@@ -186,7 +205,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     const apuesta = apuestas.find((a) => a.id === id);
     borrarApuesta(id);
     if (apuesta?.tipoFondos === "freebet" && apuesta.resultado === "pendiente") {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.stake);
+      ajustarSaldoFreebet(apuesta.casa, apuesta.stake, apuesta.categoria);
     }
   }
 
@@ -295,6 +314,18 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     </button>
                   ))}
                 </div>
+
+                {/* Visible siempre, en las dos vistas de móvil (Bets y "+")
+                    y en escritorio — por eso vive fuera de los dos bloques
+                    de abajo, que se ocultan el uno al otro según
+                    mostrandoFormulario. */}
+                <TarjetaBankroll
+                  etiqueta={`Bankroll ${ETIQUETAS_SECCION[seccionActiva]}`}
+                  dineroReal={bankrollCategoria}
+                  freebets={freebetsCategoria}
+                  grande
+                />
+
                 {/* Bloque formulario: en escritorio siempre visible (como
                     antes); en móvil solo cuando se entra desde el "+" de la
                     barra inferior (ver BarraInferiorMovil.jsx). */}
@@ -314,6 +345,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     casas={casas}
                     movimientos={movimientos}
                     apuestas={apuestas}
+                    categoria={seccionActiva}
                   />
                 </div>
 

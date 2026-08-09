@@ -9,6 +9,11 @@ function desdeFila(fila) {
     tipo: fila.tipo,
     cantidad: Number(fila.cantidad),
     archivado: fila.archivado ?? false,
+    // Movimientos de antes de esta columna (o cualquiera sin categoría
+    // asignada) quedan fuera de los dos bankrolls hasta que se corrijan a
+    // mano — calcularBankrollPorCasa (utils/movimientos.js) los ignora al
+    // filtrar por categoria, no cuentan ni para Apuestas ni Entretenimiento.
+    categoria: fila.categoria ?? null,
   };
 }
 
@@ -53,10 +58,10 @@ export function useMovimientos(userId) {
     };
   }, [userId]);
 
-  async function agregarMovimiento({ fecha, casa, tipo, cantidad }) {
+  async function agregarMovimiento({ fecha, casa, tipo, cantidad, categoria }) {
     const { data, error } = await supabase
       .from("movimientos")
-      .insert({ user_id: userId, fecha, casa, tipo, cantidad: Number(cantidad) })
+      .insert({ user_id: userId, fecha, casa, tipo, cantidad: Number(cantidad), categoria })
       .select()
       .single();
 

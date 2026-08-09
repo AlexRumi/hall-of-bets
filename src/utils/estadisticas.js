@@ -4,12 +4,17 @@ import {
   calcularEstadisticas,
   ordenarCronologicamente,
   agruparSeleccionesPorPartido,
+  cuentaComoGanada,
+  cuentaComoPerdida,
 } from "./apuestas";
 import { CATEGORIAS_MERCADO, buscarMercadoPorTexto, equiposDesdeEvento } from "./mercados";
 
 // Mejor racha de victorias y peor racha de derrotas del histórico completo.
 // Una apuesta "nula" corta ambas rachas sin contar como ninguna de las dos
-// (mismo criterio que calcularRachaActual en utils/apuestas.js).
+// (mismo criterio que calcularRachaActual en utils/apuestas.js). Un cash out
+// se juzga por si dejó beneficio (cuenta como victoria) o pérdida (cuenta
+// como derrota) — solo recuperar justo el stake se queda neutral, igual
+// que una nula.
 export function calcularRachas(apuestas) {
   let mejorRacha = 0;
   let peorRacha = 0;
@@ -17,11 +22,11 @@ export function calcularRachas(apuestas) {
   let actualPerdidas = 0;
 
   for (const apuesta of ordenarCronologicamente(apuestas)) {
-    if (apuesta.resultado === "ganada") {
+    if (cuentaComoGanada(apuesta)) {
       actualGanadas++;
       actualPerdidas = 0;
       mejorRacha = Math.max(mejorRacha, actualGanadas);
-    } else if (apuesta.resultado === "perdida") {
+    } else if (cuentaComoPerdida(apuesta)) {
       actualPerdidas++;
       actualGanadas = 0;
       peorRacha = Math.max(peorRacha, actualPerdidas);

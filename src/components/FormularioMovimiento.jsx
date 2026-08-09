@@ -15,6 +15,7 @@ export default function FormularioMovimiento({
   const [fecha, setFecha] = useState(hoy());
   const [casa, setCasa] = useState(casaFija ?? "");
   const [tipo, setTipo] = useState("ingreso");
+  const [categoria, setCategoria] = useState("apuestas");
   const [cantidad, setCantidad] = useState("");
   const [bono, setBono] = useState("");
 
@@ -23,13 +24,14 @@ export default function FormularioMovimiento({
     const casaFinal = (casaFija ?? casa).trim();
     if (!casaFinal || !cantidad) return;
 
-    onAgregar({ fecha, casa: casaFinal, tipo, cantidad });
+    onAgregar({ fecha, casa: casaFinal, tipo, cantidad, categoria });
     if (tipo === "ingreso" && bono && onAjustarSaldoFreebet) {
-      onAjustarSaldoFreebet(casaFinal, Number(bono));
+      onAjustarSaldoFreebet(casaFinal, Number(bono), categoria);
     }
 
     setCasa(casaFija ?? "");
     setTipo("ingreso");
+    setCategoria("apuestas");
     setCantidad("");
     setBono("");
     setFecha(hoy());
@@ -73,6 +75,31 @@ export default function FormularioMovimiento({
                 onClick={() => setTipo(valor)}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
                   tipo === valor
+                    ? "bg-felt text-paper border-felt"
+                    : "border-line text-slate hover:text-ink"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate mb-1">
+            Bankroll (a qué categoría pertenece este dinero)
+          </label>
+          <div className="flex gap-2">
+            {[
+              { valor: "apuestas", etiqueta: "Apuestas" },
+              { valor: "entretenimiento", etiqueta: "Entretenimiento" },
+            ].map(({ valor, etiqueta }) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setCategoria(valor)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  categoria === valor
                     ? "bg-felt text-paper border-felt"
                     : "border-line text-slate hover:text-ink"
                 }`}

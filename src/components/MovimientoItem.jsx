@@ -8,6 +8,7 @@ const ESTILOS_TIPO = {
 };
 
 const ETIQUETAS_TIPO = { ingreso: "Ingreso", retirada: "Retirada" };
+const ETIQUETAS_CATEGORIA = { apuestas: "Apuestas", entretenimiento: "Entretenimiento" };
 
 export default function MovimientoItem({ movimiento, casas, onBorrar }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
@@ -37,6 +38,11 @@ export default function MovimientoItem({ movimiento, casas, onBorrar }) {
             <Icono size={12} />
             {ETIQUETAS_TIPO[movimiento.tipo]}
           </span>
+          {movimiento.categoria && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gold/10 text-gold">
+              {ETIQUETAS_CATEGORIA[movimiento.categoria]}
+            </span>
+          )}
         </div>
         <p
           className={`font-mono text-sm font-bold mt-1 ${

@@ -1460,6 +1460,200 @@ separadas, probando cada una antes de pasar a la siguiente.
   pasa a ser la ÚNICA forma de revelar el sello, en cualquier
   dispositivo, sin ningún atajo de hover que pueda dispararse solo.
 
+- **Cash out con beneficio o pérdida cuenta para la racha y el % de
+  acierto** (petición directa, misma sesión, en dos pasos: primero solo
+  el caso con beneficio para "Racha actual"; el usuario preguntó si
+  también debía afectar al % de acierto, y de ahí cayó en la cuenta de
+  que un cash out con pérdida debía contar como fallo, no como neutral).
+  Dos funciones nuevas en `utils/apuestas.js`, hermanas:
+  `cuentaComoGanada(apuesta)` (`true` si `resultado === "ganada"`, o cash
+  out con `calcularBeneficio(apuesta) > 0`) y `cuentaComoPerdida(apuesta)`
+  (`true` si `resultado === "perdida"`, o cash out con
+  `calcularBeneficio(apuesta) < 0`). Solo el caso exacto de recuperar
+  justo el stake (cash out con beneficio 0) se queda neutral, igual que
+  una apuesta nula — ni acierto ni fallo. Sustituyen el
+  `resultado === "ganada"`/`"perdida"` suelto en:
+  - `calcularRachaActual` y `calcularEstadisticas` (`aciertoPct` —
+    numerador y qué apuestas cuentan como "decididas" en el denominador)
+    en `utils/apuestas.js`.
+  - `calcularRachas` (`utils/estadisticas.js`, mejor racha Y peor racha
+    del histórico — antes solo la mejor racha usaba el criterio nuevo).
+  - `calcularMejorRacha`, `hayRemontada` y `aciertoPerfecto`/`decididas`
+    (`utils/trofeos.js`), para que los trofeos "X victorias seguidas",
+    "El fénix" y "Perfeccionista" cuenten igual que "Racha actual" y el
+    % de acierto de Estadísticas, sin desincronizarse.
+  No se tocó `ganadas` en `construirContexto` (trofeos.js) — esa sigue
+  siendo solo victorias literales, porque los trofeos de cuota acertada,
+  combinada ganada y beneficio de freebet no tienen sentido aplicados a
+  un cash out (no hay una cuota "acertada" ni una freebet jugada hasta
+  el final).
+
+- **Calendario de actividad por beneficio, no por volumen** (petición
+  directa, misma sesión). `CalendarioActividad.jsx` pintaba cada día como
+  un mapa de calor dorado según el NÚMERO de apuestas de ese día (estilo
+  GitHub); pasa a colorear según el BENEFICIO neto del día (suma de
+  `calcularBeneficio` de sus apuestas, pendientes incluidas — aportan 0):
+  verde con beneficio, rojo con pérdidas, y un tercer color neutral
+  (`bg-void`, el mismo tono ya usado para "Nula"/archivado) si el día
+  tiene apuestas pero se queda justo en 0€ (p.ej. solo pendientes, o
+  ganancias y pérdidas que se cancelan) — distinto del gris de "sin
+  apuestas ese día", para que se note la diferencia entre "no jugué" y
+  "jugué y quedé en tablas". Se quitan `nivelIntensidad`/`CLASES_NIVEL`
+  (la lógica de intensidad por volumen, sin uso ya) y se añade una
+  leyenda de 3 colores debajo del calendario. El tooltip de cada día
+  (`title`) ahora incluye también el beneficio del día, no solo el
+  número de apuestas.
+
+- **Desglose de beneficio/yield por bankroll en Inicio — probado y
+  descartado** (petición directa, misma sesión): se probaron dos
+  versiones (líneas pequeñas bajo el KPI; luego tarjetas propias de
+  Beneficio/Yield con desglose de dos columnas, estilo "Bankroll total"
+  de Casas de apuestas) pero al verlas el usuario prefirió volver al
+  diseño original de siempre (una sola fila de 4 KPI combinados: Bankroll
+  total, Beneficio, Yield, Racha actual, sin desglose por bankroll).
+  `PantallaInicio.jsx` queda sin cambios respecto a antes de esta ronda.
+
+- **Bankroll separado de verdad por Apuestas/Entretenimiento** (no era una
+  fase del guion, petición directa tras la ronda anterior). El usuario
+  aclaró su intención real: pretende usar las mismas casas — Bet365,
+  Winamax, Codere — tanto para Apuestas como para Entretenimiento, así que
+  el "truco" de usar nombres de casa distintos por bankroll no le sirve, y
+  sin más información no hay forma de saber cuánto del dinero de una casa
+  es de cada bankroll. Solución de fondo en vez del atajo visual de antes:
+  `movimientos` gana su propia columna `categoria` (igual que ya tenía
+  `apuestas`), así que ahora sí se puede calcular un bankroll real y
+  separado por casa y por bankroll.
+  - **Supabase**: `alter table public.movimientos add column categoria
+    text check (categoria in ('apuestas', 'entretenimiento'));` — sin
+    valor por defecto ni migración de datos: el usuario solo tenía 3
+    movimientos registrados, así que optó por borrarlos y volver a meterlos
+    con el selector nuevo en vez de adivinar a qué bankroll pertenecía cada
+    uno. Los movimientos sin categoría (los borrados, o cualquiera futuro
+    sin asignar) simplemente no cuentan en ningún bankroll filtrado — solo
+    en el total combinado de siempre.
+  - `useMovimientos.js`: `categoria` en `desdeFila` y en `agregarMovimiento`
+    (que ahora la recibe y la guarda). No hay `editarMovimiento`, así que no
+    hizo falta tocar nada más ahí.
+  - `FormularioMovimiento.jsx` gana un selector "Bankroll" (Apuestas/
+    Entretenimiento, por defecto Apuestas) — hacía falta preguntarlo,
+    porque a diferencia de `FormularioApuesta.jsx` (que ya sabe en qué
+    bankroll está por la sección activa), este formulario vive dentro de
+    Casas de apuestas, que no está ligada a ningún bankroll.
+    `MovimientoItem.jsx` muestra la categoría como una pastilla más, junto
+    a Ingreso/Retirada.
+  - `calcularBankrollPorCasa` (`utils/movimientos.js`) gana un tercer
+    parámetro opcional `categoria`: sin él, sigue devolviendo el bankroll
+    combinado de toda la vida (así no hizo falta tocar `PantallaInicio.jsx`
+    ni `EstadisticasDashboard.jsx`, que siguen queriendo el total
+    combinado); con él, filtra movimientos y apuestas por esa categoría
+    antes de sumar.
+  - `ListadoCasas.jsx`: el bloque "Bankroll total" de arriba gana una
+    segunda fila (Bankroll Apuestas / Bankroll Entretenimiento, dinero
+    real). Cada tarjeta de casa, en la cabecera cerrada, cambia su único
+    "Bankroll" por dos valores más pequeños lado a lado (Apuestas /
+    Entret.); al abrirla, la fila combinada de Ingresos/Retiradas/
+    Beneficio/Yield/ROI/Freebet se convierte en dos filas, una por
+    bankroll, sacadas a un componente nuevo `FilaBankroll` para no
+    triplicar el JSX (el Freebet de cada fila se separó también, ver más
+    abajo).
+  - `FormularioApuesta.jsx` gana un prop `categoria` (opcional): al crear
+    una apuesta nueva, `App.jsx` le pasa la sección activa
+    (`seccionActiva`); al editar una ya existente, usa la propia categoría
+    guardada de la apuesta (`apuestaInicial.categoria`) en vez del prop —
+    nunca se cambia de bankroll editando. El aviso de "Dinero real
+    disponible" pasa a comprobar el bankroll de esa categoría en esa casa,
+    no el combinado — para avisar de verdad de si hay fondos en el
+    bankroll correcto, no en la suma de los dos.
+  - **Pendiente**: ejecutar el `alter table` de Supabase, borrar los 3
+    movimientos ya registrados y volver a meterlos con el bankroll
+    correcto antes de dar esto por probado.
+  - Al probarlo, el usuario detectó de paso que ya no existe ningún "aviso
+    de bono pendiente" al añadir un "Otro bono" — no es un fallo: ese
+    sistema (`bonos_pendientes`, `AvisoBonos.jsx`) se eliminó a propósito
+    hace unas fases, sustituido por la suma directa al saldo de freebet
+    (ver "Bonos pendientes — eliminado por completo" más arriba). También
+    se confirmó que borrar una apuesta de freebet ya resuelta no devuelve
+    el saldo (solo se devuelve si estaba Pendiente o se marca Nula, regla
+    ya existente) — comportamiento esperado, no un bug.
+
+- **Freebet separado también por bankroll** (petición directa, misma
+  sesión, tras la del dinero real de arriba: mismo motivo — un freebet de
+  una promo de Entretenimiento no debería poder gastarse sin querer en
+  Apuestas). `casas.freebet_saldo` (un único número por casa) se sustituye
+  por dos columnas, `freebet_saldo_apuestas` y
+  `freebet_saldo_entretenimiento` — sin migrar el valor antiguo (el
+  usuario solo tenía 2€ sueltos de una prueba, los volvió a meter a mano
+  con el selector nuevo); `freebet_saldo` se queda en la tabla sin usar,
+  mismo criterio que con `promociones`/`bonos_pendientes`.
+  - `useCasas.js`: `desdeFila` expone `freebetSaldoApuestas` y
+    `freebetSaldoEntretenimiento` en vez de un único `freebetSaldo`.
+    `ajustarSaldoFreebet(nombre, delta, categoria)` gana un tercer
+    parámetro (por defecto `"apuestas"` si no se indica, por seguridad) que
+    decide qué columna/campo tocar — nueva `camposFreebet(categoria)`
+    interna para no repetir el mismo `if/else` en cada sitio de este hook
+    que toca el saldo.
+  - Los 4 disparadores automáticos en `App.jsx` (crear apuesta Freebet,
+    seguro perdido, nula que devuelve el freebet, borrar una Freebet
+    pendiente) ya tenían a mano la categoría de la apuesta implicada
+    (`apuesta.categoria` o `seccionActiva`), así que solo hizo falta
+    añadirla a la llamada — sin lógica nueva.
+  - `FormularioMovimiento.jsx` reutiliza su propio selector de bankroll
+    (ya añadido en la fase anterior) también para el "Bono recibido con
+    este depósito": no hacía falta preguntarlo dos veces, el bono es del
+    mismo bankroll que el ingreso. `FormularioBono.jsx` ("Otro bono"), que
+    no está ligado a ningún ingreso, gana su propio selector Apuestas/
+    Entretenimiento (por defecto Apuestas).
+  - `FormularioApuesta.jsx`: el aviso de "Freebets disponibles" pasa a
+    mirar el campo de freebet de la categoría en la que se está creando la
+    apuesta (`categoriaEfectiva`, la misma variable que ya se usaba para
+    el dinero real), no un valor combinado.
+  - `ListadoCasas.jsx`: `FilaBankroll` gana una sexta columna (Freebet)
+    con el valor de esa categoría — la fila de Ingresos/Retiradas/
+    Beneficio/Yield/ROI/Freebet queda así completa por bankroll, ya no
+    hace falta un bloque de Freebet aparte sin repartir. El "Freebets" del
+    gran total de arriba sigue combinado (suma de las dos columnas nuevas).
+  - **Pendiente**: ejecutar los dos `alter table` de Supabase, y volver a
+    registrar el freebet de 2€ (bankroll Entretenimiento) con el
+    formulario nuevo antes de dar esto por probado.
+  - Bug real de esta misma fase, detectado al probarlo: la columna nueva
+    "Bankroll Apuestas"/"Bankroll Entretenimiento" del gran total de
+    arriba solo sumaba dinero real, sin freebets — con un freebet de 2€ en
+    Entretenimiento y nada de dinero real, esa fila mostraba "0,00€" en
+    las dos, que no cuadraba con los "2,00€" de "Freebets" en la fila de
+    arriba. El usuario propuso el arreglo: en vez de una fila suelta de
+    dinero real por bankroll, cada bankroll (Apuestas/Entretenimiento)
+    pasa a tener su propia tarjeta completa — mismo formato que "Bankroll
+    total" (total grande arriba, Dinero real/Freebets debajo) — así cada
+    una "cuadra" por sí sola. Nuevo componente `TarjetaBankroll`
+    (`etiqueta`, `dineroReal`, `freebets`, `grande` opcional) para no
+    triplicar esa tarjeta a mano; `freebetsTotal` se separa en
+    `freebetsTotalApuestas`/`freebetsTotalEntretenimiento` (sumando
+    `casa.freebetSaldo*` de todas las casas) en vez de un único valor
+    combinado.
+  - **`TarjetaBankroll` también arriba de Apuestas/Entretenimiento**
+    (petición directa, misma sesión — retoma algo que se había descartado
+    antes de esta fase: "no lo metería, el bankroll es dinero compartido
+    entre las dos categorías, saldría el mismo número en las dos
+    secciones"; ahora que sí hay un bankroll propio por categoría, ese
+    motivo ya no aplica). `TarjetaBankroll` se saca de `ListadoCasas.jsx`
+    a su propio archivo (ya se usaba en tres sitios de esa pantalla: total,
+    Apuestas y Entretenimiento). `App.jsx` calcula `bankrollCategoria`
+    (`calcularBankrollPorCasa(movimientos, apuestas, seccionActiva)`
+    sumado) y `freebetsCategoria` (suma de
+    `casa.freebetSaldoApuestas`/`freebetSaldoEntretenimiento` según
+    `seccionActiva`).
+    Ronda de ajuste tras probarlo: la tarjeta empezó dentro del bloque
+    "lista" (junto a `RachaActual`/`ObjetivoPersonal`), pero ese bloque se
+    oculta en móvil mientras se está en el formulario ("+"), así que no se
+    veía al crear una apuesta — justo cuando más falta hace saber el
+    bankroll disponible. Se saca de los dos bloques ("formulario" y
+    "lista", que se ocultan el uno al otro según `mostrandoFormulario`) a
+    su propio sitio, visible siempre en cualquier vista. De paso, las dos
+    tarjetas "Bankroll Apuestas"/"Bankroll Entretenimiento" que se habían
+    añadido en `ListadoCasas.jsx` se quitan de ahí — quedaban redundantes
+    ahora que ya se ven en su sección correspondiente; "Bankroll total"
+    (combinado) se queda, es el único sitio que lo enseña.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

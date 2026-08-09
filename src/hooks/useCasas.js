@@ -5,8 +5,18 @@ function desdeFila(fila) {
   return {
     nombre: fila.nombre,
     logo: fila.logo,
-    freebetSaldo: Number(fila.freebet_saldo ?? 0),
+    freebetSaldoApuestas: Number(fila.freebet_saldo_apuestas ?? 0),
+    freebetSaldoEntretenimiento: Number(fila.freebet_saldo_entretenimiento ?? 0),
   };
+}
+
+// Nombre del campo (estado local, camelCase) y de la columna (Supabase,
+// snake_case) del saldo de freebet según el bankroll — para no repetir el
+// mismo if/else en cada sitio de useCasas.js que toca este saldo.
+function camposFreebet(categoria) {
+  return categoria === "entretenimiento"
+    ? { campo: "freebetSaldoEntretenimiento", columna: "freebet_saldo_entretenimiento" }
+    : { campo: "freebetSaldoApuestas", columna: "freebet_saldo_apuestas" };
 }
 
 export function useCasas(userId) {
@@ -83,26 +93,29 @@ export function useCasas(userId) {
     }
   }
 
-  // Ajusta el saldo de freebet de una casa (Fase A): delta positivo suma
-  // (bono de depósito, seguro perdido, devolución por nula/borrado),
-  // negativo resta (al crear una apuesta con fondos Freebet). Lee el
-  // saldo actual del propio estado en vez de pedirlo a Supabase, así que
-  // dos ajustes seguidos (p.ej. crear apuesta + marcarla nula después) no
-  // se pisan entre sí siempre que no se disparen en el mismo instante.
-  async function ajustarSaldoFreebet(nombre, delta) {
+  // Ajusta el saldo de freebet de una casa (Fase A) para un bankroll
+  // concreto ("apuestas" o "entretenimiento" — por defecto "apuestas" si no
+  // se indica, por seguridad): delta positivo suma (bono de depósito,
+  // seguro perdido, devolución por nula/borrado), negativo resta (al crear
+  // una apuesta con fondos Freebet). Lee el saldo actual del propio estado
+  // en vez de pedirlo a Supabase, así que dos ajustes seguidos (p.ej. crear
+  // apuesta + marcarla nula después) no se pisan entre sí siempre que no se
+  // disparen en el mismo instante.
+  async function ajustarSaldoFreebet(nombre, delta, categoria = "apuestas") {
     const casaActual = casas.find((c) => c.nombre === nombre);
     if (!casaActual) return;
-    const nuevoSaldo = casaActual.freebetSaldo + delta;
+    const { campo, columna } = camposFreebet(categoria);
+    const nuevoSaldo = casaActual[campo] + delta;
 
     const { error } = await supabase
       .from("casas")
-      .update({ freebet_saldo: nuevoSaldo })
+      .update({ [columna]: nuevoSaldo })
       .eq("user_id", userId)
       .eq("nombre", nombre);
 
     if (!error) {
       setCasas((actuales) =>
-        actuales.map((c) => (c.nombre === nombre ? { ...c, freebetSaldo: nuevoSaldo } : c))
+        actuales.map((c) => (c.nombre === nombre ? { ...c, [campo]: nuevoSaldo } : c))
       );
     }
   }

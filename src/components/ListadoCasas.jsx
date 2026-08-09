@@ -5,6 +5,7 @@ import FormularioMovimiento from "./FormularioMovimiento";
 import FormularioBono from "./FormularioBono";
 import ListaMovimientos from "./ListaMovimientos";
 import ConfirmDialog from "./ConfirmDialog";
+import TarjetaBankroll from "./TarjetaBankroll";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import { calcularDesglosePorCasa } from "../utils/apuestas";
 
@@ -14,6 +15,69 @@ const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, 
 // últimas en el orden "Mejor rendimiento" (0 no es ni bueno ni malo, pero
 // no hay datos reales detrás).
 const SIN_ESTADISTICAS = { numApuestas: 0, yieldPct: 0 };
+
+// Ingresos/Retiradas/Beneficio/Yield/ROI/Freebet de un bankroll concreto en
+// una casa — se repite una vez por cada bankroll (Apuestas/Entretenimiento)
+// en vez de una sola fila combinada, así que se saca a su propio componente
+// para no triplicar el mismo bloque de JSX.
+function FilaBankroll({ etiqueta, bankroll, desglose, freebet }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gold uppercase tracking-wide mb-1.5">{etiqueta}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+        <div>
+          <p className="text-xs text-slate">Ingresos</p>
+          <p className="font-mono text-sm font-medium text-ink">{bankroll.ingresos.toFixed(2)}€</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate">Retiradas</p>
+          <p className="font-mono text-sm font-medium text-ink">{bankroll.retiradas.toFixed(2)}€</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate">Beneficio</p>
+          <p
+            className={`font-mono text-sm font-bold ${
+              bankroll.beneficio > 0
+                ? "text-win"
+                : bankroll.beneficio < 0
+                ? "text-lose"
+                : "text-ink"
+            }`}
+          >
+            {bankroll.beneficio > 0 ? "+" : ""}
+            {bankroll.beneficio.toFixed(2)}€
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate">Yield</p>
+          <p
+            className={`font-mono text-sm font-medium ${
+              desglose.yieldPct > 0 ? "text-win" : desglose.yieldPct < 0 ? "text-lose" : "text-ink"
+            }`}
+          >
+            {desglose.yieldPct > 0 ? "+" : ""}
+            {desglose.yieldPct.toFixed(2)}%
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate">ROI</p>
+          <p
+            className={`font-mono text-sm font-medium ${
+              bankroll.roiPct > 0 ? "text-win" : bankroll.roiPct < 0 ? "text-lose" : "text-ink"
+            }`}
+          >
+            {bankroll.roiPct > 0 ? "+" : ""}
+            {bankroll.roiPct.toFixed(2)}%
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-slate">Freebet</p>
+          <p className="font-mono text-sm font-bold text-gold">{freebet.toFixed(2)}€</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ListadoCasas({
   casas,
@@ -33,8 +97,19 @@ export default function ListadoCasas({
   // "yield" (por defecto) ordena de mejor a peor rendimiento; "alfabetico"
   // vuelve al orden de toda la vida, tal como llegan desde Supabase.
   const [orden, setOrden] = useState("yield");
+  // Combinado (como siempre) para el gran total y el orden por rendimiento
+  // — y, por bankroll, para que cada casa enseñe cuánto tiene de cada uno
+  // por separado (misma casa física, dinero que el usuario lleva aparte).
   const bankrolls = calcularBankrollPorCasa(movimientos, apuestas);
+  const bankrollsApuestas = calcularBankrollPorCasa(movimientos, apuestas, "apuestas");
+  const bankrollsEntretenimiento = calcularBankrollPorCasa(movimientos, apuestas, "entretenimiento");
   const desglosePorCasa = calcularDesglosePorCasa(apuestas);
+  const desglosePorCasaApuestas = calcularDesglosePorCasa(
+    apuestas.filter((a) => a.categoria === "apuestas")
+  );
+  const desglosePorCasaEntretenimiento = calcularDesglosePorCasa(
+    apuestas.filter((a) => a.categoria === "entretenimiento")
+  );
   const casasOrdenadas = [...casas].sort((a, b) => {
     if (orden === "alfabetico") return a.nombre.localeCompare(b.nombre);
     const yieldA = (desglosePorCasa.find((d) => d.casa === a.nombre) ?? SIN_ESTADISTICAS).yieldPct;
@@ -44,10 +119,14 @@ export default function ListadoCasas({
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
   const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
-  // Saldo de freebet de todas las casas (Fase A: ver useCasas.js). "Bankroll
-  // total" pasa a ser dinero real + freebets: cuánto tienes en total para
-  // jugar ahora mismo, contando también lo prometido.
-  const freebetsTotal = casas.reduce((suma, c) => suma + c.freebetSaldo, 0);
+  // Saldo de freebet de todas las casas (Fase A: ver useCasas.js), sumando
+  // los dos bankrolls — "Bankroll total" pasa a ser dinero real + freebets:
+  // cuánto tienes en total para jugar ahora mismo, contando también lo
+  // prometido.
+  const freebetsTotal = casas.reduce(
+    (suma, c) => suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento,
+    0
+  );
 
   function manejarBorrarTodosMovimientos() {
     onBorrarTodosMovimientos();
@@ -56,30 +135,18 @@ export default function ListadoCasas({
 
   return (
     <div className="space-y-4">
+      {/* El desglose por bankroll (Apuestas/Entretenimiento) del total ya
+          no vive aquí — se movió arriba de cada sección (App.jsx), que es
+          donde de verdad importa mientras se está apostando; aquí se
+          quedaba redundante. "Bankroll total" (combinado) sí se queda, es
+          el único sitio que lo enseña. */}
       {casas.length > 0 && (
-        <div className="bg-surface border border-line rounded-xl p-5 sm:p-6 text-center space-y-4">
-          <div>
-            <p className="text-xs text-slate">Bankroll total</p>
-            <p className="font-mono text-3xl font-bold text-goldDark">
-              {(bankrollTotal + freebetsTotal).toFixed(2)}€
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line">
-            <div>
-              <p className="text-xs text-slate">Dinero real</p>
-              <p className="font-mono text-lg font-semibold text-ink">
-                {bankrollTotal.toFixed(2)}€
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-slate">Freebets</p>
-              <p className="font-mono text-lg font-semibold text-gold">
-                {freebetsTotal.toFixed(2)}€
-              </p>
-            </div>
-          </div>
-        </div>
+        <TarjetaBankroll
+          etiqueta="Bankroll total"
+          dineroReal={bankrollTotal}
+          freebets={freebetsTotal}
+          grande
+        />
       )}
 
       <FormularioCasa onAgregar={onAgregarCasa} />
@@ -121,10 +188,17 @@ export default function ListadoCasas({
               abrirla. */}
           <div className="space-y-3">
             {casasOrdenadas.map((casa) => {
-              const bankroll =
-                bankrolls.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
+              const bankrollApuestas =
+                bankrollsApuestas.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
+              const bankrollEntretenimiento =
+                bankrollsEntretenimiento.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
               const desglose =
                 desglosePorCasa.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS;
+              const desgloseApuestas =
+                desglosePorCasaApuestas.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS;
+              const desgloseEntretenimiento =
+                desglosePorCasaEntretenimiento.find((d) => d.casa === casa.nombre) ??
+                SIN_ESTADISTICAS;
               const expandida = casaExpandida === casa.nombre;
               const movimientosCasa = movimientos.filter(
                 (m) => m.casa === casa.nombre
@@ -169,11 +243,19 @@ export default function ListadoCasas({
                         </span>
                       )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs text-slate">Bankroll</p>
-                      <p className="font-mono text-base font-bold text-goldDark">
-                        {bankroll.bankroll.toFixed(2)}€
-                      </p>
+                    <div className="shrink-0 grid grid-cols-2 gap-x-2 text-right">
+                      <div>
+                        <p className="text-[10px] text-slate whitespace-nowrap">Apuestas</p>
+                        <p className="font-mono text-sm font-bold text-goldDark">
+                          {bankrollApuestas.bankroll.toFixed(2)}€
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate whitespace-nowrap">Entret.</p>
+                        <p className="font-mono text-sm font-bold text-goldDark">
+                          {bankrollEntretenimiento.bankroll.toFixed(2)}€
+                        </p>
+                      </div>
                     </div>
                     {expandida ? (
                       <ChevronUp size={18} className="text-slate shrink-0" />
@@ -184,70 +266,25 @@ export default function ListadoCasas({
 
                   {expandida && (
                     <div className="px-3 sm:px-4 pb-4 space-y-4 border-t border-line pt-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-                        <div>
-                          <p className="text-xs text-slate">Ingresos</p>
-                          <p className="font-mono text-sm font-medium text-ink">
-                            {bankroll.ingresos.toFixed(2)}€
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate">Retiradas</p>
-                          <p className="font-mono text-sm font-medium text-ink">
-                            {bankroll.retiradas.toFixed(2)}€
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate">Beneficio</p>
-                          <p
-                            className={`font-mono text-sm font-bold ${
-                              bankroll.beneficio > 0
-                                ? "text-win"
-                                : bankroll.beneficio < 0
-                                ? "text-lose"
-                                : "text-ink"
-                            }`}
-                          >
-                            {bankroll.beneficio > 0 ? "+" : ""}
-                            {bankroll.beneficio.toFixed(2)}€
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate">Yield</p>
-                          <p
-                            className={`font-mono text-sm font-medium ${
-                              desglose.yieldPct > 0
-                                ? "text-win"
-                                : desglose.yieldPct < 0
-                                ? "text-lose"
-                                : "text-ink"
-                            }`}
-                          >
-                            {desglose.yieldPct > 0 ? "+" : ""}
-                            {desglose.yieldPct.toFixed(2)}%
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate">ROI</p>
-                          <p
-                            className={`font-mono text-sm font-medium ${
-                              bankroll.roiPct > 0
-                                ? "text-win"
-                                : bankroll.roiPct < 0
-                                ? "text-lose"
-                                : "text-ink"
-                            }`}
-                          >
-                            {bankroll.roiPct > 0 ? "+" : ""}
-                            {bankroll.roiPct.toFixed(2)}%
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate">Freebet</p>
-                          <p className="font-mono text-sm font-bold text-gold">
-                            {casa.freebetSaldo.toFixed(2)}€
-                          </p>
-                        </div>
+                      {/* Ingresos/Retiradas/Beneficio/Yield/ROI/Freebet, una
+                          fila por bankroll — antes era una sola fila
+                          combinada; ahora que movimientos y el freebet
+                          también tienen categoría, se puede ver de verdad
+                          cuánto tiene cada bankroll en esta casa, por
+                          separado. */}
+                      <div className="space-y-3">
+                        <FilaBankroll
+                          etiqueta="Apuestas"
+                          bankroll={bankrollApuestas}
+                          desglose={desgloseApuestas}
+                          freebet={casa.freebetSaldoApuestas}
+                        />
+                        <FilaBankroll
+                          etiqueta="Entretenimiento"
+                          bankroll={bankrollEntretenimiento}
+                          desglose={desgloseEntretenimiento}
+                          freebet={casa.freebetSaldoEntretenimiento}
+                        />
                       </div>
 
                       <FormularioMovimiento
