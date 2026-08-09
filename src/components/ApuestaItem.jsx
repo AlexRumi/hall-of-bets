@@ -22,20 +22,22 @@ const COLOR_PUNTO = {
   cashout: "bg-cashout",
 };
 
-const COLOR_TEXTO = {
-  pendiente: "text-pending",
-  ganada: "text-win",
-  perdida: "text-lose",
-  nula: "text-void",
-  cashout: "text-cashout",
-};
-
-// Con borde a juego (a diferencia de COLOR_TEXTO, que es solo texto) — para
-// el mini-selector de resultado por partido, ver más abajo.
+// Con borde a juego — para el mini-selector de resultado por partido, ver
+// más abajo.
 const ESTILOS_BOTON_RESULTADO = {
   ganada: "border-win text-win",
   perdida: "border-lose text-lose",
   nula: "border-void text-void",
+};
+
+// Fondo sólido para el "sello" de resultado sobre cada partido — ver
+// "colorResultado !== pendiente" más abajo. Mismos tokens que COLOR_PUNTO,
+// como relleno en vez de punto.
+const TINTE_SELLO = {
+  ganada: "bg-win",
+  perdida: "bg-lose",
+  nula: "bg-void",
+  cashout: "bg-cashout",
 };
 
 // Detalle simplificado (tercera ronda de ajuste sobre el rediseño anterior):
@@ -200,7 +202,7 @@ export default function ApuestaItem({
         </p>
       )}
 
-      <div className="px-3 sm:px-4">
+      <div>
         {gruposPartido.map((grupo, indice) => {
           // El resultado de cada partido es el suyo propio (independiente
           // del resultado final de toda la apuesta) cuando es una
@@ -211,7 +213,7 @@ export default function ApuestaItem({
           return (
             <div key={grupo.indiceLider}>
               {indice > 0 && <div className="h-px bg-line" />}
-              <div className="py-3">
+              <div className="relative group overflow-hidden px-4 sm:px-5 py-3">
                 <div className="flex items-start gap-2.5">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${COLOR_PUNTO[colorResultado]}`}
@@ -240,9 +242,6 @@ export default function ApuestaItem({
                   <div className="text-right shrink-0">
                     <p className="font-mono text-base font-bold text-gold">
                       {grupo.cuota.toFixed(2)}
-                    </p>
-                    <p className={`text-xs font-bold mt-0.5 ${COLOR_TEXTO[colorResultado]}`}>
-                      {ETIQUETAS_RESULTADO[colorResultado].toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -273,6 +272,41 @@ export default function ApuestaItem({
                         {etiqueta}
                       </button>
                     ))}
+                  </div>
+                )}
+
+                {/* "Sello" de resultado (maqueta de referencia del
+                    usuario): tinte de color + etiqueta grande, con
+                    pointer-events-none para que los botones de arriba
+                    (Ganada/Perdida/Nula) se sigan pudiendo pulsar a través
+                    del sello. Al pasar el ratón, el texto desaparece, se
+                    quita el desenfoque y el tinte baja de opacidad — deja
+                    leer el contenido sin perder la marca de color. Solo en
+                    partidos ya resueltos; "Pendiente" no lleva sello.
+                    Desenfoque y tinte van en dos capas separadas (no una
+                    sola con blur+opacity a la vez): con las dos cosas en
+                    el mismo elemento, ese 10% de opacidad restante deja
+                    ver el contenido de debajo SIN desenfocar (el blur ya
+                    se había aplicado al 100% antes de bajar la opacidad),
+                    así que se seguía leyendo texto de fondo. Con el blur
+                    en su propia capa (siempre al 100%, nunca transparente)
+                    y el tinte encima en una capa aparte, no hay fuga.
+                    inset-x/inset-y (en vez de inset-0) dejan un margen a
+                    los lados y arriba/abajo para que el sello se vea como
+                    una tarjeta redondeada flotando dentro de la fila, no
+                    como un bloque a sangre completa de borde a borde. */}
+                {colorResultado !== "pendiente" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] group-hover:backdrop-blur-none transition-[backdrop-filter] duration-200" />
+                    <div
+                      className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl opacity-90 group-hover:opacity-[0.48] transition-opacity duration-200 ${TINTE_SELLO[colorResultado]}`}
+                    />
+                    <div className="relative flex flex-col items-center gap-1 group-hover:opacity-0 transition-opacity duration-200 px-4 text-center">
+                      <span className="font-display font-extrabold text-2xl tracking-wide text-paper">
+                        {ETIQUETAS_RESULTADO[colorResultado].toUpperCase()}
+                      </span>
+                      <span className="text-sm font-semibold text-paper/90">{grupo.evento}</span>
+                    </div>
                   </div>
                 )}
               </div>

@@ -210,7 +210,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
           centrado. Escritorio: barra más fina, nombre a la izquierda.
           "sticky" para que se quede fija arriba al hacer scroll, igual que
           el menú lateral. */}
-      <div className="sticky top-0 z-30 bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
+      {/* z-[60]: por encima de los overlays de modales (ConfirmDialog,
+          ApuestaItem, CashOutDialog... todos a z-50), para que el modo
+          oscuro/claro y cerrar sesión de aquí se puedan seguir pulsando
+          con un modal abierto, sin tener que cerrarlo primero. */}
+      <div className="sticky top-0 z-[60] bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
         <div className="flex items-center md:justify-between">
           <button
             type="button"

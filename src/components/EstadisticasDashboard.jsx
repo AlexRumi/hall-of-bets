@@ -96,16 +96,22 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Segmented control, deliberadamente distinto de las pastillas de
+          casa/rango de más abajo (contorno + fondo felt en vez de pastillas
+          sueltas): es el filtro más importante de la página (decide qué
+          bankroll se analiza entero), así que necesitaba su propia caja en
+          vez de leerse como una fila más de pastillas — antes las dos filas
+          se veían casi idénticas, pegadas una a la otra. */}
+      <div className="flex items-center gap-1 bg-paperDim border border-line rounded-xl p-1">
         {BANKROLLS.map(({ valor, etiqueta }) => (
           <button
             key={valor}
             type="button"
             onClick={() => setFiltroBankroll(valor)}
-            className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 transition-colors ${
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
               filtroBankroll === valor
-                ? "bg-felt text-paper border-felt"
-                : "border-gold/40 text-ink hover:border-gold"
+                ? "bg-felt text-paper shadow-sm"
+                : "text-slate hover:text-ink"
             }`}
           >
             {etiqueta}
@@ -113,7 +119,7 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 pt-2">
         {!verRango && casas.length > 0 && (
           <>
             <button
@@ -223,19 +229,30 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
         oscuro={oscuro}
         mensajeVacio="Todavía no hay apuestas resueltas suficientes."
       />
-      <GraficoBarraDivergente
-        titulo="ROI por tipo de mercado"
-        datos={roiPorMercado}
-        oscuro={oscuro}
-        formatoValor={FORMATO_PCT}
-        mensajeVacio="Todavía no hay suficientes apuestas por tipo de mercado."
-      />
-      <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
-        <h2 className="font-display text-lg font-semibold text-ink mb-4">
-          Estadísticas por tipo de mercado
-        </h2>
-        <TablaEstadisticasMercado datos={estadisticasPorMercado} />
-      </div>
+      {/* Las apuestas de Entretenimiento suelen ser bet builders con varios
+          mercados a la vez: el dinero atribuido a "la categoría líder" (ver
+          calcularEstadisticasPorMercado) sale engañoso ahí, así que estas
+          dos vistas de dinero por mercado se ocultan en Entretenimiento —
+          "Mercados más usados" (sin dinero, cuenta todos los mercados por
+          igual) sigue viéndose siempre, esa sí tiene sentido en cualquier
+          bankroll. */}
+      {filtroBankroll !== "entretenimiento" && (
+        <GraficoBarraDivergente
+          titulo="ROI por tipo de mercado"
+          datos={roiPorMercado}
+          oscuro={oscuro}
+          formatoValor={FORMATO_PCT}
+          mensajeVacio="Todavía no hay suficientes apuestas por tipo de mercado."
+        />
+      )}
+      {filtroBankroll !== "entretenimiento" && (
+        <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
+          <h2 className="font-display text-lg font-semibold text-ink mb-4">
+            Estadísticas por tipo de mercado
+          </h2>
+          <TablaEstadisticasMercado datos={estadisticasPorMercado} />
+        </div>
+      )}
       <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
         <h2 className="font-display text-lg font-semibold text-ink mb-1">
           Mercados más usados

@@ -2,19 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { usePartidos } from "../hooks/usePartidos";
 import { PAISES_CONECTADOS, PAISES_GRUPO_EUROPA } from "../utils/ligasConectadas";
 import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
+import { normalizarTexto } from "../utils/texto";
 import SelectorDesplegable from "./SelectorDesplegable";
 
 // Sentinela para "Otras ligas": no puede coincidir con ningún nombre real
 // de país de PAISES_CONECTADOS.
 const OTRAS_LIGAS = "otras";
-
-// Quita acentos para que "atletico" encuentre "Atletico" al escribir.
-function normalizar(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
-}
 
 const PAISES_INDIVIDUALES = PAISES_CONECTADOS.filter(
   (p) => !PAISES_GRUPO_EUROPA.includes(p.pais) && p.pais !== "Competición Europea"
@@ -86,7 +79,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
       : partidos
           .filter((p) => p.pais === paisFiltro)
           .filter((p) => !competicionFiltro || p.competicion === competicionFiltro)
-          .filter((p) => !valor.trim() || normalizar(p.evento).includes(normalizar(valor)));
+          .filter((p) => !valor.trim() || normalizarTexto(p.evento).includes(normalizarTexto(valor)));
   // Sin límite de resultados: la lista ya viene acotada a una sola
   // competición (país + competición son obligatorios antes de ver nada), y
   // el cuadro tiene scroll para listas largas (p.ej. una jornada completa

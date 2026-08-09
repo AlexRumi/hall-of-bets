@@ -1233,6 +1233,166 @@ separadas, probando cada una antes de pasar a la siguiente.
     las dos categorías siempre, sea cual sea la pastilla elegida (mismo
     comportamiento que ya tenía el filtro de casa con estos dos KPIs).
 
+- **Fase B — Búsqueda de texto libre en el historial** — ✅ hecho.
+  `ListaApuestas.jsx` gana un campo de búsqueda (icono `Search`, mismo
+  patrón que ya usa `Academia.jsx`: filtrado en vivo con cada tecla, sin
+  botón de buscar) que coincide contra el evento o el mercado de
+  CUALQUIER selección de la apuesta, no solo la líder — así buscar
+  "Córners" encuentra también una combinada donde ese mercado es uno más
+  entre varios. Solo se muestra cuando `agrupada` es `true` (el historial
+  normal de Apuestas/Entretenimiento); en "Últimas apuestas"
+  (`PantallaInicio.jsx`, `agrupada=false`, solo 5 apuestas) no aporta con
+  tan pocas.
+  Nuevo `utils/texto.js` con `normalizarTexto` (quita acentos, para que
+  escribir sin tildes también encuentre resultados) — se extrajo de
+  `BuscadorEvento.jsx` (que ya tenía exactamente esta función de forma
+  local, sin exportar) para no duplicarla.
+
+- **Fase C — Ranking de rendimiento por casa** — ✅ hecho.
+  `ListadoCasas.jsx` reutiliza `calcularDesglosePorCasa` (`utils/apuestas.js`
+  — ya calculaba `yieldPct` por casa, entre otras cosas, para un uso que no
+  llegó a usarse aquí) en vez de reimplementar nada. Pastillas "Mejor
+  rendimiento" (por defecto) / "Alfabético" arriba del listado, mismo
+  patrón que el resto de filtros de la app; "Mejor rendimiento" ordena por
+  `yieldPct` descendente, con las casas sin apuestas todavía al final (no
+  aparecen en `calcularDesglosePorCasa`, que solo agrupa sobre apuestas
+  existentes). El yield se muestra en dos sitios: una pastilla pequeña
+  bajo el nombre de la casa en la cabecera siempre visible (verde/roja
+  según signo, oculta si la casa no tiene ninguna apuesta) para que el
+  orden se entienda de un vistazo sin tener que abrir cada tarjeta, y una
+  columna más en la rejilla ya expandida (`Ingresos/Retiradas/Beneficio/
+  ROI/Freebet` pasa a `sm:grid-cols-6` con "Yield" junto a "Beneficio",
+  como pedía el usuario). Yield (beneficio/stake apostado) y ROI
+  (beneficio/ingresos depositados) se quedan como dos columnas distintas
+  a propósito — son fórmulas distintas que la app ya distinguía en
+  Estadísticas, fusionarlas habría sido confuso.
+
+- **Ronda de pulido sobre las 3 fases** (peticiones directas, misma
+  sesión):
+  - Las pastillas Apuestas/Entretenimiento/Todas de `EstadisticasDashboard.jsx`
+    se veían casi idénticas a las de casa/rango justo debajo, demasiado
+    pegadas — pasan a ser un control segmentado propio (`bg-paperDim`,
+    contorno, botones dentro con `flex-1`, el activo en fondo felt) en vez
+    de pastillas sueltas, con `pt-2` extra antes de la fila de casa/rango
+    para separarlas visualmente. Es el filtro más importante de la página
+    (decide qué bankroll se analiza entero), así que merecía destacar más
+    que un filtro secundario.
+  - "ROI por tipo de mercado" y "Estadísticas por tipo de mercado" (las dos
+    vistas de dinero por mercado) se ocultan cuando `filtroBankroll` es
+    "entretenimiento" — el motivo que las hizo confusas en primer lugar
+    (bet builders con varios mercados a la vez, atribuidos enteros a un
+    solo mercado líder) es sobre todo un problema de Entretenimiento.
+    "Mercados más usados" (sin dinero, cuenta todos los mercados por
+    igual) sigue viéndose en cualquier bankroll — nunca tuvo ese problema.
+    En "Apuestas" y "Todas" las tres vistas se quedan igual que estaban.
+  - Buscador de `ListaApuestas.jsx` más vistoso: de `border` recto a
+    `border-2 rounded-full`, icono más grande (16→18) que se pone dorado
+    con el foco (`group-focus-within:text-gold`), y un botón "✕" para
+    vaciar la búsqueda de un toque en vez de borrar letra a letra —
+    aparece solo si hay texto escrito.
+
+- **Sello de resultado por partido en el detalle** (petición directa, con
+  maqueta HTML de referencia). En `ApuestaItem.jsx`, cada partido con
+  `colorResultado !== "pendiente"` gana un "sello" superpuesto: un tinte
+  de color sólido (`TINTE_SELLO`, mismos tokens que `COLOR_PUNTO` pero
+  como relleno) a opacidad 0.82 con desenfoque (`backdrop-blur-[3px]`), y
+  encima la etiqueta GANADA/PERDIDA/NULA/CASH OUT grande y centrada
+  (`font-display font-extrabold text-2xl`). Al pasar el ratón por encima
+  (`group`/`group-hover` sobre el contenedor del partido): el texto
+  desaparece del todo, se quita el desenfoque, y el tinte baja a 0.48 de
+  opacidad — mismo color, deja leer el contenido de debajo sin perder la
+  marca visual de si se ganó o se perdió. El sello lleva
+  `pointer-events-none`, así que el mini-selector Ganada/Perdida/Nula de
+  las combinadas (que vive dentro del mismo contenedor, debajo) se puede
+  seguir pulsando a través suyo sin que el sello lo bloquee. Los partidos
+  en "Pendiente" no llevan sello.
+  Ajuste tras verlo con datos reales: el punto/cuota/botón "Nula" salían
+  pegados al borde del tinte, porque el contenedor de cada partido no
+  tenía padding horizontal propio — dependía del `px-3 sm:px-4` del
+  contenedor de la lista, y el tinte (`absolute inset-0`) llega hasta el
+  borde de su propio contenedor sin importar el padding de sus hijos. El
+  padding horizontal se mueve del contenedor de la lista (que pasa a no
+  tener ninguno) a cada fila de partido (`px-4 sm:px-5`, igual que la
+  cabecera y el resumen de arriba, para que quede todo alineado al mismo
+  margen) — así el tinte sigue llegando de borde a borde (a juego con los
+  separadores entre partidos), pero el contenido de dentro ya no toca sus
+  bordes.
+  Segunda maqueta de referencia, misma sesión: el sello sube de opacidad
+  0.82 a 0.90 y de `blur(3px)` a `blur(5px)` por defecto (no debe poder
+  leerse nada de debajo hasta el hover), y el hover sigue bajando a 0.48
+  sin desenfoque. La etiqueta pasa de una línea a dos: GANADA/PERDIDA/NULA
+  grande arriba y, más pequeño y algo más tenue (`text-paper/90`), el
+  nombre del partido de esa selección debajo — útil sobre todo en
+  combinadas, para saber de un vistazo a qué partido corresponde ese
+  sello sin tener que quitar el hover. El texto de estado suelto que
+  vivía junto a la cuota (`GANADA`/`PERDIDA`/... en pequeño, con
+  `COLOR_TEXTO`) se quita del todo — el sello ya lo cubre, era
+  redundante; `COLOR_TEXTO` se borra de `ApuestaItem.jsx` por quedarse
+  sin ningún punto de entrada.
+  **Pendiente de decidir**: en móvil no hay hover, así que de momento el
+  sello se queda fijo (no se revela nunca al tocar). Se planteó un
+  "toque para alternar" (tap-to-toggle, replicando el hover con estado
+  local por partido) como la opción recomendada frente a dejarlo siempre
+  tapado — pero no se ha implementado todavía, a la espera de que el
+  usuario lo confirme.
+  Ronda de ajuste tras verlo con datos reales, misma sesión: dos bugs
+  reales.
+  - El desenfoque no ocultaba el texto de debajo del todo, aunque
+    `blur(5px)` ya era el valor pedido. Causa: `backdrop-blur` y
+    `opacity` estaban en el MISMO elemento — el navegador aplica el
+    desenfoque y luego reduce la opacidad del resultado ya desenfocado
+    como una capa, así que ese ~10% de opacidad restante dejaba pasar el
+    contenido original SIN desenfocar por debajo (el blur nunca se
+    "reaplica" al mezclar). Se separa en dos capas absolutas apiladas: una
+    solo con `backdrop-blur` (sin opacity ni color, siempre al 100%) y
+    otra encima solo con el color + opacity — así el contenido de detrás
+    siempre pasa primero por el desenfoque antes de que el tinte decida
+    cuánto se transparenta.
+  - El sello ocupaba todo el ancho de la fila (a sangre completa, borde
+    con borde con las líneas separadoras) — "muy forzado y feo" según el
+    usuario, porque en la maqueta de referencia el sello llena toda la
+    tarjeta, pero ahí la tarjeta ya es una tarjeta discreta con margen y
+    esquinas redondeadas propias; en la app es una fila dentro de una
+    lista continua sin margen ni esquinas. Las dos capas del sello pasan
+    de `inset-0` a `inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl`: deja un
+    margen a los lados y arriba/abajo, con las esquinas redondeadas, para
+    que se vea como una tarjeta flotando dentro de la fila en vez de un
+    bloque de pared a pared — sin tocar el ancho/padding/márgenes del
+    resto de la tarjeta de detalle, tal como pidió el usuario.
+
+- **Cabecera por encima de los modales** (petición directa, misma
+  sesión — detectado al probar el sello: con el detalle de una apuesta
+  abierto, no había forma de tocar el interruptor de modo oscuro/claro ni
+  "Cerrar sesión" sin cerrar antes el modal). Causa: el fondo oscuro de
+  cualquier diálogo (`ConfirmDialog.jsx`, `ApuestaItem.jsx` vía
+  `ListaApuestas.jsx`, `CashOutDialog.jsx`...) usa `fixed inset-0 ... z-50`
+  — cubre toda la pantalla, cabecera incluida, y la cabecera (`App.jsx`)
+  estaba a `z-30`, por debajo. El fondo oscuro en sí se mantiene (sirve
+  para cerrar tocando fuera y centra la atención en el modal); la cabecera
+  sube a `z-[60]` (por encima de cualquier `z-50`) para quedar siempre
+  alcanzable, con o sin un modal abierto.
+  Bug real de ese mismo cambio, detectado al probarlo: la cabecera ahora
+  tapaba visualmente la parte de arriba del modal, que se veía "cortado"
+  en línea recta justo debajo de la cabecera. Causa: el fondo de los
+  diálogos sigue centrado en la pantalla ENTERA (`fixed inset-0` +
+  `items-center`, sin saber nada de la cabecera), así que su caja seguía
+  extendiéndose por debajo de la cabecera como siempre — solo que ahora,
+  al estar la cabecera por encima en el z-index, esa parte se pintaba
+  encima y tapaba el modal en vez de quedar oculta detrás de él. Los 5
+  fondos de diálogo (`ConfirmDialog.jsx`, `CashOutDialog.jsx`,
+  `CuotasDialog.jsx`, `BotonInfoConcepto.jsx`, el de `ApuestaItem.jsx` en
+  `ListaApuestas.jsx`) pasan de `p-4` a `px-4 pb-4 pt-36 md:pt-20`: un
+  hueco superior generoso (calculado a ojo a partir de la altura real de
+  la cabecera en cada tamaño — banner grande en móvil, barra fina en
+  escritorio) que empuja el modal entero por debajo de la cabecera, para
+  que ya no se solapen. Los dos modales con altura máxima fija
+  (`max-h-[90vh]` en el detalle de apuesta, `max-h-[80vh]` en
+  `BotonInfoConcepto.jsx`) se recalculan a `max-h-[calc(100vh-10rem)]
+  md:max-h-[calc(100vh-6rem)]` (mismos valores que el hueco superior + un
+  margen inferior) para que sigan cabiendo enteros en el espacio que
+  queda libre debajo de la cabecera, en vez de desbordar por abajo de la
+  pantalla.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

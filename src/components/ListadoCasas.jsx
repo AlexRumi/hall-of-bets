@@ -6,8 +6,14 @@ import FormularioBono from "./FormularioBono";
 import ListaMovimientos from "./ListaMovimientos";
 import ConfirmDialog from "./ConfirmDialog";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
+import { calcularDesglosePorCasa } from "../utils/apuestas";
 
 const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, roiPct: 0 };
+// Casas sin ninguna apuesta todavía no aparecen en calcularDesglosePorCasa
+// (agrupa solo sobre apuestas existentes) — sin yield que mostrar, y las
+// últimas en el orden "Mejor rendimiento" (0 no es ni bueno ni malo, pero
+// no hay datos reales detrás).
+const SIN_ESTADISTICAS = { numApuestas: 0, yieldPct: 0 };
 
 export default function ListadoCasas({
   casas,
@@ -24,7 +30,17 @@ export default function ListadoCasas({
   const [casaExpandida, setCasaExpandida] = useState(null);
   const [mostrandoBono, setMostrandoBono] = useState(false);
   const [confirmandoBorrarMovimientos, setConfirmandoBorrarMovimientos] = useState(false);
+  // "yield" (por defecto) ordena de mejor a peor rendimiento; "alfabetico"
+  // vuelve al orden de toda la vida, tal como llegan desde Supabase.
+  const [orden, setOrden] = useState("yield");
   const bankrolls = calcularBankrollPorCasa(movimientos, apuestas);
+  const desglosePorCasa = calcularDesglosePorCasa(apuestas);
+  const casasOrdenadas = [...casas].sort((a, b) => {
+    if (orden === "alfabetico") return a.nombre.localeCompare(b.nombre);
+    const yieldA = (desglosePorCasa.find((d) => d.casa === a.nombre) ?? SIN_ESTADISTICAS).yieldPct;
+    const yieldB = (desglosePorCasa.find((d) => d.casa === b.nombre) ?? SIN_ESTADISTICAS).yieldPct;
+    return yieldB - yieldA;
+  });
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
   const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
@@ -79,13 +95,36 @@ export default function ListadoCasas({
             {casas.length === 1 ? "casa registrada" : "casas registradas"}
           </p>
 
-          {/* Cada tarjeta va cerrada por defecto (logo, nombre y bankroll,
-              lo único que importa de un vistazo); el resto de datos, el
-              historial y el botón de añadir movimiento se ven al abrirla. */}
+          <div className="flex items-center justify-center gap-2">
+            {[
+              { valor: "yield", etiqueta: "Mejor rendimiento" },
+              { valor: "alfabetico", etiqueta: "Alfabético" },
+            ].map(({ valor, etiqueta }) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setOrden(valor)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border-2 transition-colors ${
+                  orden === valor
+                    ? "bg-felt text-paper border-felt"
+                    : "border-gold/40 text-ink hover:border-gold"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
+          </div>
+
+          {/* Cada tarjeta va cerrada por defecto (logo, nombre, yield y
+              bankroll, lo único que importa de un vistazo); el resto de
+              datos, el historial y el botón de añadir movimiento se ven al
+              abrirla. */}
           <div className="space-y-3">
-            {casas.map((casa) => {
+            {casasOrdenadas.map((casa) => {
               const bankroll =
                 bankrolls.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
+              const desglose =
+                desglosePorCasa.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS;
               const expandida = casaExpandida === casa.nombre;
               const movimientosCasa = movimientos.filter(
                 (m) => m.casa === casa.nombre
@@ -113,9 +152,23 @@ export default function ListadoCasas({
                     ) : (
                       <Landmark size={28} className="text-gold shrink-0" />
                     )}
-                    <p className="flex-1 min-w-0 text-base font-bold text-ink truncate">
-                      {casa.nombre}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-bold text-ink truncate">{casa.nombre}</p>
+                      {desglose.numApuestas > 0 && (
+                        <span
+                          className={`inline-block mt-0.5 text-xs font-semibold px-1.5 py-0.5 rounded ${
+                            desglose.yieldPct > 0
+                              ? "bg-win/10 text-win"
+                              : desglose.yieldPct < 0
+                              ? "bg-lose/10 text-lose"
+                              : "bg-paperDim text-slate"
+                          }`}
+                        >
+                          Yield {desglose.yieldPct > 0 ? "+" : ""}
+                          {desglose.yieldPct.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs text-slate">Bankroll</p>
                       <p className="font-mono text-base font-bold text-goldDark">
@@ -131,7 +184,7 @@ export default function ListadoCasas({
 
                   {expandida && (
                     <div className="px-3 sm:px-4 pb-4 space-y-4 border-t border-line pt-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                         <div>
                           <p className="text-xs text-slate">Ingresos</p>
                           <p className="font-mono text-sm font-medium text-ink">
@@ -157,6 +210,21 @@ export default function ListadoCasas({
                           >
                             {bankroll.beneficio > 0 ? "+" : ""}
                             {bankroll.beneficio.toFixed(2)}€
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate">Yield</p>
+                          <p
+                            className={`font-mono text-sm font-medium ${
+                              desglose.yieldPct > 0
+                                ? "text-win"
+                                : desglose.yieldPct < 0
+                                ? "text-lose"
+                                : "text-ink"
+                            }`}
+                          >
+                            {desglose.yieldPct > 0 ? "+" : ""}
+                            {desglose.yieldPct.toFixed(2)}%
                           </p>
                         </div>
                         <div>

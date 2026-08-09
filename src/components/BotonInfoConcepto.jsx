@@ -24,11 +24,11 @@ export default function BotonInfoConcepto({ conceptoId, etiqueta }) {
 
       {abierto && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 pb-4 pt-36 md:pt-20 z-50"
           onClick={() => setAbierto(false)}
         >
           <div
-            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3 max-h-[80vh] overflow-y-auto"
+            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3 max-h-[calc(100vh-10rem)] md:max-h-[calc(100vh-6rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">

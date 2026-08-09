@@ -22,7 +22,7 @@ export default function CashOutDialog({ abierto, onConfirmar, onCancelar }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 pb-4 pt-36 md:pt-20 z-50">
       <form
         onSubmit={manejarConfirmar}
         className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-4"
