@@ -1411,6 +1411,45 @@ separadas, probando cada una antes de pasar a la siguiente.
   implementado desde la fase "Detalle de combinada agrupado por partido,
   y resultado por partido", más arriba en este documento.
 
+- **Icono de ojo por partido para revelar el sello en móvil** (petición
+  directa, misma sesión). El sello de resultado por partido (ver más
+  arriba) solo se revelaba con `group-hover`, que en móvil no existe de
+  verdad — el usuario detectó que algunos navegadores simulan un ":hover"
+  al tocar que se queda pegado de forma impredecible (hacía falta tocar
+  OTRA apuesta para que se ocultara la primera). Primer intento: un único
+  interruptor en la cabecera para toda la apuesta — el usuario aclaró que
+  lo quería por partido (revelar el primero no debía afectar al segundo),
+  así que se cambió antes de subirlo. `ApuestaItem.jsx` guarda
+  `revelados` como un `Set` de `indiceLider` (no un booleano único) con
+  `alternarRevelado(indiceLider)` para añadir/quitar; dentro del `.map` de
+  partidos, `revelado = revelados.has(grupo.indiceLider)`. Cada partido ya
+  resuelto (`colorResultado !== "pendiente"`) gana su propio icono
+  `Eye`/`EyeOff` en la esquina superior derecha de su propia tarjeta
+  (`absolute top-3 right-3`, con fondo `bg-black/15` para verse igual de
+  bien tapado que revelado) — colocado DESPUÉS del sello en el JSX para
+  pintar encima suyo sin necesitar z-index, y fuera de su
+  `pointer-events-none` así que siempre es pulsable. Con `revelado` en
+  `true` para ese partido se fuerza el aspecto "revelado" (texto oculto,
+  sin desenfoque, tinte al 0.48) sin depender de hover; en `false`
+  (por defecto), el hover de escritorio se conserva como atajo rápido de
+  propina.
+  Ronda de pulido en móvil, misma sesión: el ojo estaba demasiado pegado a
+  la esquina de la tarjeta (`top-2 right-2` → `top-3 right-3`, con más
+  margen aún en `sm:`). Y la fila Stake/Cuota total/Ganancia potencial se
+  veía grande en pantallas estrechas — "Ganancia potencial" llegaba a
+  partirse en dos líneas por falta de sitio. Las etiquetas ganan
+  `whitespace-nowrap` y pasan de `text-xs` fijo a `text-[10px] sm:text-xs`
+  (los valores de `text-base` a `text-sm sm:text-base`), y las propias
+  etiquetas se acortan: "Cuota total" → "Cuota", "Ganancia potencial" →
+  "Ganancia" (a juego con "Beneficio", que ya era una sola palabra) — así
+  cada una cabe en una línea sin depender solo de bajar el tamaño de letra.
+  Segunda vuelta: `top-3 right-3` seguía sin ser suficiente — con
+  `rounded-xl` (radio de 12px) en la esquina del sello, el ojo quedaba
+  parcialmente cortado por la propia curva de esa esquina, no solo cerca
+  del borde recto. Sube a `top-4 right-5` (sin variante `sm:` aparte, ya
+  vale para los dos tamaños) para quedar claramente dentro de la curva,
+  no pegado a ella.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Pencil, Trash2 } from "lucide-react";
+import { X, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
@@ -65,6 +65,13 @@ export default function ApuestaItem({
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
   const [importeCashOut, setImporteCashOut] = useState("");
   const [editando, setEditando] = useState(false);
+  // En escritorio, el sello de cada partido ya se revela solo al pasar el
+  // ratón (group-hover). En móvil no hay hover — este set guarda qué
+  // partidos (por indiceLider) se han revelado a mano con su propio ojo,
+  // independiente uno de otro: revelar el primer partido no afecta al
+  // segundo. Evita depender de un ":hover" simulado al tocar que en
+  // algunos navegadores se queda pegado de forma poco predecible.
+  const [revelados, setRevelados] = useState(() => new Set());
   const esPendiente = apuesta.resultado === "pendiente";
   const cuotaTotal = calcularCuotaTotal(apuesta);
   const beneficio = calcularBeneficio(apuesta);
@@ -98,6 +105,15 @@ export default function ApuestaItem({
     onMarcarResultado(apuesta.id, "cashout", Number(importeCashOut));
     setImporteCashOut("");
     setMostrandoCashOut(false);
+  }
+
+  function alternarRevelado(indiceLider) {
+    setRevelados((actuales) => {
+      const nuevo = new Set(actuales);
+      if (nuevo.has(indiceLider)) nuevo.delete(indiceLider);
+      else nuevo.add(indiceLider);
+      return nuevo;
+    });
   }
 
   if (editando) {
@@ -187,20 +203,26 @@ export default function ApuestaItem({
 
       <div className="flex border-b border-line">
         <div className="flex-1 text-center py-3">
-          <p className="text-xs uppercase tracking-wide text-slate">Stake</p>
-          <p className="font-mono text-base font-bold text-ink">{apuesta.stake.toFixed(2)}€</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">
+            Stake
+          </p>
+          <p className="font-mono text-sm sm:text-base font-bold text-ink">
+            {apuesta.stake.toFixed(2)}€
+          </p>
         </div>
         <div className="flex-1 text-center py-3">
-          <p className="text-xs uppercase tracking-wide text-slate">
-            Cuota total{apuesta.cuotaTotalManual ? " *" : ""}
+          <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">
+            Cuota{apuesta.cuotaTotalManual ? " *" : ""}
           </p>
-          <p className="font-mono text-base font-bold text-gold">{cuotaTotal.toFixed(2)}</p>
+          <p className="font-mono text-sm sm:text-base font-bold text-gold">
+            {cuotaTotal.toFixed(2)}
+          </p>
         </div>
         <div className="flex-1 text-center py-3">
-          <p className="text-xs uppercase tracking-wide text-slate">
-            {esPendiente ? "Ganancia potencial" : "Beneficio"}
+          <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">
+            {esPendiente ? "Ganancia" : "Beneficio"}
           </p>
-          <p className={`font-mono text-base font-bold ${colorResumen}`}>
+          <p className={`font-mono text-sm sm:text-base font-bold ${colorResumen}`}>
             {valorResumen > 0 ? "+" : ""}
             {valorResumen.toFixed(2)}€
           </p>
@@ -221,6 +243,7 @@ export default function ApuestaItem({
           // combinada; en una apuesta simple el único "partido" es la
           // apuesta entera, así que ahí sí refleja el resultado general.
           const colorResultado = esCombinada ? grupo.resultado : apuesta.resultado;
+          const revelado = revelados.has(grupo.indiceLider);
 
           return (
             <div key={grupo.indiceLider}>
@@ -306,20 +329,55 @@ export default function ApuestaItem({
                     inset-x/inset-y (en vez de inset-0) dejan un margen a
                     los lados y arriba/abajo para que el sello se vea como
                     una tarjeta redondeada flotando dentro de la fila, no
-                    como un bloque a sangre completa de borde a borde. */}
+                    como un bloque a sangre completa de borde a borde.
+                    "revelado" (el ojo de la cabecera) fuerza el mismo
+                    aspecto que el hover, sin depender de él — en móvil no
+                    hay hover de verdad, y el ":hover" que simulan algunos
+                    navegadores al tocar se queda pegado de forma
+                    impredecible. Con "revelado" en true se aplican los
+                    mismos estilos directamente; en false, el hover de
+                    escritorio se conserva como atajo rápido de todas
+                    formas. */}
                 {colorResultado !== "pendiente" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] group-hover:backdrop-blur-none transition-[backdrop-filter] duration-200" />
                     <div
-                      className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl opacity-90 group-hover:opacity-[0.48] transition-opacity duration-200 ${TINTE_SELLO[colorResultado]}`}
+                      className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] transition-[backdrop-filter] duration-200 ${
+                        revelado ? "backdrop-blur-none" : "group-hover:backdrop-blur-none"
+                      }`}
                     />
-                    <div className="relative flex flex-col items-center gap-1 group-hover:opacity-0 transition-opacity duration-200 px-4 text-center">
+                    <div
+                      className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl transition-opacity duration-200 ${TINTE_SELLO[colorResultado]} ${
+                        revelado ? "opacity-[0.48]" : "opacity-90 group-hover:opacity-[0.48]"
+                      }`}
+                    />
+                    <div
+                      className={`relative flex flex-col items-center gap-1 transition-opacity duration-200 px-4 text-center ${
+                        revelado ? "opacity-0" : "group-hover:opacity-0"
+                      }`}
+                    >
                       <span className="font-display font-extrabold text-2xl tracking-wide text-paper">
                         {ETIQUETAS_RESULTADO[colorResultado].toUpperCase()}
                       </span>
                       <span className="text-sm font-semibold text-paper/90">{grupo.evento}</span>
                     </div>
                   </div>
+                )}
+
+                {/* Ojo propio de este partido — no uno solo para toda la
+                    apuesta: revelar el primer partido no afecta al resto.
+                    Va DESPUÉS del sello en el JSX (así pinta encima suyo
+                    sin necesitar z-index) y con fondo propio para
+                    distinguirse igual de bien tapado (sobre el tinte de
+                    color) que revelado (sobre el contenido normal). */}
+                {colorResultado !== "pendiente" && (
+                  <button
+                    type="button"
+                    onClick={() => alternarRevelado(grupo.indiceLider)}
+                    aria-label={revelado ? "Ocultar resultado de este partido" : "Ver resultado de este partido"}
+                    className="absolute top-4 right-5 p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
+                  >
+                    {revelado ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
                 )}
               </div>
             </div>
