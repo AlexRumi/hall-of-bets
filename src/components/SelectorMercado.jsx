@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { CATEGORIAS_MERCADO, equiposDesdeEvento } from "../utils/mercados";
+import { CATEGORIAS_MERCADO, equiposDesdeEvento, buscarMercadoPorTexto } from "../utils/mercados";
 import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
 
 const OTRO = "otro";
@@ -17,12 +17,8 @@ function buscarOpcion(valor) {
 // para no esconder lo que ya había escrito.
 function seleccionInicial(valorApuesta, equipos) {
   if (!valorApuesta) return "";
-  for (const categoria of CATEGORIAS_MERCADO) {
-    for (const opcion of categoria.opciones) {
-      if (opcion.texto(equipos) === valorApuesta) return `${categoria.id}|${opcion.id}`;
-    }
-  }
-  return OTRO;
+  const encontrado = buscarMercadoPorTexto(valorApuesta, equipos);
+  return encontrado ? `${encontrado.categoriaId}|${encontrado.opcionId}` : OTRO;
 }
 
 function etiquetaSeleccion(seleccion, equipos) {

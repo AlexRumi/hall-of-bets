@@ -3,7 +3,9 @@ import {
   calcularCuotaTotal,
   calcularEstadisticas,
   ordenarCronologicamente,
+  agruparSeleccionesPorPartido,
 } from "./apuestas";
+import { CATEGORIAS_MERCADO, buscarMercadoPorTexto, equiposDesdeEvento } from "./mercados";
 
 // Mejor racha de victorias y peor racha de derrotas del histórico completo.
 // Una apuesta "nula" corta ambas rachas sin contar como ninguna de las dos
@@ -73,6 +75,68 @@ export function calcularDesglosePorDeporte(apuestas) {
       ...calcularEstadisticas(apuestasDeDeporte),
     }))
     .sort((a, b) => b.beneficio - a.beneficio);
+}
+
+// Mismo patrón que calcularDesglosePorCasa/calcularDesglosePorDeporte,
+// agrupando por categoría de mercado (utils/mercados.js) — Resultado,
+// Goles, Hándicap asiático... Con varios mercados/partidos en la misma
+// apuesta no tiene sentido repartir su stake/beneficio entre categorías,
+// así que se atribuye entera a la categoría de la selección "líder": la
+// primera del primer partido (mismo criterio que ya usa
+// agruparSeleccionesPorPartido para la cuota real del bloque). Si el texto
+// no coincide con ningún mercado del catálogo (escrito a mano, o de antes
+// de tener el desplegable), cuenta como "Otro mercado".
+export function calcularEstadisticasPorMercado(apuestas) {
+  const grupos = new Map();
+  for (const apuesta of apuestas) {
+    const [primerGrupo] = agruparSeleccionesPorPartido(apuesta.selecciones);
+    if (!primerGrupo) continue;
+
+    const liderSeleccion = apuesta.selecciones[primerGrupo.indiceLider];
+    const equipos = equiposDesdeEvento(primerGrupo.evento);
+    const encontrado = buscarMercadoPorTexto(liderSeleccion.apuesta, equipos);
+    const categoriaId = encontrado?.categoriaId ?? "otro";
+
+    if (!grupos.has(categoriaId)) grupos.set(categoriaId, []);
+    grupos.get(categoriaId).push(apuesta);
+  }
+
+  return [...grupos.entries()]
+    .map(([categoriaId, apuestasCategoria]) => ({
+      categoriaId,
+      etiqueta: CATEGORIAS_MERCADO.find((c) => c.id === categoriaId)?.etiqueta ?? "Otro mercado",
+      ...calcularEstadisticas(apuestasCategoria),
+    }))
+    .sort((a, b) => b.beneficio - a.beneficio);
+}
+
+// Frecuencia de uso por categoría de mercado — a diferencia de
+// calcularEstadisticasPorMercado (que atribuye la apuesta entera a la
+// categoría de su selección líder, para no contar el mismo dinero dos
+// veces), aquí se cuenta CADA selección de CADA apuesta por su propia
+// categoría: así los mercados "secundarios" de una combinada o de un bet
+// builder (los que no llevan la cuota real del bloque) también cuentan,
+// aunque solo como frecuencia de uso — sin dinero asociado, porque el
+// beneficio de una apuesta no se puede repartir de forma real entre sus
+// mercados.
+export function calcularFrecuenciaMercados(apuestas) {
+  const conteo = new Map();
+  for (const apuesta of apuestas) {
+    for (const seleccion of apuesta.selecciones) {
+      const equipos = equiposDesdeEvento(seleccion.evento);
+      const encontrado = buscarMercadoPorTexto(seleccion.apuesta, equipos);
+      const categoriaId = encontrado?.categoriaId ?? "otro";
+      conteo.set(categoriaId, (conteo.get(categoriaId) ?? 0) + 1);
+    }
+  }
+
+  return [...conteo.entries()]
+    .map(([categoriaId, veces]) => ({
+      categoriaId,
+      etiqueta: CATEGORIAS_MERCADO.find((c) => c.id === categoriaId)?.etiqueta ?? "Otro mercado",
+      veces,
+    }))
+    .sort((a, b) => b.veces - a.veces);
 }
 
 const RANGOS_CUOTA = [

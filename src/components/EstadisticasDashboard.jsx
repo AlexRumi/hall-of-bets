@@ -7,13 +7,32 @@ import RachasYExtremos from "./RachasYExtremos";
 import GraficoBarraDivergente from "./GraficoBarraDivergente";
 import CalendarioActividad from "./CalendarioActividad";
 import InsightsAutomaticos from "./InsightsAutomaticos";
+import TablaEstadisticasMercado from "./TablaEstadisticasMercado";
+import TablaFrecuenciaMercados from "./TablaFrecuenciaMercados";
 import { calcularDesglosePorCasa, filtrarPorRango } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
-import { calcularBeneficioPorRangoCuota, calcularDesglosePorDeporte } from "../utils/estadisticas";
+import {
+  calcularBeneficioPorRangoCuota,
+  calcularDesglosePorDeporte,
+  calcularEstadisticasPorMercado,
+  calcularFrecuenciaMercados,
+} from "../utils/estadisticas";
 
 const FORMATO_PCT = (v) => `${v > 0 ? "+" : ""}${v.toFixed(2)}%`;
 
+const BANKROLLS = [
+  { valor: "apuestas", etiqueta: "Apuestas" },
+  { valor: "entretenimiento", etiqueta: "Entretenimiento" },
+  { valor: "todas", etiqueta: "Todas" },
+];
+
 export default function EstadisticasDashboard({ apuestas, movimientos, casas, oscuro }) {
+  // Por defecto solo "Apuestas": las de Entretenimiento suelen ser más
+  // experimentales (varios mercados en la misma apuesta, tipo bet
+  // builder), y mezclarlas con las de verdad ensuciaba sobre todo el
+  // desglose por tipo de mercado (una combinada de Entretenimiento con
+  // Resultado + Goles + Córners solo contaba como "Resultado Final").
+  const [filtroBankroll, setFiltroBankroll] = useState("apuestas");
   const [filtroCasa, setFiltroCasa] = useState("todas");
   // Fase C: archivado. "Ver también archivado" solo aplica al modo normal
   // (pastillas de casa); el modo "Rango de fechas" siempre cruza archivado
@@ -26,13 +45,22 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
   const hayFiltro = filtroCasa !== "todas";
   const rangoListo = verRango && desde && hasta;
 
+  // El filtro de bankroll solo se aplica a las apuestas: los movimientos
+  // (ingresos/retiradas) son de la casa entera, no tienen "categoria" —
+  // Apuestas y Entretenimiento comparten el mismo dinero de cada casa, así
+  // que el bankroll/ROI de "Casas de apuestas" ya combina las dos siempre
+  // (mismo motivo por el que tampoco se filtran al elegir una sola casa).
+  const apuestasDelBankroll =
+    filtroBankroll === "todas" ? apuestas : apuestas.filter((a) => a.categoria === filtroBankroll);
+
   // Todo el dashboard se recalcula sobre las apuestas (y movimientos, para
   // el bankroll) de la casa elegida, en vez de sobre todas.
   const apuestasFiltradas = rangoListo
-    ? filtrarPorRango(apuestas, desde, hasta)
-    : (hayFiltro ? apuestas.filter((a) => a.casa === filtroCasa) : apuestas).filter(
-        (a) => incluirArchivado || !a.archivado
-      );
+    ? filtrarPorRango(apuestasDelBankroll, desde, hasta)
+    : (hayFiltro
+        ? apuestasDelBankroll.filter((a) => a.casa === filtroCasa)
+        : apuestasDelBankroll
+      ).filter((a) => incluirArchivado || !a.archivado);
   const movimientosFiltrados = rangoListo
     ? filtrarPorRango(movimientos, desde, hasta)
     : (hayFiltro ? movimientos.filter((m) => m.casa === filtroCasa) : movimientos).filter(
@@ -57,8 +85,34 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
     .filter((r) => r.numApuestas > 0)
     .map((r) => ({ etiqueta: r.rango, valor: r.beneficio }));
 
+  const estadisticasPorMercado = calcularEstadisticasPorMercado(apuestasFiltradas).filter(
+    (m) => m.numApuestas > 0
+  );
+  const roiPorMercado = estadisticasPorMercado.map((m) => ({
+    etiqueta: m.etiqueta,
+    valor: m.yieldPct,
+  }));
+  const frecuenciaMercados = calcularFrecuenciaMercados(apuestasFiltradas);
+
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {BANKROLLS.map(({ valor, etiqueta }) => (
+          <button
+            key={valor}
+            type="button"
+            onClick={() => setFiltroBankroll(valor)}
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 transition-colors ${
+              filtroBankroll === valor
+                ? "bg-felt text-paper border-felt"
+                : "border-gold/40 text-ink hover:border-gold"
+            }`}
+          >
+            {etiqueta}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {!verRango && casas.length > 0 && (
           <>
@@ -169,6 +223,29 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
         oscuro={oscuro}
         mensajeVacio="Todavía no hay apuestas resueltas suficientes."
       />
+      <GraficoBarraDivergente
+        titulo="ROI por tipo de mercado"
+        datos={roiPorMercado}
+        oscuro={oscuro}
+        formatoValor={FORMATO_PCT}
+        mensajeVacio="Todavía no hay suficientes apuestas por tipo de mercado."
+      />
+      <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
+        <h2 className="font-display text-lg font-semibold text-ink mb-4">
+          Estadísticas por tipo de mercado
+        </h2>
+        <TablaEstadisticasMercado datos={estadisticasPorMercado} />
+      </div>
+      <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
+        <h2 className="font-display text-lg font-semibold text-ink mb-1">
+          Mercados más usados
+        </h2>
+        <p className="text-xs text-slate mb-4">
+          Cuenta cada mercado dentro de una apuesta, no solo el principal — sin dinero
+          asociado (el beneficio no se puede repartir entre los mercados de una misma apuesta).
+        </p>
+        <TablaFrecuenciaMercados datos={frecuenciaMercados} />
+      </div>
       <CalendarioActividad apuestas={apuestasFiltradas} />
       <InsightsAutomaticos apuestas={apuestasFiltradas} />
     </div>

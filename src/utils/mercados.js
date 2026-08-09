@@ -103,6 +103,25 @@ function opcionesHandicapEquipo(clave) {
   return opciones;
 }
 
+// Busca en el catálogo la categoría+opción cuyo texto generado (con los
+// nombres de equipo ya resueltos) coincide exactamente con el texto ya
+// guardado de una selección — para saber de qué categoría es un mercado a
+// partir solo del texto que se guardó (ver SelectorMercado.jsx y
+// calcularEstadisticasPorMercado en utils/estadisticas.js). Devuelve null
+// si no coincide con nada del catálogo (mercado escrito a mano en "Otro
+// mercado", o de antes de tener este desplegable).
+export function buscarMercadoPorTexto(apuestaTexto, equipos) {
+  if (!apuestaTexto) return null;
+  for (const categoria of CATEGORIAS_MERCADO) {
+    for (const opcion of categoria.opciones) {
+      if (opcion.texto(equipos) === apuestaTexto) {
+        return { categoriaId: categoria.id, opcionId: opcion.id };
+      }
+    }
+  }
+  return null;
+}
+
 export const CATEGORIAS_MERCADO = [
   {
     id: "resultado",

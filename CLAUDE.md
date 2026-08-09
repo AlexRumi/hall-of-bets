@@ -1159,6 +1159,80 @@ confirmando cada una antes de la siguiente.
   el que llevaba la cuota real del grupo (el primero), esa cuota pasa al
   que quede primero, para no perder el valor combinado del resto.
 
+## Tres funcionalidades pedidas (estadísticas por mercado, búsqueda, ranking por casa)
+
+Petición directa de una tanda de 3 funcionalidades, a abordar en fases
+separadas, probando cada una antes de pasar a la siguiente.
+
+- **Fase A — Estadísticas por tipo de mercado** — ✅ hecho. Nueva
+  `calcularEstadisticasPorMercado(apuestas)` en `utils/estadisticas.js`
+  (mismo patrón que `calcularDesglosePorCasa`/`calcularDesglosePorDeporte`:
+  agrupa y reutiliza `calcularEstadisticas` para cada grupo), agrupando por
+  categoría de `CATEGORIAS_MERCADO` (`utils/mercados.js`: Resultado, Goles,
+  Hándicap asiático...). Con varios mercados o partidos en la misma
+  apuesta no tiene sentido repartir su stake/beneficio entre categorías,
+  así que se atribuye entera a la categoría de la selección "líder": la
+  primera del primer partido (`agruparSeleccionesPorPartido(...)[0]`,
+  mismo criterio que ya usa esa función para la cuota real del bloque). Si
+  el texto de esa selección no coincide con ningún mercado del catálogo
+  (escrito a mano en "Otro mercado", o de apuestas de antes del
+  desplegable), cuenta como "Otro mercado".
+  - Nueva `buscarMercadoPorTexto(apuestaTexto, equipos)` en
+    `utils/mercados.js`: dado el texto ya guardado de una selección y los
+    equipos del partido, busca en el catálogo qué categoría+opción genera
+    ese mismo texto. Se extrajo de `seleccionInicial` en
+    `SelectorMercado.jsx` (que hacía exactamente esto para preseleccionar
+    el mercado al editar una apuesta) para no duplicar la misma lógica.
+  - En `EstadisticasDashboard.jsx`: un gráfico más "ROI por tipo de
+    mercado" (reutiliza `GraficoBarraDivergente.jsx` tal cual, mismo
+    patrón que "ROI por deporte"/"ROI por casa" — así ya usa
+    `coloresGrafico.js` sin tocar nada) y, debajo, una tabla nueva
+    (`TablaEstadisticasMercado.jsx`, mismo estilo de tabla que ya usaba
+    `CuotasDialog.jsx`: filas alternas con `bg-paperDim`) con las columnas
+    que pedía el usuario que el gráfico no puede enseñar a la vez
+    (Apuestas, Stake, Beneficio, Yield, Acierto) — un gráfico de barras
+    solo puede representar un número por categoría (aquí, el yield), así
+    que hacía falta la tabla para el resto.
+  - Se preguntó por reorganizar la entrada a Estadísticas (elegir "Casas"
+    vs "Mercados" al entrar, en vez de todo en una sola página larga) —
+    de momento se dejó como está: el patrón ya existente de la página
+    (pastillas de casa + "Rango de fechas" arriba, y debajo todos los
+    desgloses uno tras otro en scroll continuo — deporte, casa, cuota, y
+    ahora mercado) ya convive bien con varios desgloses a la vez sin
+    obligar a elegir uno. Si la página se nota demasiado larga una vez
+    probada esta fase, valorar una navegación por pestañas en una fase
+    aparte.
+  - **Ajuste real tras probarlo**: `calcularEstadisticasPorMercado`
+    atribuye cada apuesta entera a la categoría de su selección líder — el
+    usuario detectó que esto esconde los mercados "secundarios" de una
+    combinada o bet builder (p.ej. una apuesta con Resultado + Goles de un
+    equipo + Córners contaba entera como "Resultado Final", sin rastro de
+    los otros dos). Se decidió entre 3 opciones (dejarlo así; que la
+    apuesta cuente en todas sus categorías, con el problema de que sumar
+    la columna Beneficio ya no daría el beneficio real; o una tabla nueva
+    de frecuencia sin dinero) y se eligió la tercera, para no falsear los
+    números de dinero. Nueva `calcularFrecuenciaMercados(apuestas)` en
+    `utils/estadisticas.js`: cuenta CADA selección de CADA apuesta por su
+    categoría (no solo la líder), sin ningún dato de dinero — mostrada en
+    `TablaFrecuenciaMercados.jsx` (barras horizontales simples, sin
+    recharts ni `coloresGrafico.js`: son solo conteos, no hay
+    positivo/negativo que colorear) debajo de la tabla de dinero en
+    `EstadisticasDashboard.jsx`. La tabla de dinero
+    (`TablaEstadisticasMercado.jsx`) no se toca, sigue siendo exacta.
+  - **Filtro de bankroll en Estadísticas**: al probarlo con datos reales,
+    el usuario notó que las apuestas de Entretenimiento (más
+    experimentales, con varios mercados en la misma apuesta tipo bet
+    builder) ensuciaban el desglose por mercado de sus apuestas "de
+    verdad". `EstadisticasDashboard.jsx` gana una fila de pastillas nueva
+    (Apuestas / Entretenimiento / Todas, mismo estilo que las pastillas de
+    casa) que filtra `apuestas` antes de cualquier otro cálculo — por
+    defecto en "Apuestas". No filtra `movimientos`: los movimientos son de
+    la casa entera (ingresos/retiradas), sin columna `categoria` — Apuestas
+    y Entretenimiento comparten el mismo dinero de cada casa, así que
+    "Bankroll"/"ROI" del panel de KPIs y "ROI por casa" siguen combinando
+    las dos categorías siempre, sea cual sea la pastilla elegida (mismo
+    comportamiento que ya tenía el filtro de casa con estos dos KPIs).
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
