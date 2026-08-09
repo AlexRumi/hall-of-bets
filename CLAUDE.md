@@ -1393,6 +1393,24 @@ separadas, probando cada una antes de pasar a la siguiente.
   queda libre debajo de la cabecera, en vez de desbordar por abajo de la
   pantalla.
 
+- **Cash Out en la misma fila, importe directo sin diálogo** (petición
+  directa, misma sesión). En `ApuestaItem.jsx`, los botones de resultado
+  de una apuesta pendiente pasan de 3+1 (Ganada/Perdida/Nula en una fila,
+  Cash Out suelto debajo abriendo `CashOutDialog.jsx`) a una única fila de
+  4 (`grid-cols-4`) con los nombres acortados ("Apuesta Ganada" → "Ganada",
+  etc., para que quepan cuatro sin apretarse). Pulsar "Cash Out" no abre
+  ya un modal aparte: revela un campo de importe + botón "Confirmar" justo
+  debajo, en la propia tarjeta (mismo patrón que ya usaba el diálogo,
+  trasladado a la tarjeta) — un segundo toque en "Cash Out" lo cierra sin
+  guardar. `CashOutDialog.jsx` se borra por quedarse sin ningún punto de
+  entrada.
+  De paso, confirmado con el usuario que ya funcionaba sin tocar nada: si
+  se marca un partido de una combinada como Nula con el mini-selector, la
+  Cuota Total de arriba ya se recalculaba sola (`calcularCuotaTotal`
+  ignora en el producto las selecciones `resultado: "nula"`) — llevaba
+  implementado desde la fase "Detalle de combinada agrupado por partido,
+  y resultado por partido", más arriba en este documento.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

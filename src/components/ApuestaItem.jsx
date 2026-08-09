@@ -3,7 +3,6 @@ import { X, Pencil, Trash2 } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
-import CashOutDialog from "./CashOutDialog";
 import FormularioApuesta from "./FormularioApuesta";
 
 const ETIQUETAS_RESULTADO = {
@@ -64,6 +63,7 @@ export default function ApuestaItem({
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
+  const [importeCashOut, setImporteCashOut] = useState("");
   const [editando, setEditando] = useState(false);
   const esPendiente = apuesta.resultado === "pendiente";
   const cuotaTotal = calcularCuotaTotal(apuesta);
@@ -87,6 +87,18 @@ export default function ApuestaItem({
     : baseGanancia;
   const valorResumen = esPendiente ? gananciaPotencial : beneficio;
   const colorResumen = valorResumen > 0 ? "text-win" : valorResumen < 0 ? "text-lose" : "text-ink";
+
+  function alternarCashOut() {
+    setMostrandoCashOut((actual) => !actual);
+    setImporteCashOut("");
+  }
+
+  function confirmarCashOut() {
+    if (!importeCashOut || Number(importeCashOut) < 0) return;
+    onMarcarResultado(apuesta.id, "cashout", Number(importeCashOut));
+    setImporteCashOut("");
+    setMostrandoCashOut(false);
+  }
 
   if (editando) {
     return (
@@ -317,20 +329,20 @@ export default function ApuestaItem({
 
       {esPendiente && (
         <div className="p-4 sm:p-5 border-t border-line space-y-2">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <button
               type="button"
               onClick={() => onMarcarResultado(apuesta.id, "ganada")}
               className="py-2.5 rounded-lg text-sm font-bold border border-line text-win hover:border-win transition-colors"
             >
-              Apuesta Ganada
+              Ganada
             </button>
             <button
               type="button"
               onClick={() => onMarcarResultado(apuesta.id, "perdida")}
               className="py-2.5 rounded-lg text-sm font-bold border border-line text-lose hover:border-lose transition-colors"
             >
-              Apuesta Perdida
+              Perdida
             </button>
             <button
               type="button"
@@ -339,15 +351,45 @@ export default function ApuestaItem({
             >
               Nula
             </button>
+            <button
+              type="button"
+              onClick={alternarCashOut}
+              className={`py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+                mostrandoCashOut
+                  ? "bg-cashout text-paper border-cashout"
+                  : "border-line text-cashout hover:border-cashout"
+              }`}
+            >
+              Cash Out
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMostrandoCashOut(true)}
-            className="w-full py-2 rounded-lg text-sm font-semibold bg-gold text-felt hover:bg-goldDark transition-colors"
-          >
-            Cash Out
-          </button>
+          {/* Importe directo en la propia tarjeta, en vez de un diálogo
+              aparte (CashOutDialog.jsx, eliminado): la casa no calcula el
+              cash out con la cuota, así que hace falta preguntarlo, pero no
+              hacía falta un modal para un solo campo. */}
+          {mostrandoCashOut && (
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={importeCashOut}
+                onChange={(e) => setImporteCashOut(e.target.value)}
+                placeholder="Importe recibido (€)"
+                autoFocus
+                className="flex-1 border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
+              />
+              <button
+                type="button"
+                onClick={confirmarCashOut}
+                disabled={!importeCashOut || Number(importeCashOut) < 0}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-cashout text-paper hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                Confirmar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -360,15 +402,6 @@ export default function ApuestaItem({
           setConfirmandoBorrado(false);
         }}
         onCancelar={() => setConfirmandoBorrado(false)}
-      />
-
-      <CashOutDialog
-        abierto={mostrandoCashOut}
-        onConfirmar={(importe) => {
-          onMarcarResultado(apuesta.id, "cashout", importe);
-          setMostrandoCashOut(false);
-        }}
-        onCancelar={() => setMostrandoCashOut(false)}
       />
     </div>
   );
