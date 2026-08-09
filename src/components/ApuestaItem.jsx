@@ -248,7 +248,7 @@ export default function ApuestaItem({
           return (
             <div key={grupo.indiceLider}>
               {indice > 0 && <div className="h-px bg-line" />}
-              <div className="relative group overflow-hidden px-4 sm:px-5 py-3">
+              <div className="relative overflow-hidden px-4 sm:px-5 py-3">
                 <div className="flex items-start gap-2.5">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${COLOR_PUNTO[colorResultado]}`}
@@ -314,10 +314,11 @@ export default function ApuestaItem({
                     usuario): tinte de color + etiqueta grande, con
                     pointer-events-none para que los botones de arriba
                     (Ganada/Perdida/Nula) se sigan pudiendo pulsar a través
-                    del sello. Al pasar el ratón, el texto desaparece, se
-                    quita el desenfoque y el tinte baja de opacidad — deja
-                    leer el contenido sin perder la marca de color. Solo en
-                    partidos ya resueltos; "Pendiente" no lleva sello.
+                    del sello. Al pulsar el ojo de abajo, el texto
+                    desaparece, se quita el desenfoque y el tinte baja de
+                    opacidad — deja leer el contenido sin perder la marca
+                    de color. Solo en partidos ya resueltos; "Pendiente" no
+                    lleva sello.
                     Desenfoque y tinte van en dos capas separadas (no una
                     sola con blur+opacity a la vez): con las dos cosas en
                     el mismo elemento, ese 10% de opacidad restante deja
@@ -330,29 +331,28 @@ export default function ApuestaItem({
                     los lados y arriba/abajo para que el sello se vea como
                     una tarjeta redondeada flotando dentro de la fila, no
                     como un bloque a sangre completa de borde a borde.
-                    "revelado" (el ojo de la cabecera) fuerza el mismo
-                    aspecto que el hover, sin depender de él — en móvil no
-                    hay hover de verdad, y el ":hover" que simulan algunos
-                    navegadores al tocar se queda pegado de forma
-                    impredecible. Con "revelado" en true se aplican los
-                    mismos estilos directamente; en false, el hover de
-                    escritorio se conserva como atajo rápido de todas
-                    formas. */}
+                    Se quitó el "group-hover" que revelaba el sello solo al
+                    pasar el ratón (bug real: al tocar el mini-selector
+                    Ganada/Perdida/Nula de arriba, que vive en el mismo
+                    contenedor, el navegador simulaba un ":hover" pegado
+                    que revelaba el sello sin haber tocado el ojo) — ahora
+                    "revelado" (el ojo de abajo) es la ÚNICA forma de
+                    revelar, en cualquier dispositivo. */}
                 {colorResultado !== "pendiente" && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
                       className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] transition-[backdrop-filter] duration-200 ${
-                        revelado ? "backdrop-blur-none" : "group-hover:backdrop-blur-none"
+                        revelado ? "backdrop-blur-none" : ""
                       }`}
                     />
                     <div
                       className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl transition-opacity duration-200 ${TINTE_SELLO[colorResultado]} ${
-                        revelado ? "opacity-[0.48]" : "opacity-90 group-hover:opacity-[0.48]"
+                        revelado ? "opacity-[0.48]" : "opacity-90"
                       }`}
                     />
                     <div
                       className={`relative flex flex-col items-center gap-1 transition-opacity duration-200 px-4 text-center ${
-                        revelado ? "opacity-0" : "group-hover:opacity-0"
+                        revelado ? "opacity-0" : ""
                       }`}
                     >
                       <span className="font-display font-extrabold text-2xl tracking-wide text-paper">

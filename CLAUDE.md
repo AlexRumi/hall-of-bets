@@ -1449,6 +1449,16 @@ separadas, probando cada una antes de pasar a la siguiente.
   del borde recto. Sube a `top-4 right-5` (sin variante `sm:` aparte, ya
   vale para los dos tamaños) para quedar claramente dentro de la curva,
   no pegado a ella.
+  Bug real detectado al usarlo: marcar un partido como Ganada/Perdida/Nula
+  con el mini-selector (que vive dentro del mismo contenedor `relative
+  group` que el sello) revelaba el sello sin haber tocado el ojo. Causa:
+  el sello todavía llevaba clases `group-hover:` de refuerzo "por si acaso
+  en escritorio" — en móvil, tocar el mini-selector disparaba un ":hover"
+  simulado por el navegador sobre ese contenedor, que activaba esas
+  mismas clases. Se quitan todas las `group-hover:` (y el propio `group`
+  del contenedor, ya sin ningún punto de entrada): "revelado" —el ojo—
+  pasa a ser la ÚNICA forma de revelar el sello, en cualquier
+  dispositivo, sin ningún atajo de hover que pueda dispararse solo.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
