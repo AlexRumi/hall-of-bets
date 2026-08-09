@@ -48,6 +48,10 @@ export function agruparSeleccionesPorPartido(selecciones) {
         pais: seleccion.pais ?? null,
         competicion: seleccion.competicion ?? null,
         partidoId: seleccion.partidoId ?? null,
+        // Ids de equipo (Fase "Jugador"): solo presentes si la selección
+        // se creó eligiendo un partido del buscador después de esa fase.
+        equipoLocalId: seleccion.equipoLocalId ?? null,
+        equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
         cuota: Number(seleccion.cuota),
         resultado: seleccion.resultado ?? "pendiente",
         selecciones: [seleccion],

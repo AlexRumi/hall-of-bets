@@ -1654,6 +1654,231 @@ separadas, probando cada una antes de pasar a la siguiente.
     ahora que ya se ven en su sección correspondiente; "Bankroll total"
     (combinado) se queda, es el único sitio que lo enseña.
 
+- **Ampliación grande del catálogo de mercados, y 10 ligas nuevas**
+  (petición directa, misma sesión). `utils/mercados.js` gana 9 categorías
+  nuevas en `CATEGORIAS_MERCADO` (mismo patrón que las ya existentes:
+  funciones generadoras + líneas Over/Under donde aplica):
+  - **Tarjetas** (total 0.5-6.5, por equipo — mismas líneas que el total,
+    igual que ya hacía "Goles por equipo" —, "Primera tarjeta: Local/
+    Visitante", "Ambos equipos reciben tarjeta: Sí/No").
+  - **Córners por equipo** (Local/Visitante, mismas líneas que "Córners"
+    ya existente, más por mitad 1ª/2ª — líneas propias más cortas,
+    `LINEAS_CORNERS_MEDIO`, interpretación del pedido igual que ya pasó
+    con las líneas del total).
+  - **Goles por equipo por mitad** (Local/Visitante, 1ª/2ª mitad,
+    `LINEAS_GOLES_MEDIO`) — categoría separada de "Goles por equipo"
+    (partido completo) a propósito. A diferencia de
+    `opcionesGolesMedioTiempo` (que no menciona la mitad en el texto, sin
+    ambigüedad porque no compite por nombre de equipo con nada más), aquí
+    el texto sí dice "1ª mitad"/"2ª mitad" explícitamente — si no,
+    "Goles Madrid: Over 1.5" del partido completo y de una mitad
+    generarían el mismo texto y no habría forma de distinguirlos al
+    editar (mismo criterio que ya usaba "Ambos equipos marcan en la 1ª
+    mitad").
+  - **Resultado exacto**: las 25 combinaciones de 0-0 a 4-4, más "Otro
+    resultado" para cualquier marcador fuera de ese rango.
+  - **Equipo — mayor número**: de córners, tarjetas, remates y remates a
+    puerta, cada uno con Local/Visitante/Igualados.
+  - **Mitad con más goles**: 1ª mitad/2ª mitad/Igualadas.
+  - **Margen de victoria**: Local o Visitante gana por 2+/3+/4+/5+ goles.
+  - **Especiales**: gana una mitad, gana las dos mitades, anota en una
+    mitad, anota en las dos mitades, gana a cero, gana remontando — cada
+    uno con Local/Visitante.
+  - **Jugador**: a diferencia de todo lo anterior, el texto final no se
+    puede generar solo con los equipos del partido — hace falta también
+    el jugador, elegido en un desplegable propio alimentado por la API
+    (ver más abajo). Los 12 mercados (Anota un gol, Anota 2+ goles, Da una
+    asistencia, Remates a puerta +0.5/+1.5/+2.5, Remates totales +0.5/
+    +1.5/+2.5, Falta cometida, Falta recibida, Recibe tarjeta) se guardan
+    como plantillas (`PLANTILLAS_JUGADOR`, con un `sufijo` de texto en vez
+    de un texto completo) sin ningún nombre de jugador hardcodeado. La
+    categoría lleva una marca `requiereJugador: true` que
+    `SelectorMercado.jsx` usa para pintar una UI especial en vez de la
+    lista de botones normal. `interpretarMercadoJugador(texto)` hace el
+    camino inverso (separa jugador + plantilla a partir del texto ya
+    guardado, comprobando el sufijo) para poder preseleccionar los dos
+    campos al editar una apuesta ya creada con este tipo de mercado — el
+    `buscarMercadoPorTexto` genérico nunca los reconocería, porque no
+    puede generar ese texto sin saber el jugador de antemano.
+  - **Desplegable de jugador y su plumbing de datos** (la parte más
+    grande de esta fase): igual que api/partidos.js, la key de
+    API-Football es secreta, así que hizo falta una segunda Serverless
+    Function, `api/jugadores.js` (`GET /players/squads?team=ID`), y un
+    hook `usePlantilla.js` (mismo patrón que `usePartidos.js`, pero
+    cacheado por equipo en vez de por fecha, sin lógica de "fuera de
+    rango" — una plantilla apenas cambia entre visitas, así que no hace
+    falta refrescarla a diario). Para poder llamar a ese endpoint hacía
+    falta el id numérico de cada equipo, que la app no guardaba en
+    ningún sitio (solo nombres, vía el texto de "Evento") — `api/
+    partidos.js` ahora añade `equipoLocalId`/`equipoVisitanteId` a cada
+    partido devuelto (ya venían en la respuesta de API-Football, no
+    costó ninguna llamada extra), y esos dos ids se guardan igual que ya
+    se guardaba `partidoId`: `ConstructorPartido.jsx` los lleva en su
+    estado `partido`, `FormularioApuesta.jsx` los lleva en cada
+    `bloque` y los guarda en cada selección al enviar, y
+    `agruparSeleccionesPorPartido` (`utils/apuestas.js`) los reconstruye
+    al editar. Las apuestas de antes de esta fase, o con el evento
+    escrito a mano, no tienen estos ids — en ese caso
+    `SelectorMercado.jsx` cae a un campo de texto libre para el nombre
+    del jugador en vez del desplegable (nunca bloquea, mismo criterio que
+    el resto del buscador de partidos). Cuando sí hay plantilla, el
+    desplegable (`SelectorDesplegable.jsx` reutilizado, con un grupo por
+    equipo) alimenta un único campo de texto (`jugadorTexto`) que se
+    combina con la plantilla elegida al pulsar uno de los 12 botones de
+    mercado — deshabilitados hasta que hay un jugador elegido.
+  - **Ligas nuevas conectadas al buscador de partidos**: Austria
+    (Bundesliga austríaca, id 218), Dinamarca (Superliga, id 119), Suiza
+    (Super League, id 207), Turquía (Süper Lig, id 203), Noruega
+    (Eliteserien, id 103), Suecia (Allsvenskan, id 113), Argentina (Liga
+    Profesional, id 128), Brasil (Brasileirão Série A, id 71), México
+    (Liga MX, id 262) y Estados Unidos (MLS, id 253) — de 22 a 32
+    competiciones en `api/partidos.js` (`LIGAS`) y `utils/
+    ligasConectadas.js` (`PAISES_CONECTADOS`). Verificadas una a una por
+    curl directo contra la API (no en el dashboard web, más rápido y
+    igual de fiable) el 2026-08-10: primero se confirmó el id numérico
+    correcto de cada una (`GET /leagues?country=X`, comparando el nombre
+    exacto de la competición, no solo el país — Argentina y Brasil tienen
+    decenas de competiciones menores con nombres parecidos). Después se
+    comprobó cobertura real en el plan gratuito con el mismo patrón de
+    consulta que usa la app de verdad (`GET /fixtures?date=X`, no
+    `league=`/`season=`/`next=`, que tienen restricciones de plan
+    totalmente distintas y no representan lo que hace `api/partidos.js`):
+    8 de las 10 aparecieron directamente en los 3 días permitidos por el
+    plan gratuito alrededor de esa fecha; Turquía y México no tenían
+    partido en ninguno de esos 3 días concretos (no una restricción de
+    plan), así que se confirmaron aparte con una consulta histórica
+    dentro del rango que sí permite el plan gratuito (`season=2023`, con
+    resultados reales para las dos). Las 10 pasaron la comprobación, así
+    que no hubo ninguna que dejar fuera. Los dos nuevos grupos del
+    desplegable de País en `BuscadorEvento.jsx` — "Resto de Europa" (los
+    6 países europeos) y "Sudamérica y Norteamérica" (los 4 restantes) —
+    evitan agrandar "Grandes ligas" o el "Europa" ya existente
+    (Portugal/Holanda/Bélgica), con sus arrays de agrupación
+    (`PAISES_GRUPO_RESTO_EUROPA`, `PAISES_GRUPO_AMERICA`) en `utils/
+    ligasConectadas.js` junto al `PAISES_GRUPO_EUROPA` que ya había.
+  - **Pendiente**: probar el buscador de partidos con `vercel dev` (no
+    `npm run dev`, que no sirve las Serverless Functions) para confirmar
+    en local que el desplegable de jugador trae datos reales de al menos
+    un partido conectado, antes de dar la fase por probada.
+  - **Orden de las categorías** (petición directa, misma sesión): el
+    orden de `CATEGORIAS_MERCADO` en `utils/mercados.js` (que es el orden
+    del acordeón en `SelectorMercado.jsx`) pasa a ser el pedido por el
+    usuario, de lo más general a lo más específico — Resultado Final,
+    Resultado Exacto, Margen de victoria, Resultado al descanso,
+    Resultado Descanso/Final, Jugador, Goles, Goles 1ª mitad, Goles 2ª
+    mitad, Goles por equipo, Goles por equipo por mitad, Mitad con más
+    goles, Hándicap asiático, Córners, Córners por equipo, Tarjetas,
+    Equipo — mayor número, Especiales. "Otro mercado" no forma parte de
+    este array (es el botón fijo al final del desplegable), así que no
+    hizo falta tocarlo.
+
+- **Rediseño del selector de mercado y del buscador de partido: buscador +
+  pestañas, cascada progresiva, y colapso del bloque superior del
+  formulario** (petición directa, misma sesión, a partir de tres maquetas
+  HTML interactivas de referencia que trajo el usuario). Los dos
+  desplegables propios que ya existían (`SelectorMercado.jsx` con acordeón
+  de categorías, `BuscadorEvento.jsx` con dos `SelectorDesplegable` para
+  País/Competición) se sustituyen por un patrón nuevo, compartido entre
+  los dos: buscador de texto libre arriba + pestañas horizontales con
+  scroll debajo. Los dos dejan de ser un desplegable que se abre/cierra
+  (sin `abierto`, sin "click fuera cierra", sin `usePosicionDesplegable`)
+  y pasan a ser un panel siempre visible en línea — más simple de usar, y
+  tiene sentido ahora que el bloque superior del formulario ya no ocupa
+  sitio de forma permanente (ver más abajo).
+  - **`TabsDesplazables.jsx`** (nuevo, compartido): fila de pestañas con
+    scroll horizontal, desvanecido sutil (`bg-gradient-to-r`) en el borde
+    derecho, y flechas ‹ › que solo se pintan con ratón de verdad. Como
+    Tailwind no tiene un variante nativo para `@media (hover:hover) and
+    (pointer:fine)`, se centralizó en dos clases CSS en `index.css`
+    (`.mq-solo-raton`, `.mq-oculto-raton`) en vez de repetir el variante
+    arbitrario `[@media(hover:hover)_and_(pointer:fine)]:` en cada sitio
+    — las usan tanto las flechas como la bandera de país (ver abajo).
+    `colorActivo` ("felt" por defecto, "gold" para mercado) para que la
+    pestaña activa combine con el resto de la pantalla donde se use.
+  - **`SelectorMercado.jsx`**: buscador arriba (filtra las opciones de
+    TODAS las categorías a la vez, agrupadas con su cabecera — salvo
+    "Jugador", que no tiene texto real sin elegir antes un jugador) +
+    `TabsDesplazables` con una pestaña por categoría más "Otro mercado" al
+    final. Sin texto de búsqueda, la pestaña activa decide qué lista de
+    opciones se ve (filas compactas con check dorado a la derecha si están
+    elegidas). La categoría "Jugador" sigue teniendo su UI especial
+    (desplegable de jugador + los 12 mercados) dentro de su propia
+    pestaña, sin cambios de fondo respecto a la fase anterior. Encima de
+    todo, si ya hay un mercado elegido, se ve como una píldora dorada
+    (antes era el texto del botón cerrado del desplegable).
+  - **`BuscadorEvento.jsx`**: incluso más simplificado, porque aquí el
+    buscador de texto libre ES el propio campo "Evento" (no una copia
+    aparte) — escribir algo busca en TODOS los partidos conectados de la
+    fecha (de cualquier país/competición) y agrupa por competición, ignora
+    a propósito qué pestaña de país esté activa (igual que hace la
+    maqueta de referencia). Sin texto, aparece una cascada estricta: país
+    (pestañas, con `BANDERAS_PAIS` nuevo en `utils/ligasConectadas.js` —
+    la bandera solo se ve en táctil, `.mq-oculto-raton`, porque algunas
+    versiones de Windows no renderizan bien los emoji de bandera
+    compuestos) → competición (chips, solo si ese país tiene datos
+    conectados) → partidos de esa competición — cada bloque solo se pinta
+    cuando el paso anterior ya está completo, sin ningún texto de relleno
+    de por medio. Elegir un país reinicia competición Y el texto ya
+    escrito (`onCambiar("")`), para no dejar una combinación a medias —
+    mismo comportamiento que la maqueta. "Otras ligas" se queda sin
+    cascada (no hay datos conectados): el buscador de arriba, ya con
+    placeholder de escribir a mano, es lo único que hace falta. Con esto,
+    los dos `<select>` de País/Competición desaparecen del todo, así como
+    los grupos `PAISES_GRUPO_EUROPA`/`PAISES_GRUPO_RESTO_EUROPA`/
+    `PAISES_GRUPO_AMERICA` de `ligasConectadas.js` (sin uso ya: las
+    pestañas van en una sola fila plana, sin cabeceras de grupo).
+  - **`FormularioApuesta.jsx`**: el bloque superior (Fecha, Casa,
+    Cantidad, Deporte, Tipo de fondos, Apuesta asegurada, Aumento de
+    cuota) gana un botón "Confirmar →" al final (deshabilitado hasta que
+    haya casa y cantidad), que lo colapsa en una tira resumen ("09/08/2026
+    · Bet365 · 10,00€ · Real · Fútbol") con un "✎ Editar" para reabrirlo.
+    Dos estados separados a propósito: `bloqueSuperiorAbierto` (si se ve
+    el formulario completo o la tira) y `confirmado` (si la sección
+    "Selecciones" ya está desbloqueada) — reabrir con "✎ Editar" solo
+    toca el primero, así que las selecciones ya añadidas no desaparecen
+    mientras se corrige un dato de arriba. Antes de confirmar, en el
+    sitio de "Selecciones" se ve un aviso ("Confirma los datos de arriba
+    para empezar a añadir partidos") en vez de `ConstructorPartido` — al
+    editar una apuesta ya existente, `confirmado` arranca en `true`
+    (datos ya completos, no tiene sentido pedir confirmarlos otra vez) y
+    el bloque superior arranca colapsado.
+  - **Bug real encontrado en revisión de código, antes de compilar**:
+    `puedeConfirmar` (el cálculo que activa el botón "Confirmar") usaba
+    `stakeNumero` en la línea donde se declaraba el nuevo estado, pero
+    `stakeNumero` no se declaraba hasta más abajo en el componente —
+    error de "temporal dead zone" de JavaScript (acceder a un `const`
+    antes de su propia declaración), que `npx vite build` NO detecta (es
+    un fallo en tiempo de ejecución, no de compilación) pero sí habría
+    roto la página en el navegador. Se corrigió subiendo la declaración
+    de `stakeNumero` a justo después de los `useState`, antes de
+    calcularse `puedeConfirmar`.
+  - **Bug real encontrado por el usuario al probarlo**: al elegir un
+    mercado o un partido, el panel entero (buscador + pestañas + lista)
+    se quedaba abierto — no había ninguna señal de que la elección se
+    hubiera aplicado, y ocupaba sitio de sobra. Confirmado con el usuario
+    (con `AskUserQuestion`) que el arreglo debía ser el mismo patrón que
+    el bloque superior de `FormularioApuesta.jsx` recién hecho: colapsar
+    tras elegir. `SelectorMercado.jsx` y `BuscadorEvento.jsx` ganan un
+    estado `expandido` (arranca en `true` si no había valor guardado,
+    `false` si ya lo había, p.ej. al editar una selección ya creada);
+    elegir una opción de la lista (o un partido) lo pone en `false` y
+    colapsa el panel a una píldora dorada con lo elegido + un enlace
+    "Cambiar mercado"/"Cambiar partido" que lo vuelve a abrir — mismo
+    lenguaje visual que la tira resumen del bloque superior ("✎ Editar").
+    Los dos campos de texto libre que no pasan por una lista clicable
+    ("Otro mercado" en `SelectorMercado.jsx`, el modo "Otras ligas" en
+    `BuscadorEvento.jsx`) no se colapsan solos al escribir (no tendría
+    sentido cerrar el campo en cada tecla): ganan un botón "Listo"
+    (deshabilitado hasta que hay texto) para colapsar a mano cuando se
+    termina de escribir.
+  - **Pendiente**: probar de verdad en el navegador (con `vercel dev`,
+    para que el buscador de partidos y el de jugador tengan datos reales)
+    — solo se pudo comprobar que `npx vite build` compila limpio y que
+    los módulos se transforman sin error en el servidor de desarrollo de
+    Vite; no hay herramienta de navegador en esta sesión para clicar la
+    cascada país→competición→partido, las pestañas de mercado, ni el
+    colapso/reapertura de ninguno de los tres paneles de verdad.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

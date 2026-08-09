@@ -21,10 +21,41 @@ export const PAISES_CONECTADOS = [
     pais: "Competición Europea",
     competiciones: ["Champions League", "Europa League", "Conference League"],
   },
+  { pais: "Austria", competiciones: ["Bundesliga austríaca"] },
+  { pais: "Dinamarca", competiciones: ["Superliga"] },
+  { pais: "Suiza", competiciones: ["Super League"] },
+  { pais: "Turquía", competiciones: ["Süper Lig"] },
+  { pais: "Noruega", competiciones: ["Eliteserien"] },
+  { pais: "Suecia", competiciones: ["Allsvenskan"] },
+  { pais: "Argentina", competiciones: ["Liga Profesional"] },
+  { pais: "Brasil", competiciones: ["Brasileirão Série A"] },
+  { pais: "México", competiciones: ["Liga MX"] },
+  { pais: "Estados Unidos", competiciones: ["MLS"] },
 ];
 
-// Solo para agrupar visualmente el desplegable de País en
-// BuscadorEvento.jsx (Portugal/Holanda/Bélgica bajo un mismo grupo
-// "Europa"); no afecta al filtrado en sí, que sigue comparando por el
-// nombre de país normal de PAISES_CONECTADOS.
-export const PAISES_GRUPO_EUROPA = ["Portugal", "Holanda", "Bélgica"];
+// Emoji de bandera por país, para las pestañas de BuscadorEvento.jsx
+// (mismo orden de PAISES_CONECTADOS). Solo se pintan en dispositivos
+// táctiles (ver .mq-oculto-raton en index.css) — con ratón se ocultan,
+// porque algunas versiones de Windows no renderizan bien los emoji de
+// bandera compuestos. "Otras ligas" no es un país real, no lleva bandera.
+export const BANDERAS_PAIS = {
+  España: "🇪🇸",
+  "Reino Unido": "🇬🇧",
+  Alemania: "🇩🇪",
+  Italia: "🇮🇹",
+  Francia: "🇫🇷",
+  Portugal: "🇵🇹",
+  Holanda: "🇳🇱",
+  Bélgica: "🇧🇪",
+  "Competición Europea": "🇪🇺",
+  Austria: "🇦🇹",
+  Dinamarca: "🇩🇰",
+  Suiza: "🇨🇭",
+  Turquía: "🇹🇷",
+  Noruega: "🇳🇴",
+  Suecia: "🇸🇪",
+  Argentina: "🇦🇷",
+  Brasil: "🇧🇷",
+  México: "🇲🇽",
+  "Estados Unidos": "🇺🇸",
+};

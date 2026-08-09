@@ -21,6 +21,13 @@ const LINEAS_GOLES_MEDIO = [0.5, 1.5, 2.5, 3.5];
 // incompleto/repetido en esta parte): líneas de 6.5 a 14.5, mismo patrón
 // que goles — fácil de ajustar el rango si no era justo esto.
 const LINEAS_CORNERS = [6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5];
+// Interpretación de "por mitad" para córners de un equipo (el pedido no
+// daba un rango): la mitad de líneas del total ya existente, sin llegar a
+// las líneas altas (14.5 córners de un equipo en 45 minutos no tiene
+// sentido) — fácil de ajustar si no es justo esto.
+const LINEAS_CORNERS_MEDIO = [1.5, 2.5, 3.5, 4.5, 5.5];
+// Tarjetas: mismo patrón que goles (Over/Under), líneas 0.5 a 6.5.
+const LINEAS_TARJETAS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 
 function opcionesGolesTotal() {
   return [
@@ -56,6 +63,149 @@ function opcionesCorners() {
     ...LINEAS_CORNERS.map((l) => ({ id: `corners-over-${l}`, texto: () => `Over ${l} córners` })),
     ...LINEAS_CORNERS.map((l) => ({ id: `corners-under-${l}`, texto: () => `Under ${l} córners` })),
   ];
+}
+
+// Mismo patrón que opcionesGolesEquipo: reutiliza las líneas del total
+// (LINEAS_CORNERS), no un rango propio más corto.
+function opcionesCornersEquipo(clave) {
+  return [
+    ...LINEAS_CORNERS.map((l) => ({
+      id: `corners-${clave}-mas-${l}`,
+      texto: (eq) => `Córners ${eq[clave]}: +${l} córners`,
+    })),
+    ...LINEAS_CORNERS.map((l) => ({
+      id: `corners-${clave}-menos-${l}`,
+      texto: (eq) => `Córners ${eq[clave]}: -${l} córners`,
+    })),
+  ];
+}
+
+function opcionesCornersEquipoMedioTiempo(clave, prefijoId, etiquetaMitad) {
+  return [
+    ...LINEAS_CORNERS_MEDIO.map((l) => ({
+      id: `corners-${clave}-${prefijoId}-over-${l}`,
+      texto: (eq) => `Córners ${eq[clave]} ${etiquetaMitad}: Over ${l}`,
+    })),
+    ...LINEAS_CORNERS_MEDIO.map((l) => ({
+      id: `corners-${clave}-${prefijoId}-under-${l}`,
+      texto: (eq) => `Córners ${eq[clave]} ${etiquetaMitad}: Under ${l}`,
+    })),
+  ];
+}
+
+function opcionesTarjetasTotal() {
+  return [
+    ...LINEAS_TARJETAS.map((l) => ({ id: `tarjetas-over-${l}`, texto: () => `Over ${l} tarjetas` })),
+    ...LINEAS_TARJETAS.map((l) => ({ id: `tarjetas-under-${l}`, texto: () => `Under ${l} tarjetas` })),
+  ];
+}
+
+// Mismo patrón que opcionesGolesEquipo: reutiliza las líneas del total
+// (LINEAS_TARJETAS), no un rango propio más corto.
+function opcionesTarjetasEquipo(clave) {
+  return [
+    ...LINEAS_TARJETAS.map((l) => ({
+      id: `tarjetas-${clave}-mas-${l}`,
+      texto: (eq) => `Tarjetas ${eq[clave]}: +${l} tarjetas`,
+    })),
+    ...LINEAS_TARJETAS.map((l) => ({
+      id: `tarjetas-${clave}-menos-${l}`,
+      texto: (eq) => `Tarjetas ${eq[clave]}: -${l} tarjetas`,
+    })),
+  ];
+}
+
+// Goles por equipo pero acotados a una mitad (separado de "goles-equipo",
+// que es del partido completo) — a diferencia de opcionesGolesMedioTiempo
+// (que no menciona la mitad en el texto, un mercado sin ambigüedad porque
+// no compite con "goles-equipo" por nombre de equipo), aquí sí hace falta
+// decir "1ª mitad"/"2ª mitad" en el texto: si no, un mismo texto como
+// "Goles Real Madrid: Over 1.5" podría venir tanto del partido completo
+// como de una mitad, y no habría forma de distinguirlos al editar.
+function opcionesGolesEquipoMedioTiempo(clave, prefijoId, etiquetaMitad) {
+  return [
+    ...LINEAS_GOLES_MEDIO.map((l) => ({
+      id: `goles-${clave}-${prefijoId}-over-${l}`,
+      texto: (eq) => `Goles ${eq[clave]} ${etiquetaMitad}: Over ${l}`,
+    })),
+    ...LINEAS_GOLES_MEDIO.map((l) => ({
+      id: `goles-${clave}-${prefijoId}-under-${l}`,
+      texto: (eq) => `Goles ${eq[clave]} ${etiquetaMitad}: Under ${l}`,
+    })),
+  ];
+}
+
+function opcionesResultadoExacto() {
+  const opciones = [];
+  for (let local = 0; local <= 4; local++) {
+    for (let visitante = 0; visitante <= 4; visitante++) {
+      opciones.push({
+        id: `exacto-${local}-${visitante}`,
+        texto: () => `Resultado exacto: ${local}-${visitante}`,
+      });
+    }
+  }
+  return opciones;
+}
+
+function opcionesEquipoMasEstadistica(slug, etiqueta) {
+  return [
+    { id: `mas-${slug}-local`, texto: (eq) => `Equipo con más ${etiqueta}: ${eq.local}` },
+    { id: `mas-${slug}-visitante`, texto: (eq) => `Equipo con más ${etiqueta}: ${eq.visitante}` },
+    { id: `mas-${slug}-igualados`, texto: () => `Equipo con más ${etiqueta}: Igualados` },
+  ];
+}
+
+function opcionesMargenVictoria(clave) {
+  return [2, 3, 4, 5].map((n) => ({
+    id: `margen-${clave}-${n}`,
+    texto: (eq) => `${eq[clave]} gana por ${n}+ goles`,
+  }));
+}
+
+function opcionesEspecialEquipo(slug, plantilla) {
+  return [
+    { id: `${slug}-local`, texto: (eq) => plantilla(eq.local) },
+    { id: `${slug}-visitante`, texto: (eq) => plantilla(eq.visitante) },
+  ];
+}
+
+// Mercados de jugador: a diferencia del resto del catálogo, el texto final
+// no se puede generar solo con los equipos — hace falta también el
+// jugador elegido en el desplegable propio que abre SelectorMercado.jsx
+// (alimentado por /api/jugadores, ver usePlantilla.js). Por eso "texto"
+// acepta aquí un segundo argumento (el resto del catálogo lo ignora).
+// "sufijo" se guarda aparte para poder reconocer, al editar una apuesta ya
+// guardada, qué plantilla y qué jugador generaron un texto concreto (ver
+// interpretarMercadoJugador).
+const PLANTILLAS_JUGADOR = [
+  { id: "gol", sufijo: " anota un gol" },
+  { id: "gol-2", sufijo: " anota 2+ goles" },
+  { id: "asistencia", sufijo: " da una asistencia" },
+  { id: "remates-puerta-0.5", sufijo: ": +0.5 remates a puerta" },
+  { id: "remates-puerta-1.5", sufijo: ": +1.5 remates a puerta" },
+  { id: "remates-puerta-2.5", sufijo: ": +2.5 remates a puerta" },
+  { id: "remates-totales-0.5", sufijo: ": +0.5 remates totales" },
+  { id: "remates-totales-1.5", sufijo: ": +1.5 remates totales" },
+  { id: "remates-totales-2.5", sufijo: ": +2.5 remates totales" },
+  { id: "falta-cometida", sufijo: " comete una falta" },
+  { id: "falta-recibida", sufijo: " recibe una falta" },
+  { id: "tarjeta", sufijo: " recibe tarjeta" },
+];
+
+// Si el texto ya guardado de una selección termina en el sufijo de alguna
+// plantilla de jugador, separa el nombre del jugador del resto —
+// SelectorMercado.jsx lo usa para preseleccionar jugador + mercado al
+// editar una apuesta ya creada con este tipo de mercado.
+export function interpretarMercadoJugador(texto) {
+  if (!texto) return null;
+  for (const plantilla of PLANTILLAS_JUGADOR) {
+    if (texto.endsWith(plantilla.sufijo)) {
+      const jugador = texto.slice(0, texto.length - plantilla.sufijo.length);
+      if (jugador) return { opcionId: plantilla.id, jugador };
+    }
+  }
+  return null;
 }
 
 function formatoLinea(v) {
@@ -122,6 +272,11 @@ export function buscarMercadoPorTexto(apuestaTexto, equipos) {
   return null;
 }
 
+// Orden pedido directamente por el usuario (2026-08-10): de lo más
+// general (resultado) a lo más específico (especiales), con "Jugador"
+// justo después de los mercados de resultado y antes de los de goles.
+// "Otro mercado" no está aquí — es el botón fijo al final del desplegable
+// (ver SelectorMercado.jsx), no una categoría del catálogo.
 export const CATEGORIAS_MERCADO = [
   {
     id: "resultado",
@@ -145,6 +300,16 @@ export const CATEGORIAS_MERCADO = [
       { id: "dnb-1", texto: (eq) => `Empate no válido: ${eq.local}` },
       { id: "dnb-2", texto: (eq) => `Empate no válido: ${eq.visitante}` },
     ],
+  },
+  {
+    id: "resultado-exacto",
+    etiqueta: "Resultado exacto",
+    opciones: [...opcionesResultadoExacto(), { id: "exacto-otro", texto: () => "Otro resultado" }],
+  },
+  {
+    id: "margen-victoria",
+    etiqueta: "Margen de victoria",
+    opciones: [...opcionesMargenVictoria("local"), ...opcionesMargenVictoria("visitante")],
   },
   {
     id: "resultado-descanso",
@@ -172,6 +337,17 @@ export const CATEGORIAS_MERCADO = [
       { id: "2-x", texto: () => "Visitante/Empate" },
       { id: "2-2", texto: () => "Visitante/Visitante" },
     ],
+  },
+  {
+    id: "jugador",
+    etiqueta: "Jugador",
+    // Marca especial para SelectorMercado.jsx: esta categoría necesita el
+    // desplegable de jugador aparte, no solo la lista de opciones.
+    requiereJugador: true,
+    opciones: PLANTILLAS_JUGADOR.map((p) => ({
+      id: p.id,
+      texto: (eq, jugador) => `${jugador || "?"}${p.sufijo}`,
+    })),
   },
   {
     id: "goles",
@@ -204,6 +380,25 @@ export const CATEGORIAS_MERCADO = [
     opciones: [...opcionesGolesEquipo("local"), ...opcionesGolesEquipo("visitante")],
   },
   {
+    id: "goles-equipo-mitad",
+    etiqueta: "Goles por equipo por mitad",
+    opciones: [
+      ...opcionesGolesEquipoMedioTiempo("local", "1t", "1ª mitad"),
+      ...opcionesGolesEquipoMedioTiempo("visitante", "1t", "1ª mitad"),
+      ...opcionesGolesEquipoMedioTiempo("local", "2t", "2ª mitad"),
+      ...opcionesGolesEquipoMedioTiempo("visitante", "2t", "2ª mitad"),
+    ],
+  },
+  {
+    id: "mitad-mas-goles",
+    etiqueta: "Mitad con más goles",
+    opciones: [
+      { id: "mitad-1", texto: () => "Mitad con más goles: 1ª mitad" },
+      { id: "mitad-2", texto: () => "Mitad con más goles: 2ª mitad" },
+      { id: "mitad-igual", texto: () => "Mitad con más goles: Igualadas" },
+    ],
+  },
+  {
     id: "handicap",
     etiqueta: "Hándicap asiático",
     opciones: [...opcionesHandicapEquipo("local"), ...opcionesHandicapEquipo("visitante")],
@@ -212,5 +407,52 @@ export const CATEGORIAS_MERCADO = [
     id: "corners",
     etiqueta: "Córners",
     opciones: opcionesCorners(),
+  },
+  {
+    id: "corners-equipo",
+    etiqueta: "Córners por equipo",
+    opciones: [
+      ...opcionesCornersEquipo("local"),
+      ...opcionesCornersEquipo("visitante"),
+      ...opcionesCornersEquipoMedioTiempo("local", "1t", "1ª mitad"),
+      ...opcionesCornersEquipoMedioTiempo("visitante", "1t", "1ª mitad"),
+      ...opcionesCornersEquipoMedioTiempo("local", "2t", "2ª mitad"),
+      ...opcionesCornersEquipoMedioTiempo("visitante", "2t", "2ª mitad"),
+    ],
+  },
+  {
+    id: "tarjetas",
+    etiqueta: "Tarjetas",
+    opciones: [
+      ...opcionesTarjetasTotal(),
+      ...opcionesTarjetasEquipo("local"),
+      ...opcionesTarjetasEquipo("visitante"),
+      { id: "primera-tarjeta-local", texto: (eq) => `Primera tarjeta: ${eq.local}` },
+      { id: "primera-tarjeta-visitante", texto: (eq) => `Primera tarjeta: ${eq.visitante}` },
+      { id: "ambos-tarjeta-si", texto: () => "Ambos equipos reciben tarjeta: Sí" },
+      { id: "ambos-tarjeta-no", texto: () => "Ambos equipos reciben tarjeta: No" },
+    ],
+  },
+  {
+    id: "equipo-mas",
+    etiqueta: "Equipo — mayor número",
+    opciones: [
+      ...opcionesEquipoMasEstadistica("corners", "córners"),
+      ...opcionesEquipoMasEstadistica("tarjetas", "tarjetas"),
+      ...opcionesEquipoMasEstadistica("remates", "remates"),
+      ...opcionesEquipoMasEstadistica("remates-puerta", "remates a puerta"),
+    ],
+  },
+  {
+    id: "especiales",
+    etiqueta: "Especiales",
+    opciones: [
+      ...opcionesEspecialEquipo("gana-una-mitad", (equipo) => `${equipo} gana una mitad`),
+      ...opcionesEspecialEquipo("gana-ambas-mitades", (equipo) => `${equipo} gana las dos mitades`),
+      ...opcionesEspecialEquipo("anota-una-mitad", (equipo) => `${equipo} anota en una mitad`),
+      ...opcionesEspecialEquipo("anota-ambas-mitades", (equipo) => `${equipo} anota en las dos mitades`),
+      ...opcionesEspecialEquipo("gana-a-cero", (equipo) => `${equipo} gana a cero`),
+      ...opcionesEspecialEquipo("gana-remontando", (equipo) => `${equipo} gana remontando`),
+    ],
   },
 ];

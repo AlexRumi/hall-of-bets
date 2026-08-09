@@ -58,6 +58,44 @@ textarea {
   color: var(--color-ink);
 }
 
+/* Detección de dispositivo con ratón real (no táctil), para
+   TabsDesplazables.jsx (flechas ‹ › de las pestañas de mercado/país) y
+   BuscadorEvento.jsx (bandera de país junto al nombre): en Tailwind, un
+   variante arbitrario "[@media(hover:hover)_and_(pointer:fine)]:" se repetiría
+   en varios sitios, así que se centraliza aquí como dos clases. En
+   táctil, las flechas no aportan (el deslizado con el dedo ya alcanza) y
+   la bandera se oculta porque algunas versiones de Windows no renderizan
+   bien los emoji de bandera compuestos (país como par de letras
+   regionales) cuando SÍ hay ratón/teclado de verdad. */
+.mq-solo-raton {
+  display: none;
+}
+.mq-oculto-raton {
+  display: inline;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mq-solo-raton {
+    display: flex;
+  }
+  .mq-oculto-raton {
+    display: none;
+  }
+}
+
+/* Hueco lateral para las flechas ‹ › de TabsDesplazables.jsx: solo hace
+   falta con ratón (las flechas solo se pintan ahí, ver .mq-solo-raton
+   arriba); en táctil las pestañas usan todo el ancho. */
+.mq-tabs-scroll {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mq-tabs-scroll {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+}
+
 @keyframes app-entrada {
   from {
     opacity: 0;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PlusCircle, Save, X, AlertTriangle, Globe } from "lucide-react";
+import { PlusCircle, Save, X, AlertTriangle, Globe, Pencil } from "lucide-react";
 import { agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import CampoCasa from "./CampoCasa";
@@ -13,6 +13,11 @@ import SelectorMercado from "./SelectorMercado";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
+
+function fechaCorta(fechaIso) {
+  const [anio, mes, dia] = fechaIso.split("-");
+  return `${dia}/${mes}/${anio}`;
+}
 
 // Reconstruye los "bloques" (un partido, con uno o varios mercados y una
 // única cuota) a partir de las selecciones ya guardadas de una apuesta, para
@@ -28,6 +33,8 @@ function bloquesDesdeApuesta(apuestaInicial) {
     pais: grupo.pais ?? "",
     competicion: grupo.competicion ?? "",
     partidoId: grupo.partidoId ?? null,
+    equipoLocalId: grupo.equipoLocalId ?? null,
+    equipoVisitanteId: grupo.equipoVisitanteId ?? null,
     cuota: grupo.cuota,
     mercados: grupo.selecciones.map((s) => s.apuesta),
   }));
@@ -82,6 +89,29 @@ export default function FormularioApuesta({
   );
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
+  const stakeNumero = Number(cantidadApostada) || 0;
+
+  // Bloque superior (Fecha...Aumento de cuota) colapsable tras confirmarlo
+  // (ver collapse-summary-demo.html, referencia aportada por el usuario):
+  // evita el scroll de un formulario largo mientras se añaden varios
+  // partidos a una combinada. "confirmado" desbloquea la sección de
+  // Selecciones (antes de confirmar, un aviso en su lugar) y NO vuelve a
+  // false al reabrir el bloque con "✎ Editar" — así las selecciones ya
+  // añadidas no desaparecen mientras se corrige un dato de arriba.
+  // "bloqueSuperiorAbierto" es el que decide si se ve el formulario
+  // completo o la tira resumen. Al editar una apuesta ya existente, los
+  // datos de arriba ya están completos, así que arranca confirmado y
+  // colapsado.
+  const [confirmado, setConfirmado] = useState(esEdicion);
+  const [bloqueSuperiorAbierto, setBloqueSuperiorAbierto] = useState(!esEdicion);
+  const puedeConfirmar = casa.trim() !== "" && stakeNumero > 0;
+
+  function confirmarBloqueSuperior() {
+    if (!puedeConfirmar) return;
+    setConfirmado(true);
+    setBloqueSuperiorAbierto(false);
+  }
+
   // Bankroll actual de la casa elegida, del bankroll que corresponda
   // (Apuestas/Entretenimiento — mismo cálculo que en Casas de apuestas:
   // ingresos - retiradas + beneficio de apuestas ya resueltas, filtrado por
@@ -92,7 +122,6 @@ export default function FormularioApuesta({
         (b) => b.casa === casa
       )?.bankroll ?? 0
     : null;
-  const stakeNumero = Number(cantidadApostada) || 0;
   const sinBankroll = bankrollCasa !== null && bankrollCasa <= 0;
   const superaBankroll =
     !sinBankroll && bankrollCasa !== null && stakeNumero > bankrollCasa;
@@ -190,6 +219,8 @@ export default function FormularioApuesta({
         pais: bloque.pais || null,
         competicion: bloque.competicion || null,
         partidoId: bloque.partidoId || null,
+        equipoLocalId: bloque.equipoLocalId || null,
+        equipoVisitanteId: bloque.equipoVisitanteId || null,
       }))
     );
 
@@ -237,6 +268,24 @@ export default function FormularioApuesta({
         {esEdicion ? "Editar apuesta" : "Nueva apuesta"}
       </h2>
 
+      {!bloqueSuperiorAbierto && (
+        <button
+          type="button"
+          onClick={() => setBloqueSuperiorAbierto(true)}
+          className="w-full flex items-center justify-between gap-2 bg-paperDim border border-line rounded-lg px-4 py-3 text-left hover:border-gold/40 transition-colors"
+        >
+          <span className="text-sm text-ink truncate">
+            {fechaCorta(fecha)} · {casa} · {stakeNumero.toFixed(2)}€ ·{" "}
+            {tipoFondos === "real" ? "Real" : "Freebet"} · {deporte}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-semibold text-gold shrink-0">
+            <Pencil size={12} />
+            Editar
+          </span>
+        </button>
+      )}
+
+      {bloqueSuperiorAbierto && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-slate mb-1">Fecha</label>
@@ -404,7 +453,20 @@ export default function FormularioApuesta({
           )}
         </div>
       </div>
+      )}
 
+      {bloqueSuperiorAbierto && (
+        <button
+          type="button"
+          onClick={confirmarBloqueSuperior}
+          disabled={!puedeConfirmar}
+          className="w-full sm:w-auto bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-goldDark transition-colors disabled:opacity-50"
+        >
+          Confirmar →
+        </button>
+      )}
+
+      {confirmado ? (
       <div className="space-y-4 pt-4 border-t border-line">
         <label className="block text-xs text-slate">Selecciones</label>
 
@@ -453,6 +515,8 @@ export default function FormularioApuesta({
                             evento={bloque.evento}
                             valor={mercadoEditando}
                             onCambiar={setMercadoEditando}
+                            equipoLocalId={bloque.equipoLocalId}
+                            equipoVisitanteId={bloque.equipoVisitanteId}
                           />
                         </div>
                       ) : (
@@ -526,6 +590,14 @@ export default function FormularioApuesta({
           )}
         </div>
       </div>
+      ) : (
+        <div className="pt-4 border-t border-line">
+          <label className="block text-xs text-slate mb-2">Selecciones</label>
+          <div className="border border-dashed border-line rounded-lg p-5 text-center text-sm text-slate">
+            Confirma los datos de arriba para empezar a añadir partidos
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button

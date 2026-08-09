@@ -3,7 +3,14 @@ import { Globe, Plus, RefreshCw, X } from "lucide-react";
 import BuscadorEvento from "./BuscadorEvento";
 import SelectorMercado from "./SelectorMercado";
 
-const partidoVacio = () => ({ evento: "", pais: "", competicion: "", partidoId: null });
+const partidoVacio = () => ({
+  evento: "",
+  pais: "",
+  competicion: "",
+  partidoId: null,
+  equipoLocalId: null,
+  equipoVisitanteId: null,
+});
 
 // Evita que pulsar Enter en cualquier campo de aquí dentro (el buscador de
 // partido, el selector de mercado, la cuota...) envíe todo el formulario de
@@ -55,6 +62,8 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
       pais: partidoElegido.pais,
       competicion: partidoElegido.competicion,
       partidoId: partidoElegido.id,
+      equipoLocalId: partidoElegido.equipoLocalId ?? null,
+      equipoVisitanteId: partidoElegido.equipoVisitanteId ?? null,
     });
     onFechaPartido(partidoElegido.fecha);
   }
@@ -158,7 +167,14 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
         <div className="space-y-2">
           <div>
             <label className="block text-xs text-slate mb-1">Mercado</label>
-            <SelectorMercado key={resetId} evento={partido.evento} valor={mercadoSimple} onCambiar={setMercadoSimple} />
+            <SelectorMercado
+              key={resetId}
+              evento={partido.evento}
+              valor={mercadoSimple}
+              onCambiar={setMercadoSimple}
+              equipoLocalId={partido.equipoLocalId}
+              equipoVisitanteId={partido.equipoVisitanteId}
+            />
           </div>
           <div>
             <label className="block text-xs text-slate mb-1">Cuota</label>
@@ -200,6 +216,8 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
                 evento={partido.evento}
                 valor={mercadoMultiActual}
                 onCambiar={setMercadoMultiActual}
+                equipoLocalId={partido.equipoLocalId}
+                equipoVisitanteId={partido.equipoVisitanteId}
               />
             </div>
             <button

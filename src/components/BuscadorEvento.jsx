@@ -1,172 +1,213 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { Globe, Pencil, Search, X } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
-import { PAISES_CONECTADOS, PAISES_GRUPO_EUROPA } from "../utils/ligasConectadas";
-import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
+import { PAISES_CONECTADOS, BANDERAS_PAIS } from "../utils/ligasConectadas";
 import { normalizarTexto } from "../utils/texto";
-import SelectorDesplegable from "./SelectorDesplegable";
+import TabsDesplazables from "./TabsDesplazables";
 
 // Sentinela para "Otras ligas": no puede coincidir con ningún nombre real
 // de país de PAISES_CONECTADOS.
 const OTRAS_LIGAS = "otras";
 
-const PAISES_INDIVIDUALES = PAISES_CONECTADOS.filter(
-  (p) => !PAISES_GRUPO_EUROPA.includes(p.pais) && p.pais !== "Competición Europea"
-);
-const PAISES_EUROPA = PAISES_CONECTADOS.filter((p) => PAISES_GRUPO_EUROPA.includes(p.pais));
-const COMPETICION_EUROPEA = PAISES_CONECTADOS.find((p) => p.pais === "Competición Europea");
-
-// Grupos para el desplegable de País (ver SelectorDesplegable.jsx): mismas
-// tres secciones que tenía el <select> con <optgroup> de antes (Grandes
-// ligas / Europa / sueltas), con "Competición Europea" y "Otras ligas"
-// destacadas en negrita al final.
-const GRUPOS_PAIS = [
-  { etiqueta: "Grandes ligas", opciones: PAISES_INDIVIDUALES.map(({ pais }) => ({ valor: pais, texto: pais })) },
-  { etiqueta: "Europa", opciones: PAISES_EUROPA.map(({ pais }) => ({ valor: pais, texto: pais })) },
-  {
-    opciones: [
-      ...(COMPETICION_EUROPEA
-        ? [{ valor: COMPETICION_EUROPEA.pais, texto: COMPETICION_EUROPEA.pais, destacado: true }]
-        : []),
-      { valor: OTRAS_LIGAS, texto: "Otras ligas", destacado: true },
-    ],
-  },
+const TABS_PAIS = [
+  ...PAISES_CONECTADOS.map((p) => ({ valor: p.pais, texto: p.pais, icono: BANDERAS_PAIS[p.pais] })),
+  { valor: OTRAS_LIGAS, texto: "Otras ligas" },
 ];
 
-// Campo "Evento" con autocompletado, con dos modos según el desplegable de
-// País:
-// - Sin elegir país todavía, o "Otras ligas": modo manual de toda la vida,
-//   sin sugerencias — para ligas no conectadas (la inmensa mayoría del
-//   mundo).
-// - Un país conectado: hay que elegir también la competición (si ese país
-//   tiene más de una — p.ej. "Competición Europea" tiene Champions/Europa
-//   League/Conference) antes de ver ningún partido, para no mezclarlas
-//   todas en una lista larga. Con la competición elegida, el texto escrito
-//   filtra esa lista en vez de ser un evento libre.
-// País/competición no se guardan hasta elegir un partido de verdad, para
-// no acabar con un país guardado sin un evento real detrás.
+// Campo "Evento" con autocompletado (ver match-picker-demo.html, referencia
+// aportada por el usuario): un único buscador de texto libre arriba (a la
+// vez el campo "Evento" real) que, en cuanto se escribe algo, busca en
+// TODOS los partidos conectados de la fecha elegida y agrupa los
+// resultados por competición — sin depender de haber elegido país antes.
+// Sin texto escrito, aparece en su lugar una cascada estricta en 3 pasos,
+// cada uno visible solo cuando el anterior ya está completo (nada de
+// secciones vacías con texto de relleno): país (pestañas) → competición
+// (chips, si ese país tiene datos conectados) → partidos de esa
+// competición. Elegir un país reinicia la búsqueda y la competición, para
+// no dejar una combinación a medias.
+// "Otras ligas" no tiene competición ni partidos conectados: se queda solo
+// con el buscador de arriba, en modo texto libre de toda la vida.
 export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartido }) {
-  const [abierto, setAbierto] = useState(false);
   const [paisFiltro, setPaisFiltro] = useState("");
   const [competicionFiltro, setCompeticionFiltro] = useState("");
-  const contenedorRef = useRef(null);
-  const inputWrapRef = useRef(null);
-  const posicion = usePosicionDesplegable(abierto, inputWrapRef);
+  // Bug real (2026-08-10): al elegir un partido, el panel se quedaba
+  // abierto sin ninguna señal de que ya se había elegido algo — mismo
+  // arreglo que SelectorMercado.jsx: colapsa a la píldora con el evento
+  // elegido + "Cambiar partido". Arranca colapsado si ya había un evento
+  // guardado (al editar una selección ya creada), abierto si no.
+  const [expandido, setExpandido] = useState(() => !valor);
   const { partidos, fueraDeRango } = usePartidos(fecha);
 
-  useEffect(() => {
-    function manejarClickFuera(e) {
-      if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
-        setAbierto(false);
-      }
-    }
-    document.addEventListener("mousedown", manejarClickFuera);
-    return () => document.removeEventListener("mousedown", manejarClickFuera);
-  }, []);
+  function elegirPais(nuevoPais) {
+    setPaisFiltro(nuevoPais);
+    setCompeticionFiltro("");
+    onCambiar("");
+  }
 
-  const modoManual = !paisFiltro || paisFiltro === OTRAS_LIGAS;
-  const competicionesDisponibles = modoManual
-    ? []
-    : PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? [];
-  // País + competición son siempre obligatorios antes de ver partidos,
-  // incluso si ese país solo tiene una competición conectada (antes se
-  // saltaba este paso en ese caso, y confundía: parecía que hacía falta
-  // elegir competición para que la apuesta se guardara bien).
-  const necesitaCompeticion = !modoManual && !competicionFiltro;
+  const modoManual = paisFiltro === OTRAS_LIGAS;
+  const competicionesDisponibles = paisFiltro && !modoManual
+    ? PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? []
+    : [];
 
-  const coincidencias =
-    modoManual || necesitaCompeticion
-      ? []
-      : partidos
-          .filter((p) => p.pais === paisFiltro)
-          .filter((p) => !competicionFiltro || p.competicion === competicionFiltro)
-          .filter((p) => !valor.trim() || normalizarTexto(p.evento).includes(normalizarTexto(valor)));
-  // Sin límite de resultados: la lista ya viene acotada a una sola
-  // competición (país + competición son obligatorios antes de ver nada), y
-  // el cuadro tiene scroll para listas largas (p.ej. una jornada completa
-  // de Conference League, ~27 partidos).
+  // Buscador global: agrupa por competición, sin importar el país/
+  // competición elegidos en las pestañas de abajo — igual que la demo,
+  // escribir algo siempre busca en todo lo conectado para esa fecha.
+  const competicionesConCoincidencias = valor.trim()
+    ? [...new Set(partidos.map((p) => p.competicion))]
+        .map((competicion) => ({
+          competicion,
+          partidos: partidos.filter(
+            (p) => p.competicion === competicion && normalizarTexto(p.evento).includes(normalizarTexto(valor))
+          ),
+        }))
+        .filter((g) => g.partidos.length > 0)
+    : [];
+
+  // Cascada sin buscador: partidos de la competición ya elegida.
+  const partidosDeCompeticion =
+    !valor.trim() && paisFiltro && competicionFiltro
+      ? partidos.filter((p) => p.pais === paisFiltro && p.competicion === competicionFiltro)
+      : [];
+
+  function elegir(partido) {
+    onElegirPartido(partido);
+    setExpandido(false);
+  }
+
+  if (!expandido && valor) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpandido(true)}
+        className="w-full flex items-center justify-between gap-2 border border-line rounded-lg bg-surface px-3 py-2.5 text-left hover:border-gold/40 transition-colors"
+      >
+        <span className="flex items-center gap-1 text-xs font-semibold text-gold bg-gold/10 border border-gold/30 rounded-full px-3 py-1.5 truncate">
+          <Globe size={12} className="shrink-0" />
+          <span className="truncate">{valor}</span>
+        </span>
+        <span className="flex items-center gap-1 text-xs font-semibold text-gold shrink-0">
+          <Pencil size={12} />
+          Cambiar partido
+        </span>
+      </button>
+    );
+  }
 
   return (
-    <div ref={contenedorRef} className="space-y-1.5">
-      <div className="grid grid-cols-2 gap-2">
-        <SelectorDesplegable
-          valor={paisFiltro}
-          placeholder="País"
-          grupos={GRUPOS_PAIS}
-          onElegir={(nuevoPais) => {
-            setPaisFiltro(nuevoPais);
-            setCompeticionFiltro("");
-            setAbierto(true);
-          }}
-        />
-        <SelectorDesplegable
-          valor={competicionFiltro}
-          placeholder="Competición"
-          grupos={[{ opciones: competicionesDisponibles.map((c) => ({ valor: c, texto: c })) }]}
-          onElegir={(nuevaCompeticion) => {
-            setCompeticionFiltro(nuevaCompeticion);
-            setAbierto(true);
-          }}
-          disabled={modoManual}
-        />
-      </div>
-
-      {(paisFiltro || valor) && !necesitaCompeticion && (
-        <div ref={inputWrapRef} className="relative">
+    <div className="border border-line rounded-lg bg-surface overflow-hidden">
+      <div className="p-3 pb-2">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate" />
           <input
             type="text"
             value={valor}
-            onChange={(e) => {
-              onCambiar(e.target.value);
-              setAbierto(true);
-            }}
-            onFocus={() => setAbierto(true)}
+            onChange={(e) => onCambiar(e.target.value)}
             placeholder={
-              paisFiltro === OTRAS_LIGAS ? "Ej. Real Madrid - FC Barcelona" : "Escribe para filtrar"
+              modoManual ? "Ej. Real Madrid - FC Barcelona" : "Buscar equipo o partido (ej. Feyenoord)"
             }
             required
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-line rounded-lg pl-9 pr-9 py-2 text-sm"
           />
-
-          {abierto && !modoManual && fueraDeRango && (
-            <div
-              className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg text-left ${
-                posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
-              }`}
+          {valor && (
+            <button
+              type="button"
+              onClick={() => onCambiar("")}
+              aria-label="Vaciar búsqueda"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate hover:text-lose"
             >
-              <p className="px-3 py-2 text-xs text-slate">
-                El plan gratuito de API-Football solo permite buscar partidos
-                de ayer, hoy o mañana. Para esta fecha, escribe el evento a
-                mano.
-              </p>
-            </div>
+              <X size={14} />
+            </button>
           )}
+        </div>
+        {fueraDeRango && (
+          <p className="text-xs text-slate mt-1.5">
+            El plan gratuito de API-Football solo permite buscar partidos de ayer, hoy o mañana. Para
+            esta fecha, escribe el evento a mano.
+          </p>
+        )}
+        {modoManual && (
+          <button
+            type="button"
+            onClick={() => setExpandido(false)}
+            disabled={!valor.trim()}
+            className="mt-1.5 text-xs font-semibold text-gold border border-gold/40 rounded-full px-3 py-1 hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Listo
+          </button>
+        )}
+      </div>
 
-          {abierto && coincidencias.length > 0 && (
-            <div
-              className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg overflow-y-auto text-left ${
-                posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
-              }`}
-              style={{ maxHeight: posicion.maxAltura }}
-            >
-              {coincidencias.map((partido) => (
+      {valor.trim() ? (
+        <div className="max-h-72 overflow-y-auto">
+          {competicionesConCoincidencias.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-slate text-center">
+              Sin resultados — puedes escribir el partido a mano
+            </p>
+          ) : (
+            competicionesConCoincidencias.map(({ competicion, partidos: partidosGrupo }) => (
+              <div key={competicion}>
+                <p className="bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold">
+                  {competicion}
+                </p>
+                {partidosGrupo.map((partido) => (
+                  <button
+                    key={partido.id}
+                    type="button"
+                    onClick={() => elegir(partido)}
+                    className="w-full flex flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
+                  >
+                    <span className="text-sm font-medium text-ink">{partido.evento}</span>
+                    <span className="text-xs text-slate">{partido.pais}</span>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <>
+          <TabsDesplazables opciones={TABS_PAIS} valor={paisFiltro} onElegir={elegirPais} colorActivo="felt" />
+
+          {paisFiltro && !modoManual && (
+            <div className="flex flex-wrap gap-1.5 p-3 border-b border-line">
+              {competicionesDisponibles.map((competicion) => (
                 <button
-                  key={partido.id}
+                  key={competicion}
                   type="button"
-                  onClick={() => {
-                    onElegirPartido(partido);
-                    setAbierto(false);
-                  }}
-                  className="w-full flex flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-paperDim transition-colors border-b border-line last:border-b-0"
+                  onClick={() => setCompeticionFiltro(competicion)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    competicionFiltro === competicion
+                      ? "bg-gold text-feltDark border-gold"
+                      : "border-line text-ink hover:border-gold/40"
+                  }`}
                 >
-                  <span className="text-sm font-medium text-ink">{partido.evento}</span>
-                  <span className="text-xs text-slate">
-                    {partido.competicion} · {partido.pais}
-                  </span>
+                  {competicion}
                 </button>
               ))}
             </div>
           )}
-        </div>
+
+          {competicionFiltro && (
+            <div className="max-h-72 overflow-y-auto">
+              {partidosDeCompeticion.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-slate text-center">
+                  Sin partidos cacheados hoy en esta competición
+                </p>
+              ) : (
+                partidosDeCompeticion.map((partido) => (
+                  <button
+                    key={partido.id}
+                    type="button"
+                    onClick={() => elegir(partido)}
+                    className="w-full flex flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
+                  >
+                    <span className="text-sm font-medium text-ink">{partido.evento}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -4,15 +4,22 @@
 // a esta ruta (/api/partidos?fecha=YYYY-MM-DD), nunca a API-Football
 // directamente.
 //
-// Solo se filtran estas 22 competiciones (las que se pidió conectar); el
-// resto de partidos del mundo que devuelve API-Football para ese día se
-// descartan. IDs verificados a mano en el panel de API-Football del usuario
-// el 2026-08-06 — si algún día cambian de nombre de patrocinador (ya pasó
-// con "LaLiga Hypermotion" y "Carabao Cup"), el id numérico no cambia.
-// "pais" tiene que coincidir exactamente con el desplegable de
-// src/components/BuscadorEvento.jsx (mismos nombres: "Reino Unido" en vez
-// de "Inglaterra", "Holanda" en vez de "Países Bajos", "Competición
-// Europea" en vez de "Europa" — para no confundirlo con el país).
+// Se filtran estas 32 competiciones (las que se pidió conectar); el resto
+// de partidos del mundo que devuelve API-Football para ese día se
+// descartan. IDs de las 22 primeras verificados a mano en el panel de
+// API-Football del usuario el 2026-08-06; los 10 añadidos el 2026-08-10
+// (Austria, Dinamarca, Suiza, Turquía, Noruega, Suecia, Argentina, Brasil,
+// México, Estados Unidos) se verificaron por curl directo contra la API
+// con la key real — se comprobó que el id correspondía al nombre de liga
+// correcto y que el plan gratuito devolvía datos reales (no
+// "errors.plan") tanto en el rango de fechas cercano a hoy como en un
+// rango histórico de control. Si algún día cambian de nombre de
+// patrocinador (ya pasó con "LaLiga Hypermotion" y "Carabao Cup"), el id
+// numérico no cambia. "pais" tiene que coincidir exactamente con el
+// desplegable de src/components/BuscadorEvento.jsx (mismos nombres:
+// "Reino Unido" en vez de "Inglaterra", "Holanda" en vez de "Países
+// Bajos", "Competición Europea" en vez de "Europa" — para no confundirlo
+// con el país), y con src/utils/ligasConectadas.js.
 const LIGAS = {
   140: { pais: "España", competicion: "La Liga" },
   141: { pais: "España", competicion: "Segunda División" },
@@ -36,6 +43,16 @@ const LIGAS = {
   2: { pais: "Competición Europea", competicion: "Champions League" },
   3: { pais: "Competición Europea", competicion: "Europa League" },
   848: { pais: "Competición Europea", competicion: "Conference League" },
+  218: { pais: "Austria", competicion: "Bundesliga austríaca" },
+  119: { pais: "Dinamarca", competicion: "Superliga" },
+  207: { pais: "Suiza", competicion: "Super League" },
+  203: { pais: "Turquía", competicion: "Süper Lig" },
+  103: { pais: "Noruega", competicion: "Eliteserien" },
+  113: { pais: "Suecia", competicion: "Allsvenskan" },
+  128: { pais: "Argentina", competicion: "Liga Profesional" },
+  71: { pais: "Brasil", competicion: "Brasileirão Série A" },
+  262: { pais: "México", competicion: "Liga MX" },
+  253: { pais: "Estados Unidos", competicion: "MLS" },
 };
 
 export default async function handler(req, res) {
@@ -78,6 +95,12 @@ export default async function handler(req, res) {
         pais: LIGAS[p.league.id].pais,
         competicion: LIGAS[p.league.id].competicion,
         fecha: p.fixture.date.slice(0, 10),
+        // Ids de equipo (no del partido): alimentan el desplegable de
+        // jugador de la categoría "Jugador" en SelectorMercado.jsx, vía
+        // /api/jugadores (players/squads). No se usaban para nada más
+        // hasta ahora.
+        equipoLocalId: p.teams.home.id,
+        equipoVisitanteId: p.teams.away.id,
       }));
 
     // Deja que Vercel cachee esta respuesta un rato (misma fecha = mismo
