@@ -2350,6 +2350,17 @@ separadas, probando cada una antes de pasar a la siguiente.
     `ApuestaItem.jsx`/`TarjetaApuestaResumen.jsx`) y muestra "Combinada ·
     N partidos" cuando aplica.
 
+- **Reequilibrio de categorías de trofeos** (petición directa: "Especiales"
+  se había quedado con 10 de los 32 trofeos, todos ocultos — casi la mitad
+  de todos los ocultos de la app en una sola categoría). "El fénix"
+  (remontada) y "Perfeccionista" (100% de acierto) se mueven de
+  `categoria: "especiales"` a `categoria: "rachas"` en `utils/trofeos.js`
+  — encajan igual de bien ahí (los dos son, en el fondo, un patrón de
+  racha) y reparten mejor los ocultos entre categorías. Reparto final:
+  Volumen 6, Rachas 7, Cuotas 5, Combinadas 6, Especiales 8 — antes
+  Especiales tenía 10 y Rachas solo 5. `SalaTrofeos.jsx` no necesitó
+  ningún cambio, ya agrupa por `categoria` de forma dinámica.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

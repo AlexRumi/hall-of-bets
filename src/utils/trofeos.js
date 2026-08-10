@@ -239,6 +239,34 @@ export const TROFEOS = [
     progreso: (ctx) => progresoNumerico(ctx.mejorRacha, 15, "victorias seguidas"),
   },
   {
+    // Movido de "especiales" a "rachas" (petición directa: esa categoría
+    // se había quedado con demasiados trofeos, casi la mitad de los
+    // ocultos de toda la app) — encaja mejor aquí de todas formas, es una
+    // racha (de derrotas cortada por una victoria), no un logro suelto.
+    id: "remontada",
+    nombre: "El fénix",
+    descripcion:
+      "Consigue una victoria justo después de perder 3 apuestas seguidas",
+    tier: "plata",
+    categoria: "rachas",
+    oculto: true,
+    comprobar: (ctx) => ctx.remontada,
+  },
+  {
+    // Mismo motivo que "El fénix": un 100% de acierto sostenido es, en el
+    // fondo, la racha perfecta — encaja en "Rachas" tanto como en
+    // "Especiales", y ayuda a repartir mejor los trofeos ocultos entre
+    // categorías.
+    id: "perfeccionista",
+    nombre: "Perfeccionista",
+    descripcion:
+      "Consigue un 100% de acierto con al menos 10 apuestas decididas",
+    tier: "platino",
+    categoria: "rachas",
+    oculto: true,
+    comprobar: (ctx) => ctx.aciertoPerfecto,
+  },
+  {
     id: "cuota-1-8",
     nombre: "Valentía premiada",
     descripcion: "Acierta una apuesta con cuota ≥ 1,8",
@@ -334,26 +362,6 @@ export const TROFEOS = [
     categoria: "combinadas",
     oculto: true,
     comprobar: (ctx) => ctx.mejorCombinadaGanada >= 8,
-  },
-  {
-    id: "remontada",
-    nombre: "El fénix",
-    descripcion:
-      "Consigue una victoria justo después de perder 3 apuestas seguidas",
-    tier: "plata",
-    categoria: "especiales",
-    oculto: true,
-    comprobar: (ctx) => ctx.remontada,
-  },
-  {
-    id: "perfeccionista",
-    nombre: "Perfeccionista",
-    descripcion:
-      "Consigue un 100% de acierto con al menos 10 apuestas decididas",
-    tier: "platino",
-    categoria: "especiales",
-    oculto: true,
-    comprobar: (ctx) => ctx.aciertoPerfecto,
   },
   {
     id: "cinco-casas",
