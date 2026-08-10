@@ -2036,6 +2036,15 @@ separadas, probando cada una antes de pasar a la siguiente.
       estilo con más contraste (`bg-paperDim border`) en vez del
       `bg-black/15` pensado para ir sobre el tinte de color, que ahí casi
       no se veía.
+  - **Tercera ronda: tarjetas de partido de tamaño distinto entre sí**:
+    dos partidos con un único pick cada uno se veían con distinta altura
+    de sello — el sello cubre toda la fila (`inset-0`), y la fila crece o
+    encoge según su contenido real (si tiene o no país/competición
+    guardados, si tiene o no el enlace "Ajustar cuota"...), así que dos
+    partidos "iguales" en número de picks podían salir con cajas verdes
+    de tamaño distinto. `min-h-[6.75rem]` en la fila de cada partido: fija
+    un alto mínimo común, y solo crece por encima de eso si el contenido
+    de verdad lo necesita (varios picks, textos largos).
   - **Pendiente**: seguir probando en el navegador — no hay herramienta de
     navegador en esta sesión, así que solo se pudo comprobar que compila
     limpio.

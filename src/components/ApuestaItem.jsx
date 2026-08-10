@@ -341,7 +341,15 @@ export default function ApuestaItem({
           return (
             <div key={grupo.indiceLider}>
               {indice > 0 && <div className="h-px bg-line" />}
-              <div className="relative overflow-hidden px-4 sm:px-5 py-3">
+              {/* min-h: sin esto, un partido con menos contenido (p.ej. sin
+                  país/competición guardados, o sin el enlace "Ajustar
+                  cuota") ocupa menos alto que uno con más — y como el
+                  sello cubre toda la fila (inset-0), sus tarjetas verdes
+                  salían de tamaños distintos aunque las dos fueran un
+                  único pick. Un mínimo fijo iguala el tamaño del sello
+                  entre partidos, creciendo solo si el contenido de verdad
+                  necesita más (varios picks, textos largos). */}
+              <div className="relative overflow-hidden px-4 sm:px-5 py-3 min-h-[6.75rem]">
                 <div className="flex items-start gap-2.5">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${COLOR_PUNTO[colorResultado]}`}
