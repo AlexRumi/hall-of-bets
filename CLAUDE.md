@@ -2190,6 +2190,61 @@ separadas, probando cada una antes de pasar a la siguiente.
     derecha, el `pt-10` que se había añadido para esquivar el ojo/lápiz ya
     no hacía falta y se quitó.
 
+- **Ajustes responsive y ampliación de la Sala de Trofeos** (peticiones
+  directas de la misma sesión):
+  - El control segmentado Apuestas/Entretenimiento/Todas de
+    `EstadisticasDashboard.jsx` apretaba mucho el texto de
+    "Entretenimiento" en móvil (mismo `text-sm` que las otras dos
+    pestañas, mucho más cortas). Pasa a `text-xs sm:text-sm` con un
+    `px-1` de margen interno, para que quepa con holgura en pantallas
+    estrechas sin tocar el resto del control.
+  - **Cash Out cuenta para los trofeos de cuota/combinada cuando los picks
+    ya estaban todos en Ganada**: caso real del usuario — una combinada de
+    7 partidos con cuota >12, cerrada con Cash Out una vez los 7 picks ya
+    estaban marcados Ganada uno a uno, no desbloqueaba "Cazador de
+    cuotas" ni "Combinada ganadora". Causa: `construirContexto`
+    (`utils/trofeos.js`) filtraba `ganadas` por `resultado === "ganada"`
+    literal — pero Cash Out se guarda siempre como `resultado: "cashout"`
+    a propósito (ver "Marcado de resultado por pick..." más arriba: el
+    Cash Out no se deja pisar por el resultado derivado de los picks).
+    Nueva `esGanadaDeVerdad(apuesta)`: además de `resultado === "ganada"`,
+    también cuenta un Cash Out cuyo resultado DERIVADO de todos sus picks
+    (`derivarResultadoApuesta`, no el guardado) sea "ganada" — es decir,
+    cobraste antes de tiempo pero los partidos acabaron acertados de
+    todas formas. Un Cash Out a medio partido (con picks todavía
+    pendientes o alguno perdido) sigue sin contar. Con esto también se
+    benefician "Dinero gratis" (mejor beneficio de una freebet) y todos
+    los trofeos nuevos de Combinadas, ver abajo.
+  - **Catálogo ampliado de 15 a 32 trofeos** (petición directa: "hay pocos
+    trofeos, intenta llegar a 30"), repartidos en las mismas 5 categorías
+    de siempre (no hizo falta ninguna nueva, "Especiales" ya funcionaba
+    como cajón de sorpresas):
+    - Volumen: +2 — "Medio centenar" (50 apuestas, oro) y "Enciclopedia"
+      (250 apuestas, platino).
+    - Rachas: +2 — "Sobre ruedas" (7 victorias seguidas, oro) y "Máquina
+      de guerra" (15 victorias seguidas, platino).
+    - Cuotas: +2 — "Rompebancas" (cuota ≥10, platino) y "Milagro" (cuota
+      ≥20, platino, oculto).
+    - Combinadas: +5 (de 1 a 6) — "Tu primera combinada" (registrar una,
+      sin necesidad de ganarla, bronce), "Póker de aciertos" (ganar una
+      de 4+ partidos, plata), "Máquina de combinadas" (ganar 5
+      combinadas distintas, oro), "Sextuple" (ganar una de 6+ partidos,
+      oro) y "El más difícil todavía" (ganar una de 8+ partidos, platino,
+      oculto). Nuevos campos en el contexto: `combinadaCreada`,
+      `mejorCombinadaGanada` (máximo de partidos en una combinada
+      ganada) y `numCombinadasGanadas`.
+    - Especiales: +6 (de 4 a 10, todos ocultos como los 4 que ya había) —
+      "Explorador" (10 casas distintas, oro), "Cazafreebets" (jugar 5
+      freebets, plata), "Salida a tiempo" (10 Cash Out, plata), "Doble
+      juego" (apostar en Apuestas Y Entretenimiento, bronce),
+      "Todoterreno" (3 deportes distintos, plata) y "Red de seguridad"
+      (una apuesta asegurada, bronce). Nuevos campos en el contexto:
+      `deportesDistintos`, `bankrollsUsados`, `numCashouts`,
+      `tieneSeguro`, `numFreebets`.
+    `SalaTrofeos.jsx` no necesitó ningún cambio: ya recorre `CATEGORIAS` y
+    filtra `TROFEOS` de forma dinámica, así que los nuevos trofeos se
+    integran solos.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

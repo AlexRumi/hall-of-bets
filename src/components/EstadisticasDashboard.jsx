@@ -108,7 +108,7 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
             key={valor}
             type="button"
             onClick={() => setFiltroBankroll(valor)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex-1 px-1 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors ${
               filtroBankroll === valor
                 ? "bg-felt text-paper shadow-sm"
                 : "text-slate hover:text-ink"

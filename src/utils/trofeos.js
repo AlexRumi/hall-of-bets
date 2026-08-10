@@ -3,6 +3,7 @@ import {
   calcularCuotaTotal,
   ordenarCronologicamente,
   agruparSeleccionesPorPartido,
+  derivarResultadoApuesta,
   cuentaComoGanada,
   cuentaComoPerdida,
 } from "./apuestas";
@@ -40,20 +41,44 @@ function hayRemontada(apuestasCronologicas) {
   return false;
 }
 
+// Petición directa del usuario: una combinada de 7 partidos con cuota >12,
+// cerrada con Cash Out una vez los 7 picks ya estaban marcados Ganada, no
+// contaba para "Cazador de cuotas" ni "Combinada ganadora" — el "resultado"
+// guardado se queda en "cashout" a propósito (ver manejarMarcarResultadoPick
+// en App.jsx), así que un "a.resultado === 'ganada'" literal se lo perdía.
+// Se considera "ganada de verdad" si el resultado guardado ya es "ganada",
+// o si es un cash out cuyos picks, derivados uno por uno, dan "ganada" en
+// conjunto (derivarResultadoApuesta) — es decir, cobraste antes de tiempo
+// pero los 7 partidos acabaron acertados de todas formas. Un cash out a
+// medio partido (con picks todavía pendientes) sigue sin contar.
+function esGanadaDeVerdad(apuesta) {
+  if (apuesta.resultado === "ganada") return true;
+  if (apuesta.resultado !== "cashout") return false;
+  return (
+    derivarResultadoApuesta(agruparSeleccionesPorPartido(apuesta.selecciones)) === "ganada"
+  );
+}
+
+function numeroPartidos(apuesta) {
+  return agruparSeleccionesPorPartido(apuesta.selecciones).length;
+}
+
 // Todos los datos que necesitan los trofeos, calculados una sola vez.
 function construirContexto(apuestas) {
   const cronologicas = ordenarCronologicamente(apuestas);
-  // "ganadas" se queda como victorias literales: los trofeos de cuota
-  // acertada, combinada ganada y beneficio de freebet no tienen sentido
-  // aplicados a un cash out (no hay una cuota que se haya "acertado", ni
-  // una freebet jugada hasta el final).
-  const ganadas = apuestas.filter((a) => a.resultado === "ganada");
+  const ganadas = apuestas.filter(esGanadaDeVerdad);
   // "decididas" sí cuenta los cash out con beneficio o pérdida (mismo
   // criterio que aciertoPct en calcularEstadisticas), para que
   // "Perfeccionista" no se quede corto ni se pase de listo frente al %
   // de acierto real.
   const decididas = apuestas.filter((a) => cuentaComoGanada(a) || cuentaComoPerdida(a));
   const freebetsGanadas = ganadas.filter((a) => a.tipoFondos === "freebet");
+  // Solo combinadas (2+ partidos) entre las ganadas de verdad, para los
+  // trofeos de "Combinadas" — cuenta partidos, no mercados sueltos: un
+  // "multi" de un solo partido (un bet builder) no es una combinada.
+  const partidosCombinadasGanadas = ganadas
+    .map(numeroPartidos)
+    .filter((n) => n > 1);
 
   return {
     totalApuestas: apuestas.length,
@@ -62,16 +87,24 @@ function construirContexto(apuestas) {
       (max, a) => Math.max(max, calcularCuotaTotal(a)),
       0
     ),
-    // Cuenta partidos, no mercados sueltos: un "multi" de un solo partido
-    // (un bet builder) no es una combinada, aunque tenga varios mercados.
-    combinadaGanada: ganadas.some((a) => agruparSeleccionesPorPartido(a.selecciones).length > 1),
+    combinadaGanada: partidosCombinadasGanadas.length > 0,
+    combinadaCreada: apuestas.some((a) => numeroPartidos(a) > 1),
+    mejorCombinadaGanada: partidosCombinadasGanadas.length
+      ? Math.max(...partidosCombinadasGanadas)
+      : 0,
+    numCombinadasGanadas: partidosCombinadasGanadas.length,
     remontada: hayRemontada(cronologicas),
     aciertoPerfecto: decididas.length >= 10 && decididas.every((a) => cuentaComoGanada(a)),
     casasDistintas: new Set(apuestas.map((a) => a.casa)).size,
+    deportesDistintos: new Set(apuestas.map((a) => a.deporte)).size,
+    bankrollsUsados: new Set(apuestas.map((a) => a.categoria)).size,
     mejorBeneficioFreebet: freebetsGanadas.reduce(
       (max, a) => Math.max(max, calcularBeneficio(a)),
       0
     ),
+    numCashouts: apuestas.filter((a) => a.resultado === "cashout").length,
+    tieneSeguro: apuestas.some((a) => a.seguroFreebetImporte),
+    numFreebets: apuestas.filter((a) => a.tipoFondos === "freebet").length,
   };
 }
 
@@ -134,6 +167,15 @@ export const TROFEOS = [
     progreso: (ctx) => progresoNumerico(ctx.totalApuestas, 25, "apuestas"),
   },
   {
+    id: "cincuenta-apuestas",
+    nombre: "Medio centenar",
+    descripcion: "Registra 50 apuestas",
+    tier: "oro",
+    categoria: "volumen",
+    comprobar: (ctx) => ctx.totalApuestas >= 50,
+    progreso: (ctx) => progresoNumerico(ctx.totalApuestas, 50, "apuestas"),
+  },
+  {
     id: "cien-apuestas",
     nombre: "Historiador",
     descripcion: "Registra 100 apuestas",
@@ -141,6 +183,15 @@ export const TROFEOS = [
     categoria: "volumen",
     comprobar: (ctx) => ctx.totalApuestas >= 100,
     progreso: (ctx) => progresoNumerico(ctx.totalApuestas, 100, "apuestas"),
+  },
+  {
+    id: "doscientas-cincuenta-apuestas",
+    nombre: "Enciclopedia",
+    descripcion: "Registra 250 apuestas",
+    tier: "platino",
+    categoria: "volumen",
+    comprobar: (ctx) => ctx.totalApuestas >= 250,
+    progreso: (ctx) => progresoNumerico(ctx.totalApuestas, 250, "apuestas"),
   },
   {
     id: "racha-3",
@@ -161,6 +212,15 @@ export const TROFEOS = [
     progreso: (ctx) => progresoNumerico(ctx.mejorRacha, 5, "victorias seguidas"),
   },
   {
+    id: "racha-7",
+    nombre: "Sobre ruedas",
+    descripcion: "Consigue 7 victorias seguidas",
+    tier: "oro",
+    categoria: "rachas",
+    comprobar: (ctx) => ctx.mejorRacha >= 7,
+    progreso: (ctx) => progresoNumerico(ctx.mejorRacha, 7, "victorias seguidas"),
+  },
+  {
     id: "racha-10",
     nombre: "Leyenda",
     descripcion: "Consigue 10 victorias seguidas",
@@ -168,6 +228,15 @@ export const TROFEOS = [
     categoria: "rachas",
     comprobar: (ctx) => ctx.mejorRacha >= 10,
     progreso: (ctx) => progresoNumerico(ctx.mejorRacha, 10, "victorias seguidas"),
+  },
+  {
+    id: "racha-15",
+    nombre: "Máquina de guerra",
+    descripcion: "Consigue 15 victorias seguidas",
+    tier: "platino",
+    categoria: "rachas",
+    comprobar: (ctx) => ctx.mejorRacha >= 15,
+    progreso: (ctx) => progresoNumerico(ctx.mejorRacha, 15, "victorias seguidas"),
   },
   {
     id: "cuota-1-8",
@@ -197,12 +266,74 @@ export const TROFEOS = [
     progreso: (ctx) => progresoNumerico(ctx.mejorCuotaAcertada, 5, "de cuota", 2),
   },
   {
+    id: "cuota-10",
+    nombre: "Rompebancas",
+    descripcion: "Acierta una apuesta con cuota ≥ 10",
+    tier: "platino",
+    categoria: "cuotas",
+    comprobar: (ctx) => ctx.mejorCuotaAcertada >= 10,
+    progreso: (ctx) => progresoNumerico(ctx.mejorCuotaAcertada, 10, "de cuota", 2),
+  },
+  {
+    id: "cuota-20",
+    nombre: "Milagro",
+    descripcion: "Acierta una apuesta con cuota ≥ 20",
+    tier: "platino",
+    categoria: "cuotas",
+    oculto: true,
+    comprobar: (ctx) => ctx.mejorCuotaAcertada >= 20,
+  },
+  {
+    id: "primera-combinada",
+    nombre: "Tu primera combinada",
+    descripcion: "Registra una combinada de 2 o más partidos",
+    tier: "bronce",
+    categoria: "combinadas",
+    comprobar: (ctx) => ctx.combinadaCreada,
+  },
+  {
     id: "combinada-ganada",
     nombre: "Combinada ganadora",
     descripcion: "Acierta una combinada de 2 o más partidos",
     tier: "bronce",
     categoria: "combinadas",
     comprobar: (ctx) => ctx.combinadaGanada,
+  },
+  {
+    id: "combinada-4",
+    nombre: "Póker de aciertos",
+    descripcion: "Acierta una combinada de 4 o más partidos",
+    tier: "plata",
+    categoria: "combinadas",
+    comprobar: (ctx) => ctx.mejorCombinadaGanada >= 4,
+    progreso: (ctx) => progresoNumerico(ctx.mejorCombinadaGanada, 4, "partidos"),
+  },
+  {
+    id: "cinco-combinadas-ganadas",
+    nombre: "Máquina de combinadas",
+    descripcion: "Acierta 5 combinadas distintas",
+    tier: "oro",
+    categoria: "combinadas",
+    comprobar: (ctx) => ctx.numCombinadasGanadas >= 5,
+    progreso: (ctx) => progresoNumerico(ctx.numCombinadasGanadas, 5, "combinadas"),
+  },
+  {
+    id: "combinada-6",
+    nombre: "Sextuple",
+    descripcion: "Acierta una combinada de 6 o más partidos",
+    tier: "oro",
+    categoria: "combinadas",
+    comprobar: (ctx) => ctx.mejorCombinadaGanada >= 6,
+    progreso: (ctx) => progresoNumerico(ctx.mejorCombinadaGanada, 6, "partidos"),
+  },
+  {
+    id: "combinada-8",
+    nombre: "El más difícil todavía",
+    descripcion: "Acierta una combinada de 8 o más partidos",
+    tier: "platino",
+    categoria: "combinadas",
+    oculto: true,
+    comprobar: (ctx) => ctx.mejorCombinadaGanada >= 8,
   },
   {
     id: "remontada",
@@ -234,6 +365,15 @@ export const TROFEOS = [
     comprobar: (ctx) => ctx.casasDistintas >= 5,
   },
   {
+    id: "diez-casas",
+    nombre: "Explorador",
+    descripcion: "Usa 10 casas de apuestas distintas",
+    tier: "oro",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.casasDistintas >= 10,
+  },
+  {
     id: "freebet-rentable",
     nombre: "Dinero gratis",
     descripcion: "Saca más de 20€ de beneficio de una sola freebet",
@@ -241,6 +381,51 @@ export const TROFEOS = [
     categoria: "especiales",
     oculto: true,
     comprobar: (ctx) => ctx.mejorBeneficioFreebet > 20,
+  },
+  {
+    id: "cazafreebets",
+    nombre: "Cazafreebets",
+    descripcion: "Juega 5 freebets distintas",
+    tier: "plata",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.numFreebets >= 5,
+  },
+  {
+    id: "cashout-maestro",
+    nombre: "Salida a tiempo",
+    descripcion: "Haz Cash Out en 10 apuestas distintas",
+    tier: "plata",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.numCashouts >= 10,
+  },
+  {
+    id: "doble-juego",
+    nombre: "Doble juego",
+    descripcion: "Registra apuestas tanto en Apuestas como en Entretenimiento",
+    tier: "bronce",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.bankrollsUsados >= 2,
+  },
+  {
+    id: "todoterreno",
+    nombre: "Todoterreno",
+    descripcion: "Apuesta en 3 deportes distintos",
+    tier: "plata",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.deportesDistintos >= 3,
+  },
+  {
+    id: "red-seguridad",
+    nombre: "Red de seguridad",
+    descripcion: "Registra una apuesta asegurada",
+    tier: "bronce",
+    categoria: "especiales",
+    oculto: true,
+    comprobar: (ctx) => ctx.tieneSeguro,
   },
 ];
 
