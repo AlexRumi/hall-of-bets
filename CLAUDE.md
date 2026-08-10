@@ -2261,6 +2261,95 @@ separadas, probando cada una antes de pasar a la siguiente.
   `BuscadorEvento.jsx` avisa en rojo bajo el buscador cuando ocurre, sin
   bloquear: el evento se puede seguir escribiendo a mano mientras tanto.
 
+- **Equipos apilados con resultado, y línea antes de la cuota** (petición
+  directa, a partir de una captura de referencia de un ticket real de
+  apuestas). Nuevo `esFormatoEquipos(evento)` en `utils/mercados.js`
+  (hermano de `equiposDesdeEvento`, ya existente): dice si "evento" sigue
+  el formato "Local - Visitante" de verdad, sin caer en los nombres
+  genéricos de repuesto — solo entonces merece la pena partirlo en dos
+  líneas.
+  - `ApuestaItem.jsx`: `EtiquetaPartidoEnVivo` se sustituye por
+    `CabeceraPartido`, que pinta cada equipo en su propia fila con el gol
+    de ESE equipo alineado a la derecha (en vez de "Evento" en una línea
+    con una píldora "1-2" aparte) — el resultado solo se rellena una vez
+    terminado el partido (nunca en directo, mismo límite de siempre); la
+    hora, mientras tanto, se enseña junto a país/competición en vez de
+    repetida en cada fila. Si el evento no tiene el formato de dos
+    equipos (escrito a mano, otro deporte), se enseña tal cual, como
+    antes. Se añade además una línea separadora (`border-t`) justo
+    después de la lista de picks, antes de la cuota.
+  - `FormularioApuesta.jsx`: el mismo criterio en cada bloque de "Apuesta
+    en construcción" — dos líneas de equipo en vez de "Evento" truncado
+    con un icono de globo (que se queda solo para eventos sin ese
+    formato), con la cuota en la misma esquina de siempre, y la lista de
+    mercados separada por una línea en vez de pegada justo debajo.
+
+- **Rediseño de cada pick y su cabecera, a partir de una maqueta HTML de
+  referencia** (`scoreboard-crest-demo.html`, varias rondas de ajuste en
+  la misma sesión). Cada pick pasa de una línea con una flecha dorada
+  (`▸ texto`) a dos líneas: el mercado en negrita arriba, y debajo en gris
+  su categoría del catálogo — nueva `etiquetaCategoriaDeTexto(texto,
+  equipos)` en `utils/mercados.js` (combina `buscarMercadoPorTexto`, ya
+  existente, con el `etiqueta` de `CATEGORIAS_MERCADO`); si el mercado no
+  coincide con nada del catálogo ("Otro mercado", o de antes del
+  desplegable), no se pinta subtítulo. El icono circular de cada pick
+  (`ESTILOS_ICONO_PICK`) no cambia de comportamiento.
+  - Cada partido gana una cabecera propia "Multi Apuesta"/"Pick simple"
+    (según tenga varios mercados o uno) con su cuota al lado, en su propio
+    recuadro verde felt para diferenciarla del título dorado — sustituye a
+    la fecha/hora que antes vivía junto al nombre del partido (esa
+    información se conserva más abajo, junto a país/competición). El
+    mismo icono circular de los picks (verde con tic, rojo con cruz, gris
+    con rayita en nula) se reutiliza aquí, a la izquierda del título, para
+    que se lea como el mismo lenguaje visual en toda la tarjeta — sustituyó
+    a un tic/cruz sueltos (sin círculo) de una ronda anterior, y antes de
+    eso a un simple punto de color (`COLOR_PUNTO`, ya sin uso, se borró).
+  - **El marcador final se probó con escudos reales** (`EscudoEquipo.jsx`,
+    imagen de `media.api-sports.io/football/teams/{id}.png`, que no gasta
+    cuota de la API — es un CDN de imágenes aparte del endpoint de datos
+    con el límite de 100/día — con reserva a un círculo de color con
+    iniciales si no hay `equipoId` guardado o la imagen falla) y se
+    **descartó tras probarlo**: con muchos partidos escritos a mano o de
+    competiciones no conectadas (p.ej. la Taça de Portugal), salía más una
+    inicial de repuesto que un escudo de verdad, y quedaba peor que no
+    tener nada. Se quitó `EscudoEquipo.jsx` del todo (sin uso ya); el
+    marcador se quedó solo con el nombre de cada equipo apilado y su gol.
+  - Un poco de aire (`mt-2`) entre el marcador de un partido y la línea
+    que lo separa del siguiente, que antes quedaban pegados.
+  - **Picks tocables directamente mientras el partido sigue pendiente**
+    (petición directa, tras el usuario decir que no sabía que hacía falta
+    el lápiz): el bug real que motivó el lápiz-antes-de-tocar (tocar el
+    sello, `pointer-events-none`, cambiaba el resultado sin querer) solo
+    puede pasar una vez el partido ya está resuelto — el sello no existe
+    mientras está pendiente, así que exigir el lápiz ahí de más era
+    fricción sin ningún riesgo real detrás. Ahora `puedeCiclar = enEdicion
+    || colorResultado === "pendiente"`, y el lápiz deja de verse mientras
+    está pendiente (ya no aporta nada) — solo aparece una vez resuelto el
+    partido, que es cuando sí hace falta esa protección para corregirlo.
+  - **Bug real corregido de paso**: al anular un pick se abre un aviso
+    para ajustar la cuota del partido (`promptsCuota`); si después se
+    volvía a ciclar ESE MISMO pick a Ganada/Perdida/Pendiente, el aviso se
+    quedaba abierto (solo se cerraba a mano, con "Guardar" o la "X").
+    `ciclarPick` (`ApuestaItem.jsx`) ahora cierra el aviso solo en cuanto
+    el pick deja de estar anulado.
+  - **"Mejor apuesta"/"Peor apuesta" (`RachasYExtremos.jsx`, en
+    Estadísticas) se pueden tocar** para abrir el mismo modal de detalle
+    que ya usa el listado normal (`EstadisticasDashboard.jsx` gana el
+    mismo patrón de `ListaApuestas.jsx`: guardar el id, buscarlo en el
+    array completo sin filtrar, y los mismos manejadores de marcar/editar/
+    borrar recibidos ahora desde `App.jsx`). Nuevo prop `soloLectura` en
+    `ApuestaItem.jsx`: sin sello, sin ojo/lápiz por partido — esta vista es
+    para repasar una apuesta ya resuelta, no para gestionarla, así que se
+    ve directo el tic/cruz de cada pick sin nada que revelar. Solo se
+    activa en este modal; el resto de la app sigue con el sello de
+    siempre.
+  - **Bug real corregido de paso**: con una combinada, "Mejor apuesta"/
+    "Peor apuesta" mostraba solo `selecciones[0].evento` — parecía una
+    apuesta a un único partido. Ahora cuenta partidos (no mercados
+    sueltos, mismo criterio que el badge "Combinada · N partidos" de
+    `ApuestaItem.jsx`/`TarjetaApuestaResumen.jsx`) y muestra "Combinada ·
+    N partidos" cuando aplica.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

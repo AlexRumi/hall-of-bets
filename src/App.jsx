@@ -474,6 +474,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 movimientos={movimientos}
                 casas={casas}
                 oscuro={oscuro}
+                onMarcarResultado={manejarMarcarResultado}
+                onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
+                onBorrar={manejarBorrarApuesta}
+                onEditar={editarApuesta}
               />
             )}
           </div>

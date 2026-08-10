@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ApuestaItem from "./ApuestaItem";
 import KpisEstadisticas from "./KpisEstadisticas";
 import GraficoEvolucion from "./GraficoEvolucion";
 import GraficoDistribucionResultados from "./GraficoDistribucionResultados";
@@ -26,7 +27,24 @@ const BANKROLLS = [
   { valor: "todas", etiqueta: "Todas" },
 ];
 
-export default function EstadisticasDashboard({ apuestas, movimientos, casas, oscuro }) {
+export default function EstadisticasDashboard({
+  apuestas,
+  movimientos,
+  casas,
+  oscuro,
+  onMarcarResultado,
+  onMarcarResultadoSeleccion,
+  onActualizarCuotaSeleccion,
+  onBorrar,
+  onEditar,
+}) {
+  // "Mejor apuesta"/"Peor apuesta" (RachasYExtremos) se pueden abrir en el
+  // mismo modal de detalle que ya usa ListaApuestas.jsx — mismo patrón
+  // (guardar solo el id y buscarlo en el array completo sin filtrar, para
+  // que si se marca un resultado o se edita desde aquí, el modal siempre
+  // refleje el dato en vivo).
+  const [apuestaAbiertaId, setApuestaAbiertaId] = useState(null);
+  const apuestaAbierta = apuestas.find((a) => a.id === apuestaAbiertaId) ?? null;
   // Por defecto solo "Apuestas": las de Entretenimiento suelen ser más
   // experimentales (varios mercados en la misma apuesta, tipo bet
   // builder), y mezclarlas con las de verdad ensuciaba sobre todo el
@@ -206,7 +224,7 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
       <GraficoEvolucion apuestas={apuestasFiltradas} oscuro={oscuro} />
       <GraficoDistribucionResultados apuestas={apuestasFiltradas} oscuro={oscuro} />
       <GraficoBeneficioMensual apuestas={apuestasFiltradas} oscuro={oscuro} />
-      <RachasYExtremos apuestas={apuestasFiltradas} />
+      <RachasYExtremos apuestas={apuestasFiltradas} onAbrir={setApuestaAbiertaId} />
       <GraficoBarraDivergente
         titulo="ROI por deporte"
         datos={roiPorDeporte}
@@ -265,6 +283,32 @@ export default function EstadisticasDashboard({ apuestas, movimientos, casas, os
       </div>
       <CalendarioActividad apuestas={apuestasFiltradas} />
       <InsightsAutomaticos apuestas={apuestasFiltradas} />
+
+      {apuestaAbierta && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 pb-4 pt-36 md:pt-20 z-50"
+          onClick={() => setApuestaAbiertaId(null)}
+        >
+          <div
+            className="w-full max-w-xl max-h-[calc(100dvh-10rem)] md:max-h-[calc(100dvh-6rem)] overflow-y-auto scrollbar-oculto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ApuestaItem
+              apuesta={apuestaAbierta}
+              casas={casas}
+              movimientos={movimientos}
+              todasApuestas={apuestas}
+              onMarcarResultado={onMarcarResultado}
+              onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+              onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
+              onBorrar={onBorrar}
+              onEditar={onEditar}
+              onCerrar={() => setApuestaAbiertaId(null)}
+              soloLectura
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

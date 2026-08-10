@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PlusCircle, Save, X, AlertTriangle, Globe, Pencil } from "lucide-react";
 import { agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
+import { equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
 import CampoCasa from "./CampoCasa";
 import ConstructorPartido from "./ConstructorPartido";
 import SelectorMercado from "./SelectorMercado";
@@ -502,11 +503,32 @@ export default function FormularioApuesta({
                   const esMulti = bloque.mercados.length > 1;
                   return (
                     <div key={index} className="bg-surface border border-line rounded-lg p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-1.5 text-sm font-semibold text-ink min-w-0">
-                          <Globe size={14} className="text-gold shrink-0" />
-                          <span className="truncate">{bloque.evento}</span>
-                        </span>
+                      <div className="flex items-start justify-between gap-2">
+                        {/* Equipos apilados, uno encima del otro (petición
+                            directa, a partir de una captura de referencia de
+                            un ticket real) — mismo criterio que
+                            esFormatoEquipos ya usa en ApuestaItem.jsx: solo
+                            si "evento" sigue el formato "Local - Visitante",
+                            si no se enseña tal cual. La cuota se queda junto
+                            al título, arriba del todo. */}
+                        {esFormatoEquipos(bloque.evento) ? (
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            {(() => {
+                              const { local, visitante } = equiposDesdeEvento(bloque.evento);
+                              return (
+                                <>
+                                  <p className="text-sm font-semibold text-ink truncate">{local}</p>
+                                  <p className="text-sm font-semibold text-ink truncate">{visitante}</p>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink min-w-0">
+                            <Globe size={14} className="text-gold shrink-0" />
+                            <span className="truncate">{bloque.evento}</span>
+                          </span>
+                        )}
                         {editando ? (
                           <input
                             type="number"
@@ -533,7 +555,7 @@ export default function FormularioApuesta({
                           />
                         </div>
                       ) : (
-                        <ul className="mt-1.5 space-y-0.5">
+                        <ul className="mt-2 pt-2 border-t border-line/60 space-y-0.5">
                           {bloque.mercados.map((mercado, i) => (
                             <li key={i} className="flex items-center justify-between gap-2 text-xs text-slate">
                               <span>• {mercado}</span>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Pencil, Trash2, Eye, EyeOff, Check, Minus } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
+import { equiposDesdeEvento, esFormatoEquipos, etiquetaCategoriaDeTexto } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
 import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
@@ -26,33 +27,17 @@ function horaInicioPartido(fecha, hora) {
   return new Date(`${fecha}T${hora}:00`).getTime();
 }
 
-// Hora/resultado del partido en la esquina, estilo "ticket" de casa de
-// apuestas (petición directa) — el partidoId ya guardado en la selección
-// desde el buscador. Solo las apuestas creadas eligiendo un partido de
-// verdad (no escritas a mano) tienen ese id; sin él no se pinta nada (nunca
-// bloquea). La hora se enseña directa desde la propia selección (ya
-// guardada, sin gastar ninguna llamada); el marcador final, en cambio,
-// viene de usePartidoInfo.js (caché compartida en Supabase + gate por hora
-// de inicio, para no repetir la llamada a la API más de una vez por
-// partido en toda la vida de la app).
-function EtiquetaPartidoEnVivo({ partidoId, hora, horaInicioMs }) {
+// Envoltorio "render prop": llama a usePartidoInfo UNA sola vez por
+// partido y expone el resultado a los dos sitios que lo necesitan (la
+// hora/resultado de la cabecera y el marcador con escudos del final) —
+// hace falta este patrón porque el hook no se puede llamar dos veces
+// sueltas dentro del mismo .map() de partidos sin arriesgarse a que las
+// dos disparen su propia petición a la vez (ninguna sabría que la otra ya
+// está pidiendo lo mismo), duplicando el gasto de cuota.
+function InfoPartido({ partidoId, horaInicioMs, children }) {
   const info = usePartidoInfo(partidoId, horaInicioMs);
-  const terminado = info && ESTADOS_TERMINADOS_API.has(info.estado);
-
-  if (terminado) {
-    return (
-      <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-void/15 text-void">
-        {info.golesLocal}-{info.golesVisitante}
-      </span>
-    );
-  }
-
-  if (!hora) return null;
-  return (
-    <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gold/10 text-gold">
-      {hora}
-    </span>
-  );
+  const terminado = !!(info && ESTADOS_TERMINADOS_API.has(info.estado));
+  return children(info, terminado);
 }
 
 const ETIQUETAS_RESULTADO = {
@@ -61,14 +46,6 @@ const ETIQUETAS_RESULTADO = {
   perdida: "Perdida",
   nula: "Nula",
   cashout: "Cash Out",
-};
-
-const COLOR_PUNTO = {
-  pendiente: "bg-pending",
-  ganada: "bg-win",
-  perdida: "bg-lose",
-  nula: "bg-void",
-  cashout: "bg-cashout",
 };
 
 // Franja de estado general de la apuesta (nueva, ver más abajo): mismos
@@ -81,9 +58,10 @@ const ESTILOS_BARRA_ESTADO = {
   cashout: "bg-cashout/15 text-cashout",
 };
 
-// Icono circular de cada pick (ver más abajo): aro vacío en pendiente,
-// relleno del color que toque en el resto — mismo lenguaje de color que
-// COLOR_PUNTO, pero pensado para tocarlo (cicla Pendiente → Ganada →
+// Icono circular de cada pick, y también de la cabecera "Multi Apuesta"/
+// "Pick simple" de cada partido (mismo estilo, para que se lea como el
+// mismo lenguaje visual): aro vacío en pendiente, relleno del color que
+// toque en el resto — pensado para tocarlo (cicla Pendiente → Ganada →
 // Perdida → Nula → Pendiente).
 const ESTILOS_ICONO_PICK = {
   pendiente: "border-2 border-pending bg-transparent",
@@ -95,8 +73,7 @@ const ESTILOS_ICONO_PICK = {
 const ORDEN_CICLO_PICK = ["pendiente", "ganada", "perdida", "nula"];
 
 // Fondo sólido para el "sello" de resultado sobre cada partido — ver
-// "colorResultado !== pendiente" más abajo. Mismos tokens que COLOR_PUNTO,
-// como relleno en vez de punto.
+// "colorResultado !== pendiente" más abajo.
 const TINTE_SELLO = {
   ganada: "bg-win",
   perdida: "bg-lose",
@@ -128,6 +105,11 @@ export default function ApuestaItem({
   onBorrar,
   onEditar,
   onCerrar,
+  // Vista de solo repaso (petición directa: "Mejor apuesta"/"Peor apuesta"
+  // en Estadísticas) — sin el sello ni el ojo/lápiz de cada partido, que
+  // ahí solo estorban: ya se ve directamente el tic verde/cruz roja de
+  // cada pick, sin nada que revelar ni corregir desde aquí.
+  soloLectura = false,
 }) {
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
@@ -243,7 +225,15 @@ export default function ApuestaItem({
     const actual = pick.resultado ?? "pendiente";
     const siguiente = ORDEN_CICLO_PICK[(ORDEN_CICLO_PICK.indexOf(actual) + 1) % ORDEN_CICLO_PICK.length];
     onMarcarResultadoSeleccion(apuesta.id, pick.indice, siguiente);
-    if (siguiente === "nula") abrirPromptCuota(grupo);
+    if (siguiente === "nula") {
+      abrirPromptCuota(grupo);
+    } else if (actual === "nula") {
+      // Bug real: si se ciclaba de vuelta a Ganada/Perdida/Pendiente tras
+      // haber anulado el pick, el aviso de "ajustar cuota" se quedaba
+      // abierto — solo se cerraba a mano (Guardar o la "X"). Se anuló por
+      // error, así que se cierra solo al dejar de estarlo.
+      cerrarPromptCuota(grupo.indiceLider);
+    }
   }
 
   if (editando) {
@@ -396,7 +386,11 @@ export default function ApuestaItem({
 
           return (
             <div key={grupo.indiceLider}>
-              {indice > 0 && <div className="h-px bg-line" />}
+              {/* mt-2: un poco más de aire entre el marcador del partido
+                  anterior y la línea que lo separa del siguiente — antes
+                  solo tenían el py-3 de la propia tarjeta, quedaba
+                  demasiado pegado. */}
+              {indice > 0 && <div className="h-px bg-line mt-2" />}
               {/* min-h: sin esto, un partido con menos contenido (p.ej. sin
                   país/competición guardados, o sin el enlace "Ajustar
                   cuota") ocupa menos alto que uno con más — y como el
@@ -406,101 +400,195 @@ export default function ApuestaItem({
                   entre partidos, creciendo solo si el contenido de verdad
                   necesita más (varios picks, textos largos). */}
               <div className="relative overflow-hidden px-4 sm:px-5 py-3 min-h-[6.75rem]">
-                <div className="flex items-start gap-2.5">
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${COLOR_PUNTO[colorResultado]}`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    {/* Hora/resultado junto al evento (petición directa —
-                        antes vivía en una columna a la derecha, donde
-                        chocaba con el ojo/lápiz de la esquina). Al no
-                        competir ya por la esquina superior derecha, la
-                        cuota puede bajar a la esquina inferior sin
-                        necesidad del hueco extra que hacía falta antes. */}
-                    <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink break-words">
-                      {grupo.evento}
-                      {grupo.partidoId && (
-                        <EtiquetaPartidoEnVivo
-                          partidoId={grupo.partidoId}
-                          hora={grupo.hora}
-                          horaInicioMs={horaInicioPartido(grupo.fecha ?? apuesta.fecha, grupo.hora)}
-                        />
-                      )}
-                    </p>
-                    {grupo.pais && (
-                      <p className="text-xs text-slate">
-                        {grupo.competicion} · {grupo.pais}
-                      </p>
-                    )}
-                    <div className="mt-1.5 space-y-1.5">
-                      {grupo.selecciones.map((pick) => {
-                        const estadoPick = pick.resultado ?? "pendiente";
-                        const tachado = estadoPick === "perdida" || estadoPick === "nula";
-                        const contenidoPick = (
+                <div className="flex-1 min-w-0">
+                    <InfoPartido
+                      partidoId={grupo.partidoId}
+                      horaInicioMs={horaInicioPartido(grupo.fecha ?? apuesta.fecha, grupo.hora)}
+                    >
+                      {(info, terminado) => {
+                        const conEquipos = esFormatoEquipos(grupo.evento);
+                        const equipos = equiposDesdeEvento(grupo.evento);
+                        const esMultiPartido = grupo.selecciones.length > 1;
+                        return (
                           <>
-                            <span
-                              className={`w-4 h-4 rounded-full shrink-0 mt-0.5 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[estadoPick]}`}
-                            >
-                              {estadoPick === "ganada" && <Check size={10} strokeWidth={3} />}
-                              {estadoPick === "perdida" && <X size={10} strokeWidth={3} />}
-                              {estadoPick === "nula" && <Minus size={10} strokeWidth={3} />}
-                            </span>
-                            <span
-                              className={`flex-1 flex flex-wrap items-baseline gap-1.5 text-sm font-medium break-words ${
-                                tachado ? "line-through opacity-50 text-ink" : "text-ink"
-                              }`}
-                            >
-                              <span className="text-gold no-underline">▸</span>
-                              {pick.apuesta}
-                              {estadoPick === "nula" && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-void/15 text-void no-underline">
-                                  Anulada
+                            {/* Cabecera "MULTI"/"PICK SIMPLE" + cuota
+                                (petición directa, a partir de una captura de
+                                referencia de un ticket real) — la cuota vive
+                                aquí arriba, junto al título, en vez de al
+                                final: así el ojo/lápiz de la esquina
+                                superior (pr-16/pr-20 de hueco) nunca la tapa.
+                                El icono (antes en su propia columna a la
+                                izquierda de toda la tarjeta) se mueve aquí,
+                                centrado verticalmente con el título — mismo
+                                círculo relleno que ya usa cada pick
+                                (ESTILOS_ICONO_PICK), no un tic/cruz sueltos
+                                ni el punto plano de antes. La cuota va justo
+                                al lado del título (no empujada al otro
+                                extremo de la fila). */}
+                            <div className="flex items-center justify-between gap-2 pr-16 sm:pr-20">
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[colorResultado]}`}
+                                >
+                                  {colorResultado === "ganada" && <Check size={12} strokeWidth={3} />}
+                                  {colorResultado === "perdida" && <X size={12} strokeWidth={3} />}
+                                  {colorResultado === "nula" && <Minus size={12} strokeWidth={3} />}
                                 </span>
+                                <span className="text-base font-bold uppercase tracking-wide text-gold">
+                                  {esMultiPartido ? "Multi Apuesta" : "Pick simple"}
+                                </span>
+                                <span className="font-mono text-sm font-bold text-paper bg-felt rounded px-2 py-0.5">
+                                  {grupo.cuota.toFixed(2)}
+                                </span>
+                              </span>
+                              {hayPickAnulado && !promptAbierto && (
+                                <button
+                                  type="button"
+                                  onClick={() => abrirPromptCuota(grupo)}
+                                  className="text-[11px] font-semibold text-gold hover:underline shrink-0"
+                                >
+                                  ✎ Ajustar cuota
+                                </button>
                               )}
-                            </span>
+                            </div>
+
+                            {conEquipos ? (
+                              (grupo.pais || (!terminado && grupo.hora)) && (
+                                <p className="flex flex-wrap items-center gap-2 text-xs text-slate mt-0.5">
+                                  {grupo.pais && (
+                                    <span>
+                                      {grupo.competicion} · {grupo.pais}
+                                    </span>
+                                  )}
+                                  {!terminado && grupo.hora && (
+                                    <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gold/10 text-gold">
+                                      {grupo.hora}
+                                    </span>
+                                  )}
+                                </p>
+                              )
+                            ) : (
+                              <>
+                                <p className="text-base font-semibold text-ink break-words mt-0.5">
+                                  {grupo.evento}
+                                </p>
+                                {grupo.pais && (
+                                  <p className="text-xs text-slate">
+                                    {grupo.competicion} · {grupo.pais}
+                                  </p>
+                                )}
+                              </>
+                            )}
+
+                            <div className="mt-2 space-y-1.5">
+                              {grupo.selecciones.map((pick) => {
+                                const estadoPick = pick.resultado ?? "pendiente";
+                                const tachado = estadoPick === "perdida" || estadoPick === "nula";
+                                // Formato de dos líneas (petición directa):
+                                // valor del mercado en negrita arriba,
+                                // categoría del mercado en gris debajo —
+                                // solo cambia el FORMATO, el texto guardado
+                                // (pick.apuesta) sigue siendo el mismo.
+                                const etiquetaCategoria = etiquetaCategoriaDeTexto(pick.apuesta, equipos);
+                                const contenidoPick = (
+                                  <>
+                                    <span
+                                      className={`w-4 h-4 rounded-full shrink-0 mt-0.5 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[estadoPick]}`}
+                                    >
+                                      {estadoPick === "ganada" && <Check size={10} strokeWidth={3} />}
+                                      {estadoPick === "perdida" && <X size={10} strokeWidth={3} />}
+                                      {estadoPick === "nula" && <Minus size={10} strokeWidth={3} />}
+                                    </span>
+                                    <span className="flex-1 min-w-0">
+                                      <span
+                                        className={`flex flex-wrap items-baseline gap-1.5 text-sm font-semibold break-words ${
+                                          tachado ? "line-through opacity-50 text-ink" : "text-ink"
+                                        }`}
+                                      >
+                                        {pick.apuesta}
+                                        {estadoPick === "nula" && (
+                                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-void/15 text-void no-underline">
+                                            Anulada
+                                          </span>
+                                        )}
+                                      </span>
+                                      {etiquetaCategoria && (
+                                        <span
+                                          className={`block text-xs text-slate ${tachado ? "opacity-50" : ""}`}
+                                        >
+                                          {etiquetaCategoria}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </>
+                                );
+                                // Mientras el partido sigue pendiente no hay
+                                // sello todavía (solo se pinta con
+                                // colorResultado !== "pendiente"), así que
+                                // no hay riesgo de tocarlo sin querer: cada
+                                // pick es tocable directamente, sin pasar
+                                // por el lápiz. En cuanto se resuelve (bug
+                                // real de origen: al tocar el sello, que es
+                                // pointer-events-none, el toque pasaba a lo
+                                // que hubiera debajo y cambiaba el resultado
+                                // sin querer), la fila vuelve a ser solo
+                                // visual — hace falta el lápiz para volver a
+                                // editarlo.
+                                const puedeCiclar = enEdicion || colorResultado === "pendiente";
+                                return puedeCiclar ? (
+                                  <button
+                                    key={pick.indice}
+                                    type="button"
+                                    onClick={() => ciclarPick(grupo, pick)}
+                                    className="w-full flex items-start gap-2 text-left"
+                                  >
+                                    {contenidoPick}
+                                  </button>
+                                ) : (
+                                  <div key={pick.indice} className="w-full flex items-start gap-2">
+                                    {contenidoPick}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Marcador (petición directa: sin escudo — con
+                                tantos equipos sin id guardado, o de
+                                competiciones no conectadas, salía más una
+                                iniciales de repuesto que un escudo real, y
+                                chocaba más de lo que aportaba). Un equipo
+                                por fila, local arriba y visitante abajo, con
+                                su gol alineado a la derecha una vez
+                                terminado el partido — nunca en directo
+                                (mismo límite de siempre). */}
+                            {conEquipos && (
+                              <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex-1 text-sm font-semibold text-ink truncate">
+                                    {equipos.local}
+                                  </span>
+                                  {terminado && (
+                                    <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
+                                      {info.golesLocal}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="flex-1 text-sm font-semibold text-ink truncate">
+                                    {equipos.visitante}
+                                  </span>
+                                  {terminado && (
+                                    <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
+                                      {info.golesVisitante}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </>
                         );
-                        // Fuera de modo edición, la fila es solo visual (bug
-                        // real: al tocar el sello, que es pointer-events-none,
-                        // el toque pasaba a lo que hubiera debajo, cambiando
-                        // el resultado sin querer). Solo dentro del modo
-                        // edición (lápiz junto al ojo) el pick se vuelve
-                        // tocable, sin paso de confirmación.
-                        return enEdicion ? (
-                          <button
-                            key={pick.indice}
-                            type="button"
-                            onClick={() => ciclarPick(grupo, pick)}
-                            className="w-full flex items-start gap-2 text-left"
-                          >
-                            {contenidoPick}
-                          </button>
-                        ) : (
-                          <div key={pick.indice} className="w-full flex items-start gap-2">
-                            {contenidoPick}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Cuota en la esquina inferior derecha del contenido
-                        (antes arriba, en su propia columna — chocaba con
-                        el ojo/lápiz de la esquina superior). */}
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      {hayPickAnulado && !promptAbierto && (
-                        <button
-                          type="button"
-                          onClick={() => abrirPromptCuota(grupo)}
-                          className="text-[11px] font-semibold text-gold hover:underline"
-                        >
-                          ✎ Ajustar cuota
-                        </button>
-                      )}
-                      <p className="font-mono text-base font-bold text-gold">
-                        {grupo.cuota.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
+                      }}
+                    </InfoPartido>
                 </div>
 
                 {/* Aviso opcional tras anular un pick (no bloqueante): si se
@@ -570,7 +658,7 @@ export default function ApuestaItem({
                     los lados y arriba/abajo para que el sello se vea como
                     una tarjeta redondeada flotando dentro de la fila, no
                     como un bloque a sangre completa de borde a borde. */}
-                {colorResultado !== "pendiente" && !enEdicion && (
+                {colorResultado !== "pendiente" && !enEdicion && !soloLectura && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
                       className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] transition-[backdrop-filter] duration-200 ${
@@ -598,26 +686,25 @@ export default function ApuestaItem({
                 {/* Ojo + lápiz propios de este partido — no uno solo para
                     toda la apuesta: revelar/editar el primer partido no
                     afecta al resto.
-                    Bug real: antes los dos dependían de "colorResultado !==
-                    pendiente", pero un partido con picks mezclados (uno ya
-                    marcado, otro sin tocar) sigue derivándose "pendiente"
-                    en conjunto — así que nunca aparecía ni el lápiz ni el
-                    ojo, y no había forma de entrar en modo edición ni
-                    siquiera para el pick ya marcado. El lápiz ahora se ve
-                    siempre que no se esté ya revelando o editando (haya o
-                    no sello puesto); el ojo se ve si hay sello que
-                    ocultar/mostrar O si hay que salir del modo edición.
-                    Sin sello de fondo (pendiente, o en edición) los
-                    botones pasan a un estilo con más contraste que el
-                    "sobre tinte de color" de siempre. */}
-                {(() => {
+                    Petición directa: mientras el partido sigue pendiente,
+                    los picks ya son tocables directamente (ver
+                    "puedeCiclar" más arriba) — el lápiz solo hace falta
+                    para volver a entrar en modo edición una vez resuelto
+                    (ahí sí hay sello, y hace falta el hueco de seguridad
+                    contra el toque accidental). Antes se veía también
+                    mientras estaba pendiente, cuando no aportaba nada.
+                    El ojo se ve si hay sello que ocultar/mostrar O si hay
+                    que salir del modo edición. Sin sello de fondo (en
+                    edición) los botones pasan a un estilo con más
+                    contraste que el "sobre tinte de color" de siempre. */}
+                {!soloLectura && (() => {
                   const sinTinte = colorResultado === "pendiente" || enEdicion;
                   const estiloIcono = sinTinte
                     ? "bg-paperDim border border-line text-slate hover:text-gold"
                     : "bg-black/15 hover:bg-black/25 text-paper";
                   return (
                     <div className="absolute top-4 right-5 flex items-center gap-1.5">
-                      {!revelado && !enEdicion && (
+                      {!revelado && !enEdicion && colorResultado !== "pendiente" && (
                         <button
                           type="button"
                           onClick={() => activarEdicionPicks(grupo.indiceLider)}

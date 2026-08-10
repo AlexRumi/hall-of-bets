@@ -15,6 +15,15 @@ export function equiposDesdeEvento(evento) {
     : { local: "Equipo Local", visitante: "Equipo Visitante" };
 }
 
+// A diferencia de equiposDesdeEvento (siempre da un nombre, genérico si
+// hace falta, para generar texto de mercado), esto dice si de verdad
+// merece la pena partir "evento" en dos líneas (un equipo encima del
+// otro) — con nombres genéricos de repuesto no aportaría nada.
+export function esFormatoEquipos(evento) {
+  const partes = (evento ?? "").split(" - ");
+  return partes.length === 2 && !!partes[0].trim() && !!partes[1].trim();
+}
+
 const LINEAS_GOLES = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 const LINEAS_GOLES_MEDIO = [0.5, 1.5, 2.5, 3.5];
 // Interpretación de "córners" del pedido (el mensaje original venía
@@ -270,6 +279,17 @@ export function buscarMercadoPorTexto(apuestaTexto, equipos) {
     }
   }
   return null;
+}
+
+// Etiqueta de categoría (ej. "Goles", "Resultado Final") para un texto de
+// mercado ya guardado — el subtítulo gris bajo cada pick en el detalle de
+// la apuesta (ApuestaItem.jsx). null si no coincide con nada del catálogo
+// (mercado escrito a mano en "Otro mercado", o de antes de tener este
+// desplegable) — en ese caso no se pinta ningún subtítulo.
+export function etiquetaCategoriaDeTexto(apuestaTexto, equipos) {
+  const encontrado = buscarMercadoPorTexto(apuestaTexto, equipos);
+  if (!encontrado) return null;
+  return CATEGORIAS_MERCADO.find((c) => c.id === encontrado.categoriaId)?.etiqueta ?? null;
 }
 
 // Orden pedido directamente por el usuario (2026-08-10): de lo más
