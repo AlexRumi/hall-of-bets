@@ -2245,6 +2245,22 @@ separadas, probando cada una antes de pasar a la siguiente.
     filtra `TROFEOS` de forma dinámica, así que los nuevos trofeos se
     integran solos.
 
+- **Aviso de cuota diaria agotada en el buscador de partidos** (bug real,
+  detectado por el usuario al no aparecerle un partido de hoy que sí
+  existía). Comprobado a mano el 2026-08-10 llamando a API-Football
+  directamente: con la cuota gratuita agotada (100 peticiones/día), la API
+  responde 200 con `errors.requests = "You have reached the request limit
+  for the day..."` — un caso silencioso más, igual que ya pasaba con la
+  key que falta o con el rango de fechas, indistinguible de "no hay
+  partidos ese día" si no se detecta aparte. `api/partidos.js` ahora
+  comprueba `datos.errors` en general (no solo `datos.errors.plan`) y
+  devuelve `{ partidos: [], cuotaAgotada: true }` — distinto de
+  `fueraDeRango` porque el aviso es distinto (no depende de la fecha
+  elegida, se resuelve solo al día siguiente cuando la API resetea la
+  cuota). `usePartidos.js` guarda también este campo en su caché, y
+  `BuscadorEvento.jsx` avisa en rojo bajo el buscador cuando ocurre, sin
+  bloquear: el evento se puede seguir escribiendo a mano mientras tanto.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

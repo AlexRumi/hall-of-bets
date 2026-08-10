@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 // Caché a nivel de módulo, por fecha: si ya se pidieron los partidos de un
 // día en esta visita, no se vuelve a llamar a /api/partidos (que a su vez
 // solo llama a API-Football si Vercel no lo tiene ya en su propia caché).
-// Guarda el objeto { partidos, fueraDeRango } completo, no solo la lista,
-// para no tener que volver a pedirlo solo por el aviso de fuera de rango.
+// Guarda el objeto { partidos, fueraDeRango, cuotaAgotada } completo, no
+// solo la lista, para no tener que volver a pedirlo solo por el aviso.
 const cache = new Map();
-const VACIO = { partidos: [], fueraDeRango: false };
+const VACIO = { partidos: [], fueraDeRango: false, cuotaAgotada: false };
 
 export function usePartidos(fecha) {
   const [resultado, setResultado] = useState(() => cache.get(fecha) ?? VACIO);
@@ -23,7 +23,11 @@ export function usePartidos(fecha) {
     fetch(`/api/partidos?fecha=${fecha}`)
       .then((r) => (r.ok ? r.json() : VACIO))
       .then((datos) => {
-        const valor = { partidos: datos.partidos ?? [], fueraDeRango: !!datos.fueraDeRango };
+        const valor = {
+          partidos: datos.partidos ?? [],
+          fueraDeRango: !!datos.fueraDeRango,
+          cuotaAgotada: !!datos.cuotaAgotada,
+        };
         cache.set(fecha, valor);
         if (vivo) setResultado(valor);
       })

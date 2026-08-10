@@ -59,7 +59,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   // elegido + "Cambiar partido". Arranca colapsado si ya había un evento
   // guardado (al editar una selección ya creada), abierto si no.
   const [expandido, setExpandido] = useState(() => !valor);
-  const { partidos, fueraDeRango } = usePartidos(fecha);
+  const { partidos, fueraDeRango, cuotaAgotada } = usePartidos(fecha);
 
   function elegirPais(nuevoPais) {
     setPaisFiltro(nuevoPais);
@@ -145,6 +145,12 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           <p className="text-xs text-slate mt-1.5">
             El plan gratuito de API-Football solo permite buscar partidos de ayer, hoy o mañana. Para
             esta fecha, escribe el evento a mano.
+          </p>
+        )}
+        {cuotaAgotada && (
+          <p className="text-xs text-lose mt-1.5">
+            Se ha agotado la cuota diaria de peticiones a API-Football. Vuelve a intentarlo mañana, o
+            escribe el evento a mano mientras tanto.
           </p>
         )}
         {modoManual && (

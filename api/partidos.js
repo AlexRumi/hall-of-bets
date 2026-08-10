@@ -93,6 +93,18 @@ export default async function handler(req, res) {
       return;
     }
 
+    // Cuota diaria agotada (plan gratuito: 100 peticiones/día) — comprobado
+    // a mano el 2026-08-10 llamando a la API directamente: responde 200 con
+    // datos.errors.requests = "You have reached the request limit for the
+    // day...", igual de silencioso que el caso de arriba si no se detecta
+    // aparte. Se distingue de "fueraDeRango" porque el aviso al usuario es
+    // distinto (aquí no depende de la fecha elegida, mañana vuelve a
+    // funcionar solo cuando la API resetee la cuota).
+    if (datos.errors && Object.keys(datos.errors).length > 0) {
+      res.status(200).json({ partidos: [], cuotaAgotada: true });
+      return;
+    }
+
     const partidos = (datos.response ?? [])
       // Orden cronológico (hora de verdad, no solo fecha): la API no
       // garantiza ningún orden concreto en su respuesta.
