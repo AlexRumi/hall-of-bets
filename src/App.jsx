@@ -7,7 +7,12 @@ import { useTrofeos } from "./hooks/useTrofeos";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
 import { useAjustes } from "./hooks/useAjustes";
-import { calcularRachaActual, filtrarPorPeriodo } from "./utils/apuestas";
+import {
+  calcularRachaActual,
+  filtrarPorPeriodo,
+  derivarResultadoApuesta,
+  agruparSeleccionesPorPartido,
+} from "./utils/apuestas";
 import { calcularBankrollPorCasa } from "./utils/movimientos";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
@@ -79,6 +84,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     editarApuesta,
     marcarResultado,
     marcarResultadoSeleccion,
+    actualizarCuotaSeleccion,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango: archivarApuestasPorRango,
@@ -196,6 +202,31 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     }
   }
 
+  // Cada pick (ver ApuestaItem.jsx) marca su propio resultado con un icono
+  // circular que cicla Pendiente/Ganada/Perdida/Nula; ya no hay botones
+  // grandes Ganada/Perdida/Nula aparte. El resultado real de la apuesta (el
+  // que mueve beneficio, freebet, racha y trofeos) se deriva solo de los
+  // picks — en cuanto cambia de verdad, reutiliza manejarMarcarResultado de
+  // arriba para aplicarlo, con los mismos efectos de freebet que ya tenía
+  // (seguro perdido, nula que devuelve el freebet). Si la apuesta ya se
+  // cerró con Cash Out, los picks se pueden seguir marcando para llevar el
+  // registro, pero ya no pisan ese resultado — Cash Out es una acción
+  // manual aparte, independiente de en qué estado estén los picks.
+  function manejarMarcarResultadoPick(id, indiceSeleccion, resultado) {
+    const apuesta = apuestas.find((a) => a.id === id);
+    if (!apuesta) return;
+    marcarResultadoSeleccion(id, indiceSeleccion, resultado);
+    if (apuesta.resultado === "cashout") return;
+
+    const nuevasSelecciones = apuesta.selecciones.map((s, i) =>
+      i === indiceSeleccion ? { ...s, resultado } : s
+    );
+    const nuevoResultado = derivarResultadoApuesta(agruparSeleccionesPorPartido(nuevasSelecciones));
+    if (nuevoResultado !== apuesta.resultado) {
+      manejarMarcarResultado(id, nuevoResultado);
+    }
+  }
+
   // Si se borra una apuesta de fondos Freebet que seguía Pendiente, se
   // devuelve el stake al saldo (el freebet nunca llegó a gastarse de
   // verdad). Si ya estaba resuelta (ganada/perdida/cash out) el freebet sí
@@ -289,7 +320,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 casas={casas}
                 movimientos={movimientos}
                 onMarcarResultado={manejarMarcarResultado}
-                onMarcarResultadoSeleccion={marcarResultadoSeleccion}
+                onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
                 onIrASeccion={setSeccionActiva}
@@ -392,7 +424,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     movimientos={movimientos}
                     todasApuestas={apuestas}
                     onMarcarResultado={manejarMarcarResultado}
-                    onMarcarResultadoSeleccion={marcarResultadoSeleccion}
+                    onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                    onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                     onBorrar={manejarBorrarApuesta}
                     onEditar={editarApuesta}
                   />

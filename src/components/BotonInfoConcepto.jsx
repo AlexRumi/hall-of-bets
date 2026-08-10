@@ -28,7 +28,7 @@ export default function BotonInfoConcepto({ conceptoId, etiqueta }) {
           onClick={() => setAbierto(false)}
         >
           <div
-            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3 max-h-[calc(100vh-10rem)] md:max-h-[calc(100vh-6rem)] overflow-y-auto"
+            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3 max-h-[calc(100dvh-10rem)] md:max-h-[calc(100dvh-6rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">

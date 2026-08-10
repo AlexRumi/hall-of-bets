@@ -33,6 +33,7 @@ export default function ListaApuestas({
   todasApuestas,
   onMarcarResultado,
   onMarcarResultadoSeleccion,
+  onActualizarCuotaSeleccion,
   onBorrar,
   onEditar,
   agrupada = true,
@@ -184,7 +185,7 @@ export default function ListaApuestas({
               campos a 2 columnas en pantallas anchas) no quede demasiado
               apretado. */}
           <div
-            className="w-full max-w-xl max-h-[calc(100vh-10rem)] md:max-h-[calc(100vh-6rem)] overflow-y-auto"
+            className="w-full max-w-xl max-h-[calc(100dvh-10rem)] md:max-h-[calc(100dvh-6rem)] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <ApuestaItem
@@ -194,6 +195,7 @@ export default function ListaApuestas({
               todasApuestas={todasApuestas}
               onMarcarResultado={onMarcarResultado}
               onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+              onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
               onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}

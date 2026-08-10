@@ -105,7 +105,6 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
             placeholder={
               modoManual ? "Ej. Real Madrid - FC Barcelona" : "Buscar equipo o partido (ej. Feyenoord)"
             }
-            required
             className="w-full border border-line rounded-lg pl-9 pr-9 py-2 text-sm"
           />
           {valor && (

@@ -105,6 +105,12 @@ export function useApuestas(userId) {
           pais: seleccion.pais ?? null,
           competicion: seleccion.competicion ?? null,
           partidoId: seleccion.partidoId ?? null,
+          // Bug real (2026-08-10): esta lista blanca no llevaba los ids de
+          // equipo — se perdían ya al CREAR la apuesta, así que el
+          // desplegable de jugador nunca podría haber encontrado la
+          // plantilla al editarla después (nunca llegó a guardarse el id).
+          equipoLocalId: seleccion.equipoLocalId ?? null,
+          equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
         })),
       })
       .select()
@@ -152,6 +158,15 @@ export function useApuestas(userId) {
           pais: seleccion.pais ?? null,
           competicion: seleccion.competicion ?? null,
           partidoId: seleccion.partidoId ?? null,
+          // Bug real (2026-08-10): esta lista blanca no llevaba
+          // "resultado" ni los ids de equipo — editar una apuesta ya
+          // marcada por picks (o con jugador elegido) por aquí los
+          // borraba en silencio. Ahora que "resultado" deriva el
+          // resultado real de la apuesta (beneficio/freebet/racha), no
+          // solo el sello decorativo, era un fallo real.
+          equipoLocalId: seleccion.equipoLocalId ?? null,
+          equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+          resultado: seleccion.resultado,
         })),
       })
       .eq("id", id)
@@ -198,6 +213,34 @@ export function useApuestas(userId) {
 
     const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
       i === indice ? { ...seleccion, resultado } : seleccion
+    );
+
+    const { data, error } = await supabase
+      .from("apuestas")
+      .update({ selecciones: nuevasSelecciones })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) => (a.id === id ? desdeFila(data) : a))
+      );
+    }
+  }
+
+  // Cuota de un partido concreto, ajustada a mano tras anular uno de sus
+  // picks (ver ApuestaItem.jsx: el aviso "¿cuál es la nueva cuota de la
+  // casa?"). Se guarda en la selección "líder" de ese partido — la misma
+  // que ya lleva la cuota real del grupo — mismo patrón que
+  // marcarResultadoSeleccion: no hay columna propia por selección (jsonb),
+  // así que se reescribe el array completo.
+  async function actualizarCuotaSeleccion(id, indice, nuevaCuota) {
+    const apuestaActual = apuestas.find((a) => a.id === id);
+    if (!apuestaActual) return;
+
+    const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
+      i === indice ? { ...seleccion, cuota: nuevaCuota } : seleccion
     );
 
     const { data, error } = await supabase
@@ -261,6 +304,7 @@ export function useApuestas(userId) {
     editarApuesta,
     marcarResultado,
     marcarResultadoSeleccion,
+    actualizarCuotaSeleccion,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango,

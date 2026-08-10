@@ -1,10 +1,38 @@
+// Resultado de un partido/grupo, derivado del estado de sus picks (ver
+// ApuestaItem.jsx: cada pick cicla Pendiente/Ganada/Perdida/Nula por su
+// cuenta, ya no hay un botón manual a nivel de partido). Ganada si todos
+// los picks no anulados están Ganada; Perdida en cuanto alguno esté
+// Perdida (aunque otros sigan pendientes); Nula si TODOS los picks están
+// anulados; Pendiente en cualquier otro caso. Las selecciones de apuestas
+// creadas antes de este sistema no tienen "resultado" — cuentan como
+// "pendiente", igual que antes.
+export function derivarResultadoGrupo(selecciones) {
+  const noAnuladas = selecciones.filter((s) => s.resultado !== "nula");
+  if (noAnuladas.length === 0) return "nula";
+  if (noAnuladas.some((s) => s.resultado === "perdida")) return "perdida";
+  if (noAnuladas.every((s) => s.resultado === "ganada")) return "ganada";
+  return "pendiente";
+}
+
+// Mismo criterio que derivarResultadoGrupo, un nivel más arriba: el
+// resultado de toda la apuesta a partir del resultado (ya derivado) de
+// cada uno de sus partidos. Usado tanto para la franja de estado en
+// ApuestaItem.jsx como para decidir si hay que guardar un nuevo resultado
+// real (ver manejarMarcarResultadoPick en App.jsx).
+export function derivarResultadoApuesta(gruposPartido) {
+  const resultados = gruposPartido.map((g) => g.resultado);
+  const noAnulados = resultados.filter((r) => r !== "nula");
+  if (noAnulados.length === 0) return "nula";
+  if (noAnulados.some((r) => r === "perdida")) return "perdida";
+  if (noAnulados.every((r) => r === "ganada")) return "ganada";
+  return "pendiente";
+}
+
 // En una combinada, la cuota total es el producto de la cuota de cada
-// selección — salvo las marcadas "nula" por partido (ver
-// agruparSeleccionesPorPartido / ApuestaItem.jsx), que no cuentan (como si
-// su cuota fuera 1): esa pata se anuló y no debe afectar al resultado
-// final, igual que anularía esa cuota en un ticket real. Las selecciones
-// de apuestas creadas antes de esta función no tienen "resultado" — se
-// tratan igual que antes (ninguna se descarta).
+// partido/grupo — salvo los que hayan quedado "nula" (ver
+// derivarResultadoGrupo), que no cuentan (como si su cuota fuera 1): ese
+// partido se anuló y no debe afectar al resultado final, igual que
+// anularía esa cuota en un ticket real.
 //
 // "cuotaTotalManual" (opcional) es una vía de escape para combinadas de
 // varias patas: multiplicar cuotas ya redondeadas a 2 decimales (las que
@@ -14,13 +42,12 @@
 // importe real que le paga la casa, FormularioApuesta.jsx guarda la cuota
 // que sale de ahí (importe / stake) en este campo, y manda sobre el
 // producto calculado — a cambio, deja de reajustarse sola si luego se
-// marca una pata como nula (ver agruparSeleccionesPorPartido): con un
-// valor manual puesto, ya no hay forma de saber qué parte del importe
-// correspondía a esa pata.
+// anula un partido: con un valor manual puesto, ya no hay forma de saber
+// qué parte del importe correspondía a esa pata.
 export function calcularCuotaTotal({ selecciones, cuotaTotalManual }) {
   if (cuotaTotalManual) return cuotaTotalManual;
-  return selecciones.reduce(
-    (total, seleccion) => (seleccion.resultado === "nula" ? total : total * seleccion.cuota),
+  return agruparSeleccionesPorPartido(selecciones).reduce(
+    (total, grupo) => (grupo.resultado === "nula" ? total : total * grupo.cuota),
     1
   );
 }
@@ -29,10 +56,12 @@ export function calcularCuotaTotal({ selecciones, cuotaTotalManual }) {
 // el constructor de apuesta al crearla, ConstructorPartido.jsx: selecciones
 // consecutivas del mismo evento con cuota exactamente 1 son mercados extra
 // de un "multi" de ese partido). Cada grupo lleva el índice de la selección
-// que tiene la cuota real, la propia cuota, y su "resultado" por partido
-// (Ganada/Perdida/Nula, independiente del resultado final de toda la
-// apuesta) — pensado para reconstruir tanto la edición del formulario como
-// el detalle de ApuestaItem.jsx sin repetir la misma lógica dos veces.
+// que tiene la cuota real, la propia cuota, y su "resultado" ya derivado de
+// TODOS sus picks (derivarResultadoGrupo) — pensado para reconstruir tanto
+// la edición del formulario como el detalle de ApuestaItem.jsx sin repetir
+// la misma lógica dos veces. Cada pick dentro de "selecciones" lleva su
+// "indice" absoluto dentro del array original, para poder marcarlo
+// individualmente (ver ApuestaItem.jsx / marcarResultadoSeleccion).
 export function agruparSeleccionesPorPartido(selecciones) {
   const grupos = [];
   selecciones.forEach((seleccion, indice) => {
@@ -40,7 +69,7 @@ export function agruparSeleccionesPorPartido(selecciones) {
     const siguePartido =
       anterior && seleccion.evento === anterior.evento && Number(seleccion.cuota) === 1;
     if (siguePartido) {
-      anterior.selecciones.push(seleccion);
+      anterior.selecciones.push({ ...seleccion, indice });
     } else {
       grupos.push({
         indiceLider: indice,
@@ -53,12 +82,11 @@ export function agruparSeleccionesPorPartido(selecciones) {
         equipoLocalId: seleccion.equipoLocalId ?? null,
         equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
         cuota: Number(seleccion.cuota),
-        resultado: seleccion.resultado ?? "pendiente",
-        selecciones: [seleccion],
+        selecciones: [{ ...seleccion, indice }],
       });
     }
   });
-  return grupos;
+  return grupos.map((grupo) => ({ ...grupo, resultado: derivarResultadoGrupo(grupo.selecciones) }));
 }
 
 // Ganancia real: si gana, stake x (cuota total - 1) tanto en real como en freebet.

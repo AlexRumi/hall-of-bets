@@ -44,6 +44,13 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
   const [mercadosMulti, setMercadosMulti] = useState([]);
   const [mercadoMultiActual, setMercadoMultiActual] = useState("");
   const [cuotaMulti, setCuotaMulti] = useState("");
+  // Bug real (petición directa): tras "+" el selector de mercado volvía a
+  // abrirse solo, listo para el siguiente — pero si la combinada ya tenía
+  // los mercados que hacían falta, se quedaba ahí ocupando sitio sin motivo
+  // aparente. Ahora, tras añadir uno, el selector se colapsa del todo a un
+  // botón pequeño "+ Añadir otro mercado"; solo se vuelve a mostrar el
+  // buscador de verdad si se pulsa ese botón a propósito.
+  const [mostrandoSelectorMercado, setMostrandoSelectorMercado] = useState(true);
 
   function reiniciar() {
     setResetId((n) => n + 1);
@@ -54,6 +61,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
     setMercadosMulti([]);
     setMercadoMultiActual("");
     setCuotaMulti("");
+    setMostrandoSelectorMercado(true);
   }
 
   function elegirPartido(partidoElegido) {
@@ -84,6 +92,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
     setMercadosMulti((actuales) => [...actuales, mercadoMultiActual.trim()]);
     setMercadoMultiActual("");
     setResetId((n) => n + 1);
+    setMostrandoSelectorMercado(false);
   }
 
   function quitarMercadoMulti(index) {
@@ -208,28 +217,45 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
 
       {paso === "multi" && (
         <div className="space-y-2">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="block text-xs text-slate mb-1">Mercado</label>
-              <SelectorMercado
-                key={resetId}
-                evento={partido.evento}
-                valor={mercadoMultiActual}
-                onCambiar={setMercadoMultiActual}
-                equipoLocalId={partido.equipoLocalId}
-                equipoVisitanteId={partido.equipoVisitanteId}
-              />
+          {mostrandoSelectorMercado ? (
+            <div className="flex gap-2 items-end">
+              {/* min-w-0: sin esto, un hijo flex no se encoge por debajo del
+                  ancho de su contenido — con las pestañas de categoría de
+                  SelectorMercado.jsx (bastantes, en una fila con scroll
+                  propio) esto empujaba todo el bloque más ancho que la
+                  página en vez de dejar que las pestañas hicieran su propio
+                  scroll horizontal contenido. */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs text-slate mb-1">Mercado</label>
+                <SelectorMercado
+                  key={resetId}
+                  evento={partido.evento}
+                  valor={mercadoMultiActual}
+                  onCambiar={setMercadoMultiActual}
+                  equipoLocalId={partido.equipoLocalId}
+                  equipoVisitanteId={partido.equipoVisitanteId}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={añadirMercadoMulti}
+                disabled={!mercadoMultiActual.trim()}
+                aria-label="Añadir mercado"
+                className="shrink-0 bg-gold/10 text-gold border border-gold/40 rounded-lg p-2 hover:bg-gold/20 transition-colors disabled:opacity-40"
+              >
+                <Plus size={18} />
+              </button>
             </div>
+          ) : (
             <button
               type="button"
-              onClick={añadirMercadoMulti}
-              disabled={!mercadoMultiActual.trim()}
-              aria-label="Añadir mercado"
-              className="shrink-0 bg-gold/10 text-gold border border-gold/40 rounded-lg p-2 hover:bg-gold/20 transition-colors disabled:opacity-40"
+              onClick={() => setMostrandoSelectorMercado(true)}
+              className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-gold border border-gold/40 rounded-lg py-2 hover:bg-gold/10 transition-colors"
             >
-              <Plus size={18} />
+              <Plus size={16} />
+              Añadir otro mercado
             </button>
-          </div>
+          )}
 
           {mercadosMulti.length > 0 && (
             <ul className="space-y-1.5">

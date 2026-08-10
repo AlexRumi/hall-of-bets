@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { X, Pencil, Trash2, Eye, EyeOff, Check, Minus } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
 import ConfirmDialog from "./ConfirmDialog";
@@ -21,13 +21,28 @@ const COLOR_PUNTO = {
   cashout: "bg-cashout",
 };
 
-// Con borde a juego — para el mini-selector de resultado por partido, ver
-// más abajo.
-const ESTILOS_BOTON_RESULTADO = {
-  ganada: "border-win text-win",
-  perdida: "border-lose text-lose",
-  nula: "border-void text-void",
+// Franja de estado general de la apuesta (nueva, ver más abajo): mismos
+// tokens de color que el resto, en versión traslúcida de fondo.
+const ESTILOS_BARRA_ESTADO = {
+  pendiente: "bg-pending/15 text-pending",
+  ganada: "bg-win/15 text-win",
+  perdida: "bg-lose/15 text-lose",
+  nula: "bg-void/15 text-void",
+  cashout: "bg-cashout/15 text-cashout",
 };
+
+// Icono circular de cada pick (ver más abajo): aro vacío en pendiente,
+// relleno del color que toque en el resto — mismo lenguaje de color que
+// COLOR_PUNTO, pero pensado para tocarlo (cicla Pendiente → Ganada →
+// Perdida → Nula → Pendiente).
+const ESTILOS_ICONO_PICK = {
+  pendiente: "border-2 border-pending bg-transparent",
+  ganada: "bg-win border-2 border-win",
+  perdida: "bg-lose border-2 border-lose",
+  nula: "bg-void border-2 border-void",
+};
+
+const ORDEN_CICLO_PICK = ["pendiente", "ganada", "perdida", "nula"];
 
 // Fondo sólido para el "sello" de resultado sobre cada partido — ver
 // "colorResultado !== pendiente" más abajo. Mismos tokens que COLOR_PUNTO,
@@ -39,17 +54,19 @@ const TINTE_SELLO = {
   cashout: "bg-cashout",
 };
 
-// Detalle simplificado (tercera ronda de ajuste sobre el rediseño anterior):
-// se quitó el modo "✎ Editar"/"quitar mercados sueltos" inline — quitar un
-// mercado de un partido ya se puede hacer desde el formulario completo (el
-// bet builder de FormularioApuesta.jsx ya deja borrar mercados de un
-// bloque), así que un único botón "Editar" (lápiz, cabecera) basta y evita
-// tener dos formas distintas de "editar" en la misma pantalla. El
-// mini-selector Ganada/Perdida/Nula por partido (solo en combinadas, 2+
-// partidos) ahora se ve siempre, sin activar ningún modo — y el resultado
-// de cada partido es independiente del resultado final de toda la apuesta:
-// marcar la apuesta entera como "Perdida" ya NO pinta todos los partidos de
-// rojo, cada uno conserva el suyo (puede haber acertado 4 de 5).
+// Rediseño del marcado de resultado (petición directa, a partir de
+// full-bet-demo.html/pick-status-demo.html): cada pick (selección) tiene su
+// propio icono circular tocable que cicla Pendiente/Ganada/Perdida/Nula —
+// sustituye por completo al mini-selector de 3 botones que había por
+// partido. El resultado de cada partido se DERIVA de sus picks
+// (derivarResultadoGrupo, utils/apuestas.js): ya no hay ninguna acción
+// manual a nivel de partido. Y el resultado real de la apuesta (el que
+// mueve beneficio/freebet/racha/trofeos) se deriva a su vez del de todos
+// sus partidos (derivarResultadoApuesta) — manejarMarcarResultadoPick en
+// App.jsx lo aplica solo, con los mismos efectos de freebet que antes
+// tenían los botones grandes Ganada/Perdida/Nula (ya retirados). Cash Out
+// se queda como la única acción manual: cierra la apuesta con el importe
+// que se introduzca, sin depender de en qué estado estén los picks.
 export default function ApuestaItem({
   apuesta,
   casas,
@@ -57,6 +74,7 @@ export default function ApuestaItem({
   todasApuestas,
   onMarcarResultado,
   onMarcarResultadoSeleccion,
+  onActualizarCuotaSeleccion,
   onBorrar,
   onEditar,
   onCerrar,
@@ -72,6 +90,22 @@ export default function ApuestaItem({
   // segundo. Evita depender de un ":hover" simulado al tocar que en
   // algunos navegadores se queda pegado de forma poco predecible.
   const [revelados, setRevelados] = useState(() => new Set());
+  // Modo edición por partido (petición directa tras probar el lápiz por
+  // pick: ese diseño dejaba el lápiz demasiado cerca del sello, fácil de
+  // tocar sin querer). Ahora el lápiz vive junto al ojo, y solo se ve
+  // mientras el sello está oculto (ni revelado ni en edición) — al
+  // tocarlo, el sello desaparece del todo (ni opaco ni con opacidad) y los
+  // picks se vuelven tocables para cambiarlos sin paso de confirmación; el
+  // propio ojo (ahora "ocultar") sale de este modo y vuelve a aplicar el
+  // sello con el resultado ya actualizado.
+  const [editandoPicks, setEditandoPicks] = useState(() => new Set());
+  // Aviso "¿cuál es la nueva cuota?" tras anular un pick (por partido, ver
+  // ciclarPick): un Set de indiceLider con el aviso abierto, más el texto
+  // que se está escribiendo en cada uno — así cada partido lleva su propio
+  // aviso independiente, y se puede reabrir más tarde con "Ajustar cuota"
+  // aunque se haya cerrado sin guardar.
+  const [promptsCuota, setPromptsCuota] = useState(() => new Set());
+  const [cuotasEditando, setCuotasEditando] = useState({});
   const esPendiente = apuesta.resultado === "pendiente";
   const cuotaTotal = calcularCuotaTotal(apuesta);
   const beneficio = calcularBeneficio(apuesta);
@@ -114,6 +148,52 @@ export default function ApuestaItem({
       else nuevo.add(indiceLider);
       return nuevo;
     });
+  }
+
+  function activarEdicionPicks(indiceLider) {
+    setEditandoPicks((actuales) => new Set(actuales).add(indiceLider));
+  }
+
+  // El ojo, mientras un partido está en modo edición, sale de ese modo en
+  // vez de alternar "revelado" — así siempre es el mismo botón el que
+  // vuelve a aplicar el sello, ya con el resultado actualizado.
+  function alternarOjo(indiceLider) {
+    if (editandoPicks.has(indiceLider)) {
+      setEditandoPicks((actuales) => {
+        const nuevo = new Set(actuales);
+        nuevo.delete(indiceLider);
+        return nuevo;
+      });
+      return;
+    }
+    alternarRevelado(indiceLider);
+  }
+
+  function abrirPromptCuota(grupo) {
+    setPromptsCuota((actuales) => new Set(actuales).add(grupo.indiceLider));
+    setCuotasEditando((actuales) => ({ ...actuales, [grupo.indiceLider]: String(grupo.cuota) }));
+  }
+
+  function cerrarPromptCuota(indiceLider) {
+    setPromptsCuota((actuales) => {
+      const nuevo = new Set(actuales);
+      nuevo.delete(indiceLider);
+      return nuevo;
+    });
+  }
+
+  function guardarCuotaGrupo(grupo) {
+    const valor = Number(cuotasEditando[grupo.indiceLider]);
+    if (!(valor > 0)) return;
+    onActualizarCuotaSeleccion(apuesta.id, grupo.indiceLider, valor);
+    cerrarPromptCuota(grupo.indiceLider);
+  }
+
+  function ciclarPick(grupo, pick) {
+    const actual = pick.resultado ?? "pendiente";
+    const siguiente = ORDEN_CICLO_PICK[(ORDEN_CICLO_PICK.indexOf(actual) + 1) % ORDEN_CICLO_PICK.length];
+    onMarcarResultadoSeleccion(apuesta.id, pick.indice, siguiente);
+    if (siguiente === "nula") abrirPromptCuota(grupo);
   }
 
   if (editando) {
@@ -236,14 +316,22 @@ export default function ApuestaItem({
         </p>
       )}
 
+      {/* Estado general de la apuesta, derivado de sus partidos (que a su
+          vez se derivan de sus picks) — vista previa en vivo, además de ser
+          ya el resultado real guardado (ver manejarMarcarResultadoPick en
+          App.jsx). Cash Out se queda igual (acción manual aparte, no
+          derivada de los picks). */}
+      <div className={`text-center py-2 text-sm font-bold uppercase tracking-wide ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}>
+        {ETIQUETAS_RESULTADO[apuesta.resultado]}
+      </div>
+
       <div>
         {gruposPartido.map((grupo, indice) => {
-          // El resultado de cada partido es el suyo propio (independiente
-          // del resultado final de toda la apuesta) cuando es una
-          // combinada; en una apuesta simple el único "partido" es la
-          // apuesta entera, así que ahí sí refleja el resultado general.
-          const colorResultado = esCombinada ? grupo.resultado : apuesta.resultado;
+          const colorResultado = grupo.resultado;
           const revelado = revelados.has(grupo.indiceLider);
+          const enEdicion = editandoPicks.has(grupo.indiceLider);
+          const promptAbierto = promptsCuota.has(grupo.indiceLider);
+          const hayPickAnulado = grupo.selecciones.some((s) => s.resultado === "nula");
 
           return (
             <div key={grupo.indiceLider}>
@@ -262,63 +350,128 @@ export default function ApuestaItem({
                         {grupo.competicion} · {grupo.pais}
                       </p>
                     )}
-                    <div className="mt-1.5 space-y-1">
-                      {grupo.selecciones.map((s) => (
-                        <p
-                          key={s.id}
-                          className="flex items-baseline gap-1.5 text-sm font-medium text-ink break-words"
-                        >
-                          <span className="text-gold">▸</span>
-                          {s.apuesta}
-                        </p>
-                      ))}
+                    <div className="mt-1.5 space-y-1.5">
+                      {grupo.selecciones.map((pick) => {
+                        const estadoPick = pick.resultado ?? "pendiente";
+                        const tachado = estadoPick === "perdida" || estadoPick === "nula";
+                        const contenidoPick = (
+                          <>
+                            <span
+                              className={`w-4 h-4 rounded-full shrink-0 mt-0.5 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[estadoPick]}`}
+                            >
+                              {estadoPick === "ganada" && <Check size={10} strokeWidth={3} />}
+                              {estadoPick === "perdida" && <X size={10} strokeWidth={3} />}
+                              {estadoPick === "nula" && <Minus size={10} strokeWidth={3} />}
+                            </span>
+                            <span
+                              className={`flex-1 flex flex-wrap items-baseline gap-1.5 text-sm font-medium break-words ${
+                                tachado ? "line-through opacity-50 text-ink" : "text-ink"
+                              }`}
+                            >
+                              <span className="text-gold no-underline">▸</span>
+                              {pick.apuesta}
+                              {estadoPick === "nula" && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-void/15 text-void no-underline">
+                                  Anulada
+                                </span>
+                              )}
+                            </span>
+                          </>
+                        );
+                        // Fuera de modo edición, la fila es solo visual (bug
+                        // real: al tocar el sello, que es pointer-events-none,
+                        // el toque pasaba a lo que hubiera debajo, cambiando
+                        // el resultado sin querer). Solo dentro del modo
+                        // edición (lápiz junto al ojo) el pick se vuelve
+                        // tocable, sin paso de confirmación.
+                        return enEdicion ? (
+                          <button
+                            key={pick.indice}
+                            type="button"
+                            onClick={() => ciclarPick(grupo, pick)}
+                            className="w-full flex items-start gap-2 text-left"
+                          >
+                            {contenidoPick}
+                          </button>
+                        ) : (
+                          <div key={pick.indice} className="w-full flex items-start gap-2">
+                            {contenidoPick}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-mono text-base font-bold text-gold">
                       {grupo.cuota.toFixed(2)}
                     </p>
+                    {hayPickAnulado && !promptAbierto && (
+                      <button
+                        type="button"
+                        onClick={() => abrirPromptCuota(grupo)}
+                        className="text-[11px] font-semibold text-gold hover:underline"
+                      >
+                        ✎ Ajustar cuota
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {esCombinada && onMarcarResultadoSeleccion && (
-                  <div className="flex gap-1.5 mt-2 pl-[18px]">
-                    {[
-                      { valor: "ganada", etiqueta: "Ganada" },
-                      { valor: "perdida", etiqueta: "Perdida" },
-                      { valor: "nula", etiqueta: "Nula" },
-                    ].map(({ valor, etiqueta }) => (
-                      <button
-                        key={valor}
-                        type="button"
-                        onClick={() =>
-                          onMarcarResultadoSeleccion(
-                            apuesta.id,
-                            grupo.indiceLider,
-                            grupo.resultado === valor ? "pendiente" : valor
-                          )
+                {/* Aviso opcional tras anular un pick (no bloqueante): si se
+                    ignora, la cuota del partido se queda como estaba, y se
+                    puede reabrir más tarde con "✎ Ajustar cuota" de arriba.
+                    Guardar actualiza solo la cuota MOSTRADA de este grupo
+                    (la de su selección líder) — si la apuesta tiene una
+                    cuota total ajustada a mano (cuotaTotalManual), esto no
+                    la toca; ver la nota en calcularCuotaTotal. */}
+                {promptAbierto && (
+                  <div className="mt-2 ml-[26px] p-2.5 rounded-lg border border-gold/40 bg-gold/5 space-y-1.5">
+                    <p className="text-xs text-gold">
+                      Has anulado un pick — introduce la nueva cuota de este
+                      partido tras el recálculo de la casa:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="1.01"
+                        value={cuotasEditando[grupo.indiceLider] ?? ""}
+                        onChange={(e) =>
+                          setCuotasEditando((actuales) => ({
+                            ...actuales,
+                            [grupo.indiceLider]: e.target.value,
+                          }))
                         }
-                        className={`flex-1 text-sm font-semibold px-2 py-1.5 rounded-md border transition-colors ${
-                          grupo.resultado === valor
-                            ? ESTILOS_BOTON_RESULTADO[valor]
-                            : "border-line text-slate hover:text-ink"
-                        }`}
+                        placeholder="Ej. 4.20"
+                        className="flex-1 border border-line rounded-lg px-2.5 py-1.5 text-sm font-mono bg-surface"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => guardarCuotaGrupo(grupo)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gold text-feltDark hover:opacity-90 transition-opacity"
                       >
-                        {etiqueta}
+                        Guardar
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => cerrarPromptCuota(grupo.indiceLider)}
+                        aria-label="Ahora no"
+                        className="px-2 text-slate hover:text-ink transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {/* "Sello" de resultado (maqueta de referencia del
                     usuario): tinte de color + etiqueta grande, con
-                    pointer-events-none para que los botones de arriba
-                    (Ganada/Perdida/Nula) se sigan pudiendo pulsar a través
-                    del sello. Al pulsar el ojo de abajo, el texto
-                    desaparece, se quita el desenfoque y el tinte baja de
-                    opacidad — deja leer el contenido sin perder la marca
-                    de color. Solo en partidos ya resueltos; "Pendiente" no
-                    lleva sello.
+                    pointer-events-none para que los picks y el aviso de
+                    cuota de arriba se sigan pudiendo pulsar a través del
+                    sello. Se dispara solo en cuanto colorResultado (el
+                    resultado del partido, derivado de sus picks) deja de
+                    ser "pendiente" — ya no depende de ningún botón manual,
+                    ni de si la apuesta es simple o combinada.
                     Desenfoque y tinte van en dos capas separadas (no una
                     sola con blur+opacity a la vez): con las dos cosas en
                     el mismo elemento, ese 10% de opacidad restante deja
@@ -330,15 +483,8 @@ export default function ApuestaItem({
                     inset-x/inset-y (en vez de inset-0) dejan un margen a
                     los lados y arriba/abajo para que el sello se vea como
                     una tarjeta redondeada flotando dentro de la fila, no
-                    como un bloque a sangre completa de borde a borde.
-                    Se quitó el "group-hover" que revelaba el sello solo al
-                    pasar el ratón (bug real: al tocar el mini-selector
-                    Ganada/Perdida/Nula de arriba, que vive en el mismo
-                    contenedor, el navegador simulaba un ":hover" pegado
-                    que revelaba el sello sin haber tocado el ojo) — ahora
-                    "revelado" (el ojo de abajo) es la ÚNICA forma de
-                    revelar, en cualquier dispositivo. */}
-                {colorResultado !== "pendiente" && (
+                    como un bloque a sangre completa de borde a borde. */}
+                {colorResultado !== "pendiente" && !enEdicion && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div
                       className={`absolute inset-x-2 sm:inset-x-3 inset-y-1 rounded-xl backdrop-blur-[5px] transition-[backdrop-filter] duration-200 ${
@@ -363,21 +509,37 @@ export default function ApuestaItem({
                   </div>
                 )}
 
-                {/* Ojo propio de este partido — no uno solo para toda la
-                    apuesta: revelar el primer partido no afecta al resto.
-                    Va DESPUÉS del sello en el JSX (así pinta encima suyo
-                    sin necesitar z-index) y con fondo propio para
-                    distinguirse igual de bien tapado (sobre el tinte de
-                    color) que revelado (sobre el contenido normal). */}
+                {/* Ojo + lápiz propios de este partido — no uno solo para
+                    toda la apuesta: revelar/editar el primer partido no
+                    afecta al resto. El lápiz solo se ve con el sello puesto
+                    (ni revelado ni en edición): lo quita del todo y hace
+                    los picks tocables. El ojo, si el partido está en modo
+                    edición, sale de ese modo (vuelve a poner el sello, ya
+                    con el resultado actualizado) en vez de alternar
+                    "revelado". */}
                 {colorResultado !== "pendiente" && (
-                  <button
-                    type="button"
-                    onClick={() => alternarRevelado(grupo.indiceLider)}
-                    aria-label={revelado ? "Ocultar resultado de este partido" : "Ver resultado de este partido"}
-                    className="absolute top-4 right-5 p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
-                  >
-                    {revelado ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
+                  <div className="absolute top-4 right-5 flex items-center gap-1.5">
+                    {!revelado && !enEdicion && (
+                      <button
+                        type="button"
+                        onClick={() => activarEdicionPicks(grupo.indiceLider)}
+                        aria-label="Editar resultado de este partido"
+                        className="p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => alternarOjo(grupo.indiceLider)}
+                      aria-label={
+                        revelado || enEdicion ? "Ocultar resultado de este partido" : "Ver resultado de este partido"
+                      }
+                      className="p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
+                    >
+                      {revelado || enEdicion ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -387,40 +549,17 @@ export default function ApuestaItem({
 
       {esPendiente && (
         <div className="p-4 sm:p-5 border-t border-line space-y-2">
-          <div className="grid grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => onMarcarResultado(apuesta.id, "ganada")}
-              className="py-2.5 rounded-lg text-sm font-bold border border-line text-win hover:border-win transition-colors"
-            >
-              Ganada
-            </button>
-            <button
-              type="button"
-              onClick={() => onMarcarResultado(apuesta.id, "perdida")}
-              className="py-2.5 rounded-lg text-sm font-bold border border-line text-lose hover:border-lose transition-colors"
-            >
-              Perdida
-            </button>
-            <button
-              type="button"
-              onClick={() => onMarcarResultado(apuesta.id, "nula")}
-              className="py-2.5 rounded-lg text-sm font-bold border border-line text-void hover:border-void transition-colors"
-            >
-              Nula
-            </button>
-            <button
-              type="button"
-              onClick={alternarCashOut}
-              className={`py-2.5 rounded-lg text-sm font-bold border transition-colors ${
-                mostrandoCashOut
-                  ? "bg-cashout text-paper border-cashout"
-                  : "border-line text-cashout hover:border-cashout"
-              }`}
-            >
-              Cash Out
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={alternarCashOut}
+            className={`w-full py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+              mostrandoCashOut
+                ? "bg-cashout text-paper border-cashout"
+                : "border-line text-cashout hover:border-cashout"
+            }`}
+          >
+            Cash Out
+          </button>
 
           {/* Importe directo en la propia tarjeta, en vez de un diálogo
               aparte (CashOutDialog.jsx, eliminado): la casa no calcula el

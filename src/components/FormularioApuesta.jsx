@@ -211,6 +211,14 @@ export default function FormularioApuesta({
     // la cuota real del bloque (la que da la casa por el conjunto si tiene
     // varios mercados), el resto cuenta como 1 en el producto — así el
     // cálculo de cuota total de la apuesta (utils/apuestas.js) no cambia.
+    // El resultado ya marcado de cada pick (Ganada/Perdida/Nula, ver
+    // ApuestaItem.jsx) se recupera por evento+texto: si no se hace, editar
+    // la apuesta por aquí borraría el resultado de todos sus picks, y como
+    // ahora ese resultado deriva el de la apuesta entera (beneficio,
+    // freebet, racha), sería un fallo real, no solo cosmético.
+    const resultadosPrevios = new Map(
+      (apuestaInicial?.selecciones ?? []).map((s) => [`${s.evento}|${s.apuesta}`, s.resultado])
+    );
     const selecciones = bloques.flatMap((bloque) =>
       bloque.mercados.map((mercado, i) => ({
         evento: bloque.evento,
@@ -221,6 +229,7 @@ export default function FormularioApuesta({
         partidoId: bloque.partidoId || null,
         equipoLocalId: bloque.equipoLocalId || null,
         equipoVisitanteId: bloque.equipoVisitanteId || null,
+        resultado: resultadosPrevios.get(`${bloque.evento}|${mercado}`),
       }))
     );
 

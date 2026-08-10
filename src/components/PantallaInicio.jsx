@@ -13,6 +13,7 @@ export default function PantallaInicio({
   movimientos,
   onMarcarResultado,
   onMarcarResultadoSeleccion,
+  onActualizarCuotaSeleccion,
   onBorrar,
   onEditar,
   onIrASeccion,
@@ -85,6 +86,7 @@ export default function PantallaInicio({
           todasApuestas={apuestas}
           onMarcarResultado={onMarcarResultado}
           onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+          onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
           onBorrar={onBorrar}
           onEditar={onEditar}
           agrupada={false}

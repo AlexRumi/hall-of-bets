@@ -24,7 +24,7 @@ export default function TabsDesplazables({ opciones, valor, onElegir, colorActiv
     colorActivo === "gold" ? "bg-gold text-feltDark border-gold" : "bg-felt text-paper border-felt";
 
   return (
-    <div className="relative border-b border-line">
+    <div className="relative min-w-0 border-b border-line">
       <button
         type="button"
         onClick={() => desplazar(-1)}

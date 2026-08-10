@@ -1879,6 +1879,141 @@ separadas, probando cada una antes de pasar a la siguiente.
     cascada país→competición→partido, las pestañas de mercado, ni el
     colapso/reapertura de ninguno de los tres paneles de verdad.
 
+- **Marcado de resultado por pick, universal, y resultado real derivado
+  solo de los picks** (petición directa, a partir de dos maquetas HTML de
+  referencia — full-bet-demo.html/pick-status-demo.html — inspiradas en el
+  ticket de una combinada de Bet365). Cambio de fondo, confirmado con el
+  usuario tras explicarle el tradeoff (con `AskUserQuestion`): el resultado
+  REAL de la apuesta (el que mueve beneficio, freebet, racha y trofeos) ya
+  no se marca con botones grandes Ganada/Perdida/Nula — se DERIVA solo del
+  estado de los picks.
+  - **Icono circular por pick, universal** (Simple o Combinada, un único
+    pick o varios dentro de un "multi"): cicla Pendiente (aro vacío) →
+    Ganada (relleno verde, ✓) → Perdida (relleno rojo, ✕, texto tachado) →
+    Nula (relleno gris, –, texto tachado, etiqueta "Anulada") → Pendiente.
+    Sustituye por completo al mini-selector de 3 botones que había por
+    partido (solo en combinadas) — ahora es el único sitio donde se marca
+    cualquier resultado, y funciona igual en una apuesta simple de 1 pick.
+  - **`derivarResultadoGrupo`/`derivarResultadoApuesta`** (nuevas en
+    `utils/apuestas.js`): mismo patrón en dos niveles — Ganada si todos los
+    picks/partidos no anulados están Ganada; Perdida en cuanto alguno esté
+    Perdida (aunque otros sigan pendientes); Nula si TODOS están anulados;
+    Pendiente en cualquier otro caso. `agruparSeleccionesPorPartido` ya no
+    lee el "resultado" de la selección líder tal cual — calcula el
+    `resultado` de cada grupo con `derivarResultadoGrupo` sobre TODOS sus
+    picks (no solo el líder), y cada pick dentro de `grupo.selecciones`
+    lleva ahora su `indice` absoluto en el array original (para poder
+    marcarlo individualmente — de paso corrige un `key={s.id}` que llevaba
+    tiempo roto en `ApuestaItem.jsx`: las selecciones nunca tuvieron `id`,
+    así que ese key siempre había sido `undefined`). `calcularCuotaTotal`
+    pasa a operar a nivel de GRUPO (antes, de selección suelta): ahora un
+    partido cuenta como "nula" en el producto (cuota 1) en cuanto TODOS
+    sus picks están anulados, no solo si el líder lo estaba.
+  - **El sello se dispara solo, para toda apuesta**: `colorResultado` en
+    `ApuestaItem.jsx` pasa a ser siempre `grupo.resultado` (antes era
+    `esCombinada ? grupo.resultado : apuesta.resultado`) — con esto, una
+    apuesta simple de un único partido también saca su sello en cuanto se
+    marca su pick, cosa que antes no pasaba (dependía solo del resultado
+    final). El ojo de revelado por partido no cambia.
+  - **`manejarMarcarResultadoPick` (nuevo, `App.jsx`)**: en cuanto el
+    resultado derivado de TODA la apuesta cambia de verdad, reutiliza
+    `manejarMarcarResultado` (mismo punto de entrada que antes usaban los
+    botones grandes, ya retirados) para guardarlo de verdad — así los
+    efectos de freebet que ya existían (seguro perdido → suma freebet;
+    nula con fondos freebet → devuelve el stake) se disparan igual,
+    vengan de donde vengan. Si la apuesta ya tiene Cash Out, los picks se
+    pueden seguir marcando (para llevar el registro), pero ya no pisan
+    ese resultado — Cash Out se queda como acción manual aparte,
+    independiente de los picks, tal como se pidió.
+  - **Riesgo aceptado y avisado, no resuelto**: como los picks se pueden
+    ciclar libremente en cualquier momento (no solo mientras la apuesta
+    está pendiente), es más fácil que antes que un pick oscile
+    Perdida→Pendiente→Perdida por error — y `manejarMarcarResultadoPick`
+    no comprueba si el freebet del seguro ya se sumó antes, así que un
+    vaivén así podría sumarlo dos veces. Esto ya era posible antes (el
+    botón "Perdida" tampoco comprobaba si ya se había aplicado), solo que
+    ahora es más fácil llegar a ese caso sin querer. No se ha construido
+    ninguna protección extra (idempotencia) para esto — queda anotado
+    como límite conocido.
+  - **Aviso de cuota tras anular un pick**: al marcar un pick como Nula,
+    se abre un aviso no bloqueante bajo ese partido pidiendo la cuota
+    nueva que dé la casa, con campo numérico y "Guardar" — que llama a
+    `actualizarCuotaSeleccion` (nueva en `useApuestas.js`, mismo patrón
+    que `marcarResultadoSeleccion`: reescribe la cuota de la selección
+    líder de ese grupo). Si se ignora, la cuota se queda como estaba, y
+    se puede reabrir después con el enlace "✎ Ajustar cuota" que aparece
+    junto a la cuota del partido mientras tenga algún pick anulado. Si la
+    apuesta tiene `cuotaTotalManual` puesto, esto no lo toca (limitación
+    ya existente y documentada, sin cambios).
+  - **Bug real encontrado en revisión de código, antes de compilar**:
+    tanto `agregarApuesta` como `editarApuesta` (`useApuestas.js`) tenían
+    su propia lista blanca de campos al guardar cada selección en
+    Supabase, y esa lista NUNCA incluyó `equipoLocalId`/`equipoVisitanteId`
+    — es decir, esos ids (para el desplegable de jugador, fase de la
+    sesión anterior) se perdían ya al CREAR la apuesta, así que el
+    desplegable de jugador nunca habría podido encontrar la plantilla al
+    editar una apuesta ya guardada. Tampoco incluía `resultado`, que hasta
+    ahora solo afectaba al sello decorativo si se perdía al editar, pero
+    con este cambio es el dato que decide el resultado financiero real —
+    perderlo al editar (p.ej. solo para corregir el stake) habría hecho
+    que la apuesta volviera a "pendiente" sola. Las dos listas blancas
+    ganan `equipoLocalId`/`equipoVisitanteId`/`resultado`. Además,
+    `FormularioApuesta.jsx` reconstruye `selecciones` desde cero en cada
+    guardado (por diseño, el bet builder no guarda `resultado` en su
+    propio estado) — `manejarEnvio` ahora recupera el `resultado` de cada
+    pick emparejando evento+texto contra `apuestaInicial.selecciones`
+    antes de enviarlo, para no perderlo al editar por el formulario
+    completo.
+  - **Ronda de bugs reales al probarlo en local** (`vercel dev`, mismo
+    día): tres fallos distintos, todos corregidos.
+    - **"Crear apuesta" pedía un segundo partido sin motivo**: el campo
+      de texto de `BuscadorEvento.jsx` llevaba `required` de HTML — como
+      ConstructorPartido.jsx se reinicia (vacío) tras guardar un bloque,
+      listo por si se quiere añadir otro partido opcional, ese campo
+      vacío-pero-required seguía dentro del `<form>` de
+      `FormularioApuesta.jsx`, y el navegador bloqueaba el envío entero
+      por él aunque ya hubiera un bloque válido — parecía "obliga a elegir
+      otro partido" sin serlo. Se quitó el `required`: la validación real
+      (al menos un bloque) ya la hacían `disabled` en otros botones, no
+      dependía de este atributo.
+    - **El desplegable de mercado se veía "gigante"**: en "Crear multi de
+      este partido", el `<div className="flex-1">` que envuelve
+      `SelectorMercado.jsx` (junto al botón "+") no tenía `min-w-0` — un
+      hijo flex, por defecto, no se encoge por debajo del ancho de su
+      contenido, y con tantas pestañas de categoría eso empujaba todo el
+      bloque (y la página entera) más ancho en vez de dejar que las
+      pestañas hicieran su propio scroll horizontal contenido. `min-w-0`
+      en ese `div`, y de paso en la raíz de `TabsDesplazables.jsx` (para
+      que sea robusto en cualquier otro sitio flex donde se use).
+    - **Marcar un pick "desde fuera" sin querer**: el primer diseño ponía
+      un lápiz junto a cada pick, pero al tocar el sello (que es
+      `pointer-events-none`, deja pasar el toque a lo que hay debajo) el
+      toque caía sobre la fila entera y cambiaba el resultado sin querer.
+      Rediseño final, a petición directa: el lápiz pasa a vivir junto al
+      ojo (uno por partido, no por pick), y solo se ve mientras el sello
+      está puesto del todo (ni revelado ni en edición). Al tocarlo entra
+      en un modo edición nuevo (`editandoPicks`, Set de `indiceLider` en
+      `ApuestaItem.jsx`): el sello desaparece por completo (no solo se
+      atenúa) y los picks se vuelven botones tocables (ciclan sin pedir
+      confirmación, como ya hacían). El ojo, mientras ese modo está
+      activo, sale de él en vez de alternar "revelado" — así siempre es
+      el mismo botón el que vuelve a aplicar el sello, ya con el
+      resultado recalculado.
+    - **El selector de mercado se reabría solo tras cada "+"**: en "Crear
+      multi de este partido", tras añadir un mercado el comportamiento
+      era reiniciar `SelectorMercado.jsx` fresco y expandido, listo para
+      el siguiente — pero eso hacía que se quedara "abierto" aunque la
+      combinada ya tuviera todos los mercados que se querían. Nuevo
+      estado `mostrandoSelectorMercado` en `ConstructorPartido.jsx`: tras
+      "+", se colapsa del todo a un botón pequeño "+ Añadir otro mercado"
+      en vez de al buscador completo; solo se vuelve a mostrar si se
+      pulsa ese botón a propósito.
+  - **Pendiente**: seguir probando en el navegador tras esta ronda de
+    arreglos (sello + ojo + lápiz en modo edición, el flujo completo de
+    "Crear multi", y que editar una apuesta ya marcada por picks no le
+    borre el resultado) — no hay herramienta de navegador en esta sesión,
+    así que solo se pudo comprobar que compila limpio.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
