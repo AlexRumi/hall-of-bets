@@ -112,6 +112,7 @@ export function useApuestas(userId) {
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
           hora: seleccion.hora ?? null,
+          fecha: seleccion.fecha ?? null,
         })),
       })
       .select()
@@ -168,6 +169,7 @@ export function useApuestas(userId) {
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
           hora: seleccion.hora ?? null,
+          fecha: seleccion.fecha ?? null,
           resultado: seleccion.resultado,
         })),
       })

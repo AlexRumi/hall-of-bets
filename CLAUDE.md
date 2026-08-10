@@ -1915,7 +1915,32 @@ separadas, probando cada una antes de pasar a la siguiente.
     autolimitado, ya que todas las apuestas nuevas guardan la hora.
     **Pendiente**: ejecutar el `create table resultados_partidos` (con su
     política de RLS) de `supabase-setup.sql` en el SQL Editor de Supabase
-    antes de que este marcador funcione en producción.
+    antes de que este marcador funcione en producción. — Hecho, confirmado
+    por el usuario.
+  - **Bug real, detectado al probarlo en producción**: en una combinada
+    con partidos de días distintos (p.ej. 5 el sábado y 2 el domingo, caso
+    normal para este usuario), el marcador final de los partidos del
+    sábado nunca llegaba a pedirse. Causa: `horaInicioPartido` combinaba
+    la HORA de cada partido (correcta, guardada por grupo) con la FECHA
+    de toda la apuesta (`apuesta.fecha`) — un único campo compartido que
+    `ConstructorPartido.jsx` sobrescribe con la fecha del ÚLTIMO partido
+    añadido (`onFechaPartido`). Con partidos de varios días, esa fecha
+    compartida no coincide con la de cada partido: para uno del sábado
+    podía acabar calculando su hora de inicio con la fecha del domingo,
+    que cae en el futuro, así que el "gate" (hora de inicio + 2,5h)
+    bloqueaba la consulta para siempre — el partido ya había terminado de
+    verdad, pero la app creía que ni había empezado. Arreglo: `fecha`
+    (la del partido, no la de la apuesta) se añade al mismo "pipeline" que
+    ya llevaba `hora` — `ConstructorPartido.jsx` la guarda por partido,
+    `agruparSeleccionesPorPartido` la expone en cada grupo, y las dos
+    listas blancas de `useApuestas.js` la guardan. `ApuestaItem.jsx` pasa
+    a calcular la hora de inicio con `grupo.fecha ?? apuesta.fecha` (con
+    reserva a la fecha de toda la apuesta solo para selecciones de antes
+    de este arreglo, que no tienen `fecha` propia guardada). Para una
+    apuesta ya guardada antes de este arreglo, la única forma de que su
+    marcador empiece a funcionar es quitar ese partido del editor y
+    volver a elegirlo del buscador (así se guarda su `fecha` real) — no
+    hay migración automática posible, el dato original nunca se guardó.
   - **Pendiente**: probar de verdad en el navegador (con `vercel dev`,
     para que el buscador de partidos y el de jugador tengan datos reales)
     — solo se pudo comprobar que `npx vite build` compila limpio y que

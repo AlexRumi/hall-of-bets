@@ -11,6 +11,7 @@ const partidoVacio = () => ({
   equipoLocalId: null,
   equipoVisitanteId: null,
   hora: null,
+  fecha: null,
 });
 
 // Evita que pulsar Enter en cualquier campo de aquí dentro (el buscador de
@@ -74,6 +75,13 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
       equipoLocalId: partidoElegido.equipoLocalId ?? null,
       equipoVisitanteId: partidoElegido.equipoVisitanteId ?? null,
       hora: partidoElegido.hora ?? null,
+      // Fecha propia del partido, aparte de "fecha" (la de toda la
+      // apuesta, ver onFechaPartido más abajo): en una combinada con
+      // partidos de días distintos, ese campo compartido se sobrescribe
+      // con el último partido elegido, así que no sirve para saber la
+      // hora de inicio real de CADA partido — ver horaInicioPartido en
+      // ApuestaItem.jsx.
+      fecha: partidoElegido.fecha ?? null,
     });
     onFechaPartido(partidoElegido.fecha);
   }

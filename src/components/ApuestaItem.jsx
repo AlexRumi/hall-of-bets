@@ -14,7 +14,7 @@ import FormularioApuesta from "./FormularioApuesta";
 // que se puede enseñar.
 const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
 
-// Combina la fecha de la apuesta con la hora del partido (guardada en la
+// Combina la fecha del partido con su hora (las dos guardadas en la
 // selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
 // cuándo tendría sentido pedir el resultado final — usePartidoInfo.js no
 // llama a nada antes de esa hora + margen. "new Date('YYYY-MM-DDTHH:mm:00')"
@@ -371,16 +371,22 @@ export default function ApuestaItem({
           ya el resultado real guardado (ver manejarMarcarResultadoPick en
           App.jsx). Cash Out se queda igual (acción manual aparte, no
           derivada de los picks). */}
-      <div className={`text-center py-2 text-sm font-bold uppercase tracking-wide ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}>
-        {ETIQUETAS_RESULTADO[apuesta.resultado]}
+      <div className="flex justify-center py-2">
+        <span
+          className={`px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wide ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}
+        >
+          {ETIQUETAS_RESULTADO[apuesta.resultado]}
+        </span>
       </div>
 
-      {/* pb-3: si la apuesta ya está resuelta, no hay bloque de Cash Out
+      {/* pt-2: un poco de aire entre el estado de arriba y el primer
+          partido, que antes quedaban pegados.
+          pb-3: si la apuesta ya está resuelta, no hay bloque de Cash Out
           después (esPendiente es false) y el último partido quedaba justo
           contra el borde inferior redondeado de la tarjeta — su sello, sin
           margen debajo, se veía "cortado" ahí (parecía que faltaba scroll,
           pero ya era el final de verdad). */}
-      <div className="pb-3">
+      <div className="pt-2 pb-3">
         {gruposPartido.map((grupo, indice) => {
           const colorResultado = grupo.resultado;
           const revelado = revelados.has(grupo.indiceLider);
@@ -417,7 +423,7 @@ export default function ApuestaItem({
                         <EtiquetaPartidoEnVivo
                           partidoId={grupo.partidoId}
                           hora={grupo.hora}
-                          horaInicioMs={horaInicioPartido(apuesta.fecha, grupo.hora)}
+                          horaInicioMs={horaInicioPartido(grupo.fecha ?? apuesta.fecha, grupo.hora)}
                         />
                       )}
                     </p>

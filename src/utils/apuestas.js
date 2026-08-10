@@ -81,11 +81,14 @@ export function agruparSeleccionesPorPartido(selecciones) {
         // se creó eligiendo un partido del buscador después de esa fase.
         equipoLocalId: seleccion.equipoLocalId ?? null,
         equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
-        // Hora de inicio (HH:MM, hora de España): solo presente si la
+        // Hora de inicio (HH:MM, hora de España) y fecha propia de ESTE
+        // partido — no la de toda la apuesta, que en una combinada de
+        // varios días no coincide con cada uno. Solo presentes si la
         // selección se creó eligiendo un partido después de la fase del
-        // marcador final en caché — usada por ApuestaItem.jsx para saber
+        // marcador final en caché — usadas por ApuestaItem.jsx para saber
         // desde cuándo pedirlo sin gastar una llamada de más.
         hora: seleccion.hora ?? null,
+        fecha: seleccion.fecha ?? null,
         cuota: Number(seleccion.cuota),
         selecciones: [{ ...seleccion, indice }],
       });
