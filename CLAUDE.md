@@ -1871,6 +1871,51 @@ separadas, probando cada una antes de pasar a la siguiente.
     sentido cerrar el campo en cada tecla): ganan un botón "Listo"
     (deshabilitado hasta que hay texto) para colapsar a mano cuando se
     termina de escribir.
+  - **Marcador final con caché compartida y permanente en Supabase**
+    (petición directa, misma sesión — sustituye el diseño anterior de
+    `EtiquetaPartidoEnVivo`, que llamaba a `api/partido.js` una vez por
+    partido y por SESIÓN de navegador, sin compartir nada entre
+    dispositivos ni usuarios). Nueva tabla `resultados_partidos` en
+    Supabase (`partido_id` como clave primaria, `estado`/`goles_local`/
+    `goles_visitante`, sin `user_id` — es una caché de datos públicos del
+    partido, no información personal, así que cualquier usuario
+    autenticado de la app la lee y escribe sin distinción) — **sin
+    caducidad a propósito**, a diferencia de la caché de fixtures del día:
+    un resultado final no cambia nunca una vez el partido termina.
+    `usePartidoInfo.js` cambia de "una única petición por partido y
+    sesión" a un flujo de tres pasos: 1) si el partido no debería haber
+    terminado todavía (hora de inicio + 2,5h sin pasar), no se consulta
+    nada, ni siquiera Supabase — nadie podría tener ya un resultado final
+    guardado; 2) si ya debería haber terminado, se mira primero
+    `resultados_partidos` (lectura normal de Supabase, gratis) — si ya
+    está, se usa directo, cero llamadas a API-Football; 3) solo si tampoco
+    está en Supabase, se hace la única llamada a `api/partido.js`, y si el
+    estado devuelto ya es "terminado" (FT/AET/PEN/...) se guarda en
+    `resultados_partidos` para que cualquier visita futura (tuya, de tu
+    amigo, de otra pestaña) lo lea sin gastar nada. Con esto, cada partido
+    de fútbol apostado en la vida de la app gasta como mucho 1 llamada a
+    la API, una única vez, para siempre — no 1 por sesión de cada persona
+    que mire el detalle, que era el diseño anterior.
+    Para saber "hora de inicio + 2,5h" hacía falta la hora de inicio de
+    cada partido, que hasta ahora no se guardaba en ningún sitio (solo
+    vivía de forma efímera en `BuscadorEvento.jsx` mientras se elegía el
+    partido). `hora` (HH:MM, ya en hora de España) se añade al mismo
+    "pipeline" que ya llevaban `partidoId`/`equipoLocalId`/
+    `equipoVisitanteId`: `ConstructorPartido.jsx` la guarda en su estado
+    `partido` al elegir uno del buscador, `agruparSeleccionesPorPartido`
+    (`utils/apuestas.js`) la expone en cada grupo, y las dos listas
+    blancas de `useApuestas.js` (`agregarApuesta`/`editarApuesta`) la
+    guardan sin tocar el resto. De paso, `EtiquetaPartidoEnVivo` deja de
+    depender de la API para mostrar la HORA (antes esperaba la respuesta
+    de `usePartidoInfo` incluso para ese dato tan simple, que ya se sabía
+    sin llamar a nada): ahora la pinta directo desde `grupo.hora`, y solo
+    usa `usePartidoInfo` para el marcador final. Las selecciones de antes
+    de esta fase (sin `hora` guardada) no tienen forma de saber si el
+    partido ya terminó, así que consultan siempre — caso raro y
+    autolimitado, ya que todas las apuestas nuevas guardan la hora.
+    **Pendiente**: ejecutar el `create table resultados_partidos` (con su
+    política de RLS) de `supabase-setup.sql` en el SQL Editor de Supabase
+    antes de que este marcador funcione en producción.
   - **Pendiente**: probar de verdad en el navegador (con `vercel dev`,
     para que el buscador de partidos y el de jugador tengan datos reales)
     — solo se pudo comprobar que `npx vite build` compila limpio y que

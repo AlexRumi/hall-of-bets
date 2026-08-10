@@ -111,6 +111,7 @@ export function useApuestas(userId) {
           // plantilla al editarla después (nunca llegó a guardarse el id).
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+          hora: seleccion.hora ?? null,
         })),
       })
       .select()
@@ -166,6 +167,7 @@ export function useApuestas(userId) {
           // solo el sello decorativo, era un fallo real.
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+          hora: seleccion.hora ?? null,
           resultado: seleccion.resultado,
         })),
       })

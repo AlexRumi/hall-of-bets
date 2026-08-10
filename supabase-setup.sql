@@ -196,3 +196,25 @@ alter table public.movimientos add column categoria text check (categoria in ('a
 alter table public.casas add column freebet_saldo_apuestas numeric not null default 0;
 alter table public.casas add column freebet_saldo_entretenimiento numeric not null default 0;
 
+-- Caché COMPARTIDA (no por usuario) de resultados finales de partidos, para
+-- gastar como mucho 1 llamada a API-Football por partido en toda la vida de
+-- la app, la haga quien la haga. Sin caducidad a propósito: a diferencia de
+-- la caché de fixtures del día (que sí se refresca), un resultado final no
+-- cambia nunca una vez el partido termina — ver usePartidoInfo.js, que solo
+-- escribe aquí cuando el estado ya es uno "terminado" (FT/AET/PEN/...).
+create table public.resultados_partidos (
+  partido_id bigint primary key,
+  estado text not null,
+  goles_local integer,
+  goles_visitante integer,
+  guardado_en timestamptz not null default now()
+);
+
+-- Sin user_id: es una caché de datos públicos de partidos, no información
+-- personal — cualquier usuario autenticado de la app (hoy solo hay uno) la
+-- puede leer y escribir, así que un partido consultado por cualquiera queda
+-- disponible para todos sin gastar llamadas adicionales.
+alter table public.resultados_partidos enable row level security;
+create policy "autenticados_resultados_partidos" on public.resultados_partidos
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+

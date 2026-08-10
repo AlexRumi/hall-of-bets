@@ -10,6 +10,7 @@ const partidoVacio = () => ({
   partidoId: null,
   equipoLocalId: null,
   equipoVisitanteId: null,
+  hora: null,
 });
 
 // Evita que pulsar Enter en cualquier campo de aquí dentro (el buscador de
@@ -72,6 +73,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
       partidoId: partidoElegido.id,
       equipoLocalId: partidoElegido.equipoLocalId ?? null,
       equipoVisitanteId: partidoElegido.equipoVisitanteId ?? null,
+      hora: partidoElegido.hora ?? null,
     });
     onFechaPartido(partidoElegido.fecha);
   }

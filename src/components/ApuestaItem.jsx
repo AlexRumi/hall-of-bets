@@ -14,23 +14,43 @@ import FormularioApuesta from "./FormularioApuesta";
 // que se puede enseñar.
 const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
 
+// Combina la fecha de la apuesta con la hora del partido (guardada en la
+// selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
+// cuándo tendría sentido pedir el resultado final — usePartidoInfo.js no
+// llama a nada antes de esa hora + margen. "new Date('YYYY-MM-DDTHH:mm:00')"
+// se interpreta en la zona horaria del navegador; como la hora ya viene en
+// hora de España (api/partidos.js pide con timezone=Europe/Madrid) y el uso
+// real es de un usuario en España, no hace falta ninguna librería de zonas.
+function horaInicioPartido(fecha, hora) {
+  if (!fecha || !hora) return null;
+  return new Date(`${fecha}T${hora}:00`).getTime();
+}
+
 // Hora/resultado del partido en la esquina, estilo "ticket" de casa de
-// apuestas (petición directa) — vía api/partido.js, con el partidoId ya
-// guardado en la selección desde el buscador. Solo las apuestas creadas
-// eligiendo un partido de verdad (no escritas a mano) tienen ese id; sin
-// él, o mientras no responda la API, no se pinta nada (nunca bloquea).
-function EtiquetaPartidoEnVivo({ partidoId }) {
-  const info = usePartidoInfo(partidoId);
-  if (!info) return null;
-  const terminado = ESTADOS_TERMINADOS_API.has(info.estado);
-  const texto = terminado ? `${info.golesLocal}-${info.golesVisitante}` : info.hora;
+// apuestas (petición directa) — el partidoId ya guardado en la selección
+// desde el buscador. Solo las apuestas creadas eligiendo un partido de
+// verdad (no escritas a mano) tienen ese id; sin él no se pinta nada (nunca
+// bloquea). La hora se enseña directa desde la propia selección (ya
+// guardada, sin gastar ninguna llamada); el marcador final, en cambio,
+// viene de usePartidoInfo.js (caché compartida en Supabase + gate por hora
+// de inicio, para no repetir la llamada a la API más de una vez por
+// partido en toda la vida de la app).
+function EtiquetaPartidoEnVivo({ partidoId, hora, horaInicioMs }) {
+  const info = usePartidoInfo(partidoId, horaInicioMs);
+  const terminado = info && ESTADOS_TERMINADOS_API.has(info.estado);
+
+  if (terminado) {
+    return (
+      <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-void/15 text-void">
+        {info.golesLocal}-{info.golesVisitante}
+      </span>
+    );
+  }
+
+  if (!hora) return null;
   return (
-    <span
-      className={`inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded ${
-        terminado ? "bg-void/15 text-void" : "bg-gold/10 text-gold"
-      }`}
-    >
-      {texto}
+    <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gold/10 text-gold">
+      {hora}
     </span>
   );
 }
@@ -393,7 +413,13 @@ export default function ApuestaItem({
                         necesidad del hueco extra que hacía falta antes. */}
                     <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink break-words">
                       {grupo.evento}
-                      {grupo.partidoId && <EtiquetaPartidoEnVivo partidoId={grupo.partidoId} />}
+                      {grupo.partidoId && (
+                        <EtiquetaPartidoEnVivo
+                          partidoId={grupo.partidoId}
+                          hora={grupo.hora}
+                          horaInicioMs={horaInicioPartido(apuesta.fecha, grupo.hora)}
+                        />
+                      )}
                     </p>
                     {grupo.pais && (
                       <p className="text-xs text-slate">
