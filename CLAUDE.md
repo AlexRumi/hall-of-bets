@@ -2106,6 +2106,19 @@ separadas, probando cada una antes de pasar a la siguiente.
     su sección, y se había quedado con `w-full` — se veía como una franja
     entera en vez de un botón. Ancho ajustado al contenido (`px-5`, sin
     `w-full`), como cualquier otro botón normal de la app.
+  - **Hora/resultado junto al partido, cuota abajo a la derecha**
+    (petición directa, misma sesión): la píldora de `EtiquetaPartidoEnVivo`
+    vivía en una columna a la derecha, junto a la cuota — ahí es donde
+    chocaba con el ojo/lápiz de la esquina superior (ver el ajuste
+    anterior, el `pt-10`). En vez de mantener ese hueco a medida,
+    `ApuestaItem.jsx` cambia de sitio los dos: la píldora pasa a ir
+    pegada al nombre del partido (`{grupo.evento} {grupo.partidoId &&
+    <EtiquetaPartidoEnVivo .../>}` en la misma línea, con `flex flex-wrap`
+    por si no caben en una), y la cuota (+ el enlace "✎ Ajustar cuota" si
+    hay algún pick anulado) baja a una fila propia alineada a la derecha,
+    debajo de la lista de picks. Al no competir ya por la esquina superior
+    derecha, el `pt-10` que se había añadido para esquivar el ojo/lápiz ya
+    no hacía falta y se quitó.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

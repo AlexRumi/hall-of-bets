@@ -385,8 +385,15 @@ export default function ApuestaItem({
                     className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${COLOR_PUNTO[colorResultado]}`}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-base font-semibold text-ink break-words">
+                    {/* Hora/resultado junto al evento (petición directa —
+                        antes vivía en una columna a la derecha, donde
+                        chocaba con el ojo/lápiz de la esquina). Al no
+                        competir ya por la esquina superior derecha, la
+                        cuota puede bajar a la esquina inferior sin
+                        necesidad del hueco extra que hacía falta antes. */}
+                    <p className="flex flex-wrap items-center gap-2 text-base font-semibold text-ink break-words">
                       {grupo.evento}
+                      {grupo.partidoId && <EtiquetaPartidoEnVivo partidoId={grupo.partidoId} />}
                     </p>
                     {grupo.pais && (
                       <p className="text-xs text-slate">
@@ -443,25 +450,24 @@ export default function ApuestaItem({
                         );
                       })}
                     </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-mono text-base font-bold text-gold">
-                      {grupo.cuota.toFixed(2)}
-                    </p>
-                    {grupo.partidoId && (
-                      <div className="mt-0.5">
-                        <EtiquetaPartidoEnVivo partidoId={grupo.partidoId} />
-                      </div>
-                    )}
-                    {hayPickAnulado && !promptAbierto && (
-                      <button
-                        type="button"
-                        onClick={() => abrirPromptCuota(grupo)}
-                        className="text-[11px] font-semibold text-gold hover:underline"
-                      >
-                        ✎ Ajustar cuota
-                      </button>
-                    )}
+
+                    {/* Cuota en la esquina inferior derecha del contenido
+                        (antes arriba, en su propia columna — chocaba con
+                        el ojo/lápiz de la esquina superior). */}
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      {hayPickAnulado && !promptAbierto && (
+                        <button
+                          type="button"
+                          onClick={() => abrirPromptCuota(grupo)}
+                          className="text-[11px] font-semibold text-gold hover:underline"
+                        >
+                          ✎ Ajustar cuota
+                        </button>
+                      )}
+                      <p className="font-mono text-base font-bold text-gold">
+                        {grupo.cuota.toFixed(2)}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
