@@ -2008,11 +2008,37 @@ separadas, probando cada una antes de pasar a la siguiente.
       "+", se colapsa del todo a un botón pequeño "+ Añadir otro mercado"
       en vez de al buscador completo; solo se vuelve a mostrar si se
       pulsa ese botón a propósito.
-  - **Pendiente**: seguir probando en el navegador tras esta ronda de
-    arreglos (sello + ojo + lápiz en modo edición, el flujo completo de
-    "Crear multi", y que editar una apuesta ya marcada por picks no le
-    borre el resultado) — no hay herramienta de navegador en esta sesión,
-    así que solo se pudo comprobar que compila limpio.
+  - **Segunda ronda de bugs reales al probarlo**, ambos ya corregidos:
+    - **La tarjeta del último partido se veía "cortada" abajo**: cuando
+      una apuesta ya está resuelta no hay bloque de Cash Out después (solo
+      aparece con `esPendiente`), así que el último partido quedaba pegado
+      sin margen contra el borde inferior redondeado de la tarjeta — su
+      sello se veía cortado justo ahí, dando la sensación de que faltaba
+      scroll cuando en realidad ya era el final de verdad. `pb-3` en el
+      contenedor de la lista de partidos.
+    - **Barra de scroll visible, pedida más "limpia"**: nueva clase
+      `.scrollbar-oculto` en `index.css` (Firefox `scrollbar-width` +
+      `::-webkit-scrollbar` para Chrome/Safari) — oculta la barra sin
+      quitar el scroll en sí. Aplicada al modal de detalle de apuesta
+      (`ListaApuestas.jsx`) y a las listas de `SelectorMercado.jsx`/
+      `BuscadorEvento.jsx`; `TabsDesplazables.jsx` pasa a usar esta misma
+      clase en vez de repetir el mismo CSS a mano.
+    - **El lápiz/ojo no aparecían en partidos con picks a medio marcar**:
+      bug real — los dos dependían de `colorResultado !== "pendiente"`,
+      pero un partido con picks mezclados (uno ya marcado, otro sin
+      tocar) sigue derivándose "pendiente" en conjunto
+      (`derivarResultadoGrupo`), así que nunca aparecía ni el lápiz ni el
+      ojo y no había forma de entrar en modo edición ni para el pick ya
+      marcado. El lápiz ahora se ve siempre que no se esté ya revelando o
+      editando (haya o no sello puesto); el ojo se ve si hay sello que
+      mostrar/ocultar O si hay que salir del modo edición. Sin sello de
+      fondo (pendiente, o ya en edición) los dos botones cambian a un
+      estilo con más contraste (`bg-paperDim border`) en vez del
+      `bg-black/15` pensado para ir sobre el tinte de color, que ahí casi
+      no se veía.
+  - **Pendiente**: seguir probando en el navegador — no hay herramienta de
+    navegador en esta sesión, así que solo se pudo comprobar que compila
+    limpio.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

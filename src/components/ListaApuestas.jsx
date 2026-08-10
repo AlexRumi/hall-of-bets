@@ -185,7 +185,7 @@ export default function ListaApuestas({
               campos a 2 columnas en pantallas anchas) no quede demasiado
               apretado. */}
           <div
-            className="w-full max-w-xl max-h-[calc(100dvh-10rem)] md:max-h-[calc(100dvh-6rem)] overflow-y-auto"
+            className="w-full max-w-xl max-h-[calc(100dvh-10rem)] md:max-h-[calc(100dvh-6rem)] overflow-y-auto scrollbar-oculto"
             onClick={(e) => e.stopPropagation()}
           >
             <ApuestaItem

@@ -325,7 +325,12 @@ export default function ApuestaItem({
         {ETIQUETAS_RESULTADO[apuesta.resultado]}
       </div>
 
-      <div>
+      {/* pb-3: si la apuesta ya está resuelta, no hay bloque de Cash Out
+          después (esPendiente es false) y el último partido quedaba justo
+          contra el borde inferior redondeado de la tarjeta — su sello, sin
+          margen debajo, se veía "cortado" ahí (parecía que faltaba scroll,
+          pero ya era el final de verdad). */}
+      <div className="pb-3">
         {gruposPartido.map((grupo, indice) => {
           const colorResultado = grupo.resultado;
           const revelado = revelados.has(grupo.indiceLider);
@@ -511,36 +516,53 @@ export default function ApuestaItem({
 
                 {/* Ojo + lápiz propios de este partido — no uno solo para
                     toda la apuesta: revelar/editar el primer partido no
-                    afecta al resto. El lápiz solo se ve con el sello puesto
-                    (ni revelado ni en edición): lo quita del todo y hace
-                    los picks tocables. El ojo, si el partido está en modo
-                    edición, sale de ese modo (vuelve a poner el sello, ya
-                    con el resultado actualizado) en vez de alternar
-                    "revelado". */}
-                {colorResultado !== "pendiente" && (
-                  <div className="absolute top-4 right-5 flex items-center gap-1.5">
-                    {!revelado && !enEdicion && (
-                      <button
-                        type="button"
-                        onClick={() => activarEdicionPicks(grupo.indiceLider)}
-                        aria-label="Editar resultado de este partido"
-                        className="p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => alternarOjo(grupo.indiceLider)}
-                      aria-label={
-                        revelado || enEdicion ? "Ocultar resultado de este partido" : "Ver resultado de este partido"
-                      }
-                      className="p-1.5 rounded-full bg-black/15 hover:bg-black/25 text-paper transition-colors"
-                    >
-                      {revelado || enEdicion ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
-                )}
+                    afecta al resto.
+                    Bug real: antes los dos dependían de "colorResultado !==
+                    pendiente", pero un partido con picks mezclados (uno ya
+                    marcado, otro sin tocar) sigue derivándose "pendiente"
+                    en conjunto — así que nunca aparecía ni el lápiz ni el
+                    ojo, y no había forma de entrar en modo edición ni
+                    siquiera para el pick ya marcado. El lápiz ahora se ve
+                    siempre que no se esté ya revelando o editando (haya o
+                    no sello puesto); el ojo se ve si hay sello que
+                    ocultar/mostrar O si hay que salir del modo edición.
+                    Sin sello de fondo (pendiente, o en edición) los
+                    botones pasan a un estilo con más contraste que el
+                    "sobre tinte de color" de siempre. */}
+                {(() => {
+                  const sinTinte = colorResultado === "pendiente" || enEdicion;
+                  const estiloIcono = sinTinte
+                    ? "bg-paperDim border border-line text-slate hover:text-gold"
+                    : "bg-black/15 hover:bg-black/25 text-paper";
+                  return (
+                    <div className="absolute top-4 right-5 flex items-center gap-1.5">
+                      {!revelado && !enEdicion && (
+                        <button
+                          type="button"
+                          onClick={() => activarEdicionPicks(grupo.indiceLider)}
+                          aria-label="Editar resultado de este partido"
+                          className={`p-1.5 rounded-full transition-colors ${estiloIcono}`}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      {(colorResultado !== "pendiente" || enEdicion) && (
+                        <button
+                          type="button"
+                          onClick={() => alternarOjo(grupo.indiceLider)}
+                          aria-label={
+                            revelado || enEdicion
+                              ? "Ocultar resultado de este partido"
+                              : "Ver resultado de este partido"
+                          }
+                          className={`p-1.5 rounded-full transition-colors ${estiloIcono}`}
+                        >
+                          {revelado || enEdicion ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );

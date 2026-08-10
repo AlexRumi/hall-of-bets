@@ -137,7 +137,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
       </div>
 
       {valor.trim() ? (
-        <div className="max-h-72 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto scrollbar-oculto">
           {competicionesConCoincidencias.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate text-center">
               Sin resultados — puedes escribir el partido a mano
@@ -187,7 +187,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           )}
 
           {competicionFiltro && (
-            <div className="max-h-72 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto scrollbar-oculto">
               {partidosDeCompeticion.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-slate text-center">
                   Sin partidos cacheados hoy en esta competición

@@ -96,6 +96,17 @@ textarea {
   }
 }
 
+/* Oculta la barra de scroll visualmente sin quitar el scroll en sí —
+   para listas largas (detalle de apuesta, desplegables de mercado/
+   partido) donde la barra nativa se veía "sucia". Firefox
+   (scrollbar-width) + Chrome/Safari (::-webkit-scrollbar). */
+.scrollbar-oculto {
+  scrollbar-width: none;
+}
+.scrollbar-oculto::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes app-entrada {
   from {
     opacity: 0;

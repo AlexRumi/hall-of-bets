@@ -36,7 +36,7 @@ export default function TabsDesplazables({ opciones, valor, onElegir, colorActiv
 
       <div
         ref={scrollRef}
-        className="mq-tabs-scroll flex gap-1.5 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mq-tabs-scroll scrollbar-oculto flex gap-1.5 overflow-x-auto py-2"
       >
         {opciones.map((opcion) => (
           <button

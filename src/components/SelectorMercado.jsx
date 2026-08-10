@@ -179,7 +179,7 @@ export default function SelectorMercado({
       </div>
 
       {busqueda.trim() ? (
-        <div className="max-h-72 overflow-y-auto mt-2">
+        <div className="max-h-72 overflow-y-auto scrollbar-oculto mt-2">
           {categoriasConCoincidencias.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate text-center">Sin resultados — prueba "Otro mercado"</p>
           ) : (
@@ -253,7 +253,7 @@ export default function SelectorMercado({
                   />
                 )}
               </div>
-              <div className="max-h-56 overflow-y-auto -mx-3">
+              <div className="max-h-56 overflow-y-auto scrollbar-oculto -mx-3">
                 {categoriaActiva.opciones.map((opcion) => {
                   const valorOpcion = `${categoriaActiva.id}|${opcion.id}`;
                   return (
@@ -276,7 +276,7 @@ export default function SelectorMercado({
           )}
 
           {categoriaActiva && !categoriaActiva.requiereJugador && (
-            <div className="max-h-72 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto scrollbar-oculto">
               {categoriaActiva.opciones.map((opcion) => {
                 const valorOpcion = `${categoriaActiva.id}|${opcion.id}`;
                 return (
