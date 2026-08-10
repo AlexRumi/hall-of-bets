@@ -2,8 +2,38 @@ import { useState } from "react";
 import { X, Pencil, Trash2, Eye, EyeOff, Check, Minus } from "lucide-react";
 import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { useColorCasa } from "../hooks/useColorCasa";
+import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
 import FormularioApuesta from "./FormularioApuesta";
+
+// Estados "terminado" de API-Football — en cualquier otro estado (por
+// empezar o en juego) se enseña la hora en vez del resultado: sin "en
+// directo" (ver usePartidoInfo.js, se descartó por cuota), un partido en
+// juego solo se sabría con certeza si se ha vuelto a pedir, y no se
+// vuelve a pedir — así que hasta que termine, la hora es lo único fiable
+// que se puede enseñar.
+const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
+
+// Hora/resultado del partido en la esquina, estilo "ticket" de casa de
+// apuestas (petición directa) — vía api/partido.js, con el partidoId ya
+// guardado en la selección desde el buscador. Solo las apuestas creadas
+// eligiendo un partido de verdad (no escritas a mano) tienen ese id; sin
+// él, o mientras no responda la API, no se pinta nada (nunca bloquea).
+function EtiquetaPartidoEnVivo({ partidoId }) {
+  const info = usePartidoInfo(partidoId);
+  if (!info) return null;
+  const terminado = ESTADOS_TERMINADOS_API.has(info.estado);
+  const texto = terminado ? `${info.golesLocal}-${info.golesVisitante}` : info.hora;
+  return (
+    <span
+      className={`inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded ${
+        terminado ? "bg-void/15 text-void" : "bg-gold/10 text-gold"
+      }`}
+    >
+      {texto}
+    </span>
+  );
+}
 
 const ETIQUETAS_RESULTADO = {
   pendiente: "Pendiente",
@@ -418,6 +448,11 @@ export default function ApuestaItem({
                     <p className="font-mono text-base font-bold text-gold">
                       {grupo.cuota.toFixed(2)}
                     </p>
+                    {grupo.partidoId && (
+                      <div className="mt-0.5">
+                        <EtiquetaPartidoEnVivo partidoId={grupo.partidoId} />
+                      </div>
+                    )}
                     {hayPickAnulado && !promptAbierto && (
                       <button
                         type="button"
@@ -582,7 +617,7 @@ export default function ApuestaItem({
           <button
             type="button"
             onClick={alternarCashOut}
-            className={`w-full py-2.5 rounded-lg text-sm font-bold border transition-colors ${
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold border transition-colors ${
               mostrandoCashOut
                 ? "bg-cashout text-paper border-cashout"
                 : "border-line text-cashout hover:border-cashout"

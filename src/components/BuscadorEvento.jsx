@@ -14,6 +14,29 @@ const TABS_PAIS = [
   { valor: OTRAS_LIGAS, texto: "Otras ligas" },
 ];
 
+// Estados "terminado" de API-Football (tiempo reglamentario, prórroga o
+// penaltis) — en cualquier otro estado (por jugar, en juego...) se enseña
+// la hora en vez del resultado, que todavía no es definitivo.
+const ESTADOS_FINALIZADOS = new Set(["FT", "AET", "PEN"]);
+
+// Píldora de hora/resultado a la derecha de cada partido (petición
+// directa): mismos datos "hora"/"estado"/"golesLocal"/"golesVisitante"
+// que ya devuelve api/partidos.js dentro de la misma llamada de siempre,
+// sin gastar cuota aparte.
+function EtiquetaPartido({ partido }) {
+  const terminado = ESTADOS_FINALIZADOS.has(partido.estado);
+  const texto = terminado ? `${partido.golesLocal}-${partido.golesVisitante}` : partido.hora;
+  return (
+    <span
+      className={`shrink-0 font-mono text-xs font-semibold px-2 py-1 rounded ${
+        terminado ? "bg-void/15 text-void" : "bg-gold/10 text-gold"
+      }`}
+    >
+      {texto}
+    </span>
+  );
+}
+
 // Campo "Evento" con autocompletado (ver match-picker-demo.html, referencia
 // aportada por el usuario): un único buscador de texto libre arriba (a la
 // vez el campo "Evento" real) que, en cuanto se escribe algo, busca en
@@ -153,10 +176,13 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
                     key={partido.id}
                     type="button"
                     onClick={() => elegir(partido)}
-                    className="w-full flex flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
+                    className="w-full flex items-center justify-between gap-2 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
                   >
-                    <span className="text-sm font-medium text-ink">{partido.evento}</span>
-                    <span className="text-xs text-slate">{partido.pais}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink truncate">{partido.evento}</span>
+                      <span className="block text-xs text-slate truncate">{partido.pais}</span>
+                    </span>
+                    <EtiquetaPartido partido={partido} />
                   </button>
                 ))}
               </div>
@@ -198,9 +224,10 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
                     key={partido.id}
                     type="button"
                     onClick={() => elegir(partido)}
-                    className="w-full flex flex-col items-start gap-0.5 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
+                    className="w-full flex items-center justify-between gap-2 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
                   >
-                    <span className="text-sm font-medium text-ink">{partido.evento}</span>
+                    <span className="text-sm font-medium text-ink truncate">{partido.evento}</span>
+                    <EtiquetaPartido partido={partido} />
                   </button>
                 ))
               )}

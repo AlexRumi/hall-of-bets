@@ -64,8 +64,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    // timezone=Europe/Madrid: sin esto, "fixture.date" viene en UTC — la
+    // app es para un usuario en España, así que se pide directamente en su
+    // hora local (evita tener que convertir a mano en el frontend, con el
+    // lío del cambio de horario CET/CEST). Comprobado a mano el
+    // 2026-08-10: el mismo partido pasa de "...+00:00" a "...+02:00" con
+    // este parámetro, sin coste extra de cuota (mismo endpoint).
     const respuesta = await fetch(
-      `https://v3.football.api-sports.io/fixtures?date=${fecha}`,
+      `https://v3.football.api-sports.io/fixtures?date=${fecha}&timezone=Europe/Madrid`,
       { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY } }
     );
 
@@ -88,6 +94,9 @@ export default async function handler(req, res) {
     }
 
     const partidos = (datos.response ?? [])
+      // Orden cronológico (hora de verdad, no solo fecha): la API no
+      // garantiza ningún orden concreto en su respuesta.
+      .sort((a, b) => a.fixture.date.localeCompare(b.fixture.date))
       .filter((p) => LIGAS[p.league.id])
       .map((p) => ({
         id: p.fixture.id,
@@ -95,6 +104,14 @@ export default async function handler(req, res) {
         pais: LIGAS[p.league.id].pais,
         competicion: LIGAS[p.league.id].competicion,
         fecha: p.fixture.date.slice(0, 10),
+        hora: p.fixture.date.slice(11, 16),
+        // Estado y resultado: ya venían en la misma respuesta, sin
+        // llamada aparte. "estado" es el código corto de API-Football
+        // (NS = por jugar, FT/AET/PEN = terminado, 1H/HT/2H/... = en
+        // juego) — BuscadorEvento.jsx decide qué mostrar según eso.
+        estado: p.fixture.status.short,
+        golesLocal: p.goals.home,
+        golesVisitante: p.goals.away,
         // Ids de equipo (no del partido): alimentan el desplegable de
         // jugador de la categoría "Jugador" en SelectorMercado.jsx, vía
         // /api/jugadores (players/squads). No se usaban para nada más

@@ -2049,6 +2049,64 @@ separadas, probando cada una antes de pasar a la siguiente.
     navegador en esta sesión, así que solo se pudo comprobar que compila
     limpio.
 
+- **Hora y resultado del partido en el buscador, y orden cronológico**
+  (petición directa, misma sesión). `api/partidos.js` ya traía toda esta
+  información dentro de la misma llamada a `/fixtures?date=X` de siempre
+  (comprobado a mano con curl antes de tocar nada, no hacía falta gastar
+  cuota aparte): `fixture.date` (hora exacta), `fixture.status.short`
+  (NS/1H/HT/2H/FT/AET/PEN...) y `goals.home`/`goals.away`. Se añade
+  `&timezone=Europe/Madrid` a la llamada (comprobado que cambia el offset
+  de `fixture.date` de `+00:00` a `+02:00` sin coste extra) para no tener
+  que convertir a mano en el frontend — con el lío del cambio de horario
+  CET/CEST, mejor que lo resuelva la propia API. Cada partido devuelto
+  gana `hora` (`HH:MM`, ya en hora de España), `estado`, `golesLocal` y
+  `golesVisitante`. De paso, `datos.response` se ordena por
+  `fixture.date` antes de filtrar/mapear — la API no garantiza ningún
+  orden concreto, así que los partidos ya salían de sitio en el buscador.
+  `BuscadorEvento.jsx` pinta una píldora a la derecha de cada partido:
+  hora (dorada) si `estado` no es uno de los terminados
+  (`ESTADOS_FINALIZADOS`: FT/AET/PEN), o el resultado final (gris,
+  `golesLocal-golesVisitante`) si ya lo es — en cualquier otro estado
+  (1H/HT/2H, en juego) se sigue mostrando la hora, ya que el resultado
+  todavía no es definitivo.
+  - **Aclaración tras probarlo**: esto solo vive en el buscador (mientras
+    se elige el partido) — al guardar la selección no se guarda hora ni
+    resultado, así que las apuestas ya registradas nunca lo mostraban. El
+    usuario en realidad quería verlo en el propio detalle de la apuesta
+    (`ApuestaItem.jsx`), estilo ticket de una casa de apuestas.
+  - **Hora/resultado en el detalle de la apuesta**: nueva Serverless
+    Function `api/partido.js` (`GET /fixtures?id=X`, con
+    `timezone=Europe/Madrid` igual que `api/partidos.js`) — a diferencia
+    de pedir por fecha, pedir por id NO tiene la restricción de rango del
+    plan gratuito (comprobado a mano: un partido de fuera del rango
+    permitido respondió sin `errors.plan`), así que funciona para
+    cualquier apuesta con partido conectado, sea de cuando sea. Hook
+    `usePartidoInfo.js` (mismo patrón que `usePlantilla.js`, caché por
+    partido dentro de la visita) + componente `EtiquetaPartidoEnVivo` en
+    `ApuestaItem.jsx`, en la esquina de cada partido junto a la cuota —
+    solo se pinta si la selección tiene `partidoId` guardado (partido
+    elegido desde el buscador, no escrito a mano) y mientras la API
+    responda; si no, no aparece nada, nunca bloquea el detalle.
+  - **Marcador "en directo" — probado y descartado por cuota** (petición
+    directa, misma sesión): primer intento con `usePartidoInfo.js`
+    volviendo a pedir cada minuto (luego cada 3) mientras el partido
+    siguiera sin terminar, para que el marcador se actualizara solo. Al
+    calcular el gasto real (una combinada con varios partidos en juego a
+    la vez multiplica las peticiones, y el plan gratuito son ~100 al
+    día), el propio usuario decidió que no compensaba. Vuelta a una
+    única petición por partido y visita — igual que `usePlantilla.js` —
+    sin repetirla nunca: si el partido aún no ha terminado cuando se
+    pide, se enseña la hora sin más, y para ver el resultado final basta
+    con volver a abrir el detalle más tarde (eso sí cuenta como una
+    petición nueva). `EtiquetaPartidoEnVivo` vuelve a los dos únicos
+    estados visuales de antes: dorado con la hora, o gris con el
+    resultado final.
+  - **Cash Out demasiado ancho**: el botón pasó de formar parte de una
+    fila de 4 (con Ganada/Perdida/Nula, ya retirados) a ser el único de
+    su sección, y se había quedado con `w-full` — se veía como una franja
+    entera en vez de un botón. Ancho ajustado al contenido (`px-5`, sin
+    `w-full`), como cualquier otro botón normal de la app.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
