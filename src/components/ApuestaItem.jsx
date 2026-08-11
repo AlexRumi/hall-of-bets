@@ -233,30 +233,30 @@ export default function ApuestaItem({
     onMarcarResultadoSeleccion(apuesta.id, pick.indice, nuevo);
     // Petición directa: en un "multi" con varios mercados del mismo
     // partido, marcar uno como Perdida ya deja el partido entero como
-    // "perdida" (basta con que falle uno) — pero si todavía quedan otros
-    // mercados de ESE MISMO partido sin decidir, antes había que tocar el
+    // "perdida" (basta con que falle uno) — pero si todavía queda algún
+    // mercado de ESE MISMO partido sin decidir, antes había que tocar el
     // lápiz para poder seguir marcándolos (el sello ya tapaba la fila).
-    // Mientras queden hermanos pendientes, el partido se queda en modo
-    // edición solo (sin sello) para poder marcarlos de un tirón.
-    // Bug real de esta misma ronda: ese modo edición se quedaba "pegado"
-    // aunque ya se hubiera marcado el último pick pendiente — el sello
-    // nunca llegaba a aplicarse solo, hacía falta tocar el ojo a mano o
-    // cerrar y reabrir la tarjeta. Ahora, en cuanto este partido se queda
-    // sin ningún pick pendiente (el propio, incluido), se sale del modo
-    // edición sola — el sello se superpone al instante, sin pasos extra.
-    // En un pick simple (sin hermanos) esto no cambia nada: nunca llega a
-    // entrar en modo edición, el sello ya aparecía al instante.
-    const hayOtroPendiente = grupo.selecciones.some(
-      (s) => s.indice !== pick.indice && (s.resultado ?? "pendiente") === "pendiente"
-    );
-    if (hayOtroPendiente) {
+    // Mientras quede alguno pendiente, el partido se queda en modo edición
+    // solo (sin sello) para poder marcarlos de un tirón; en cuanto no
+    // quede ninguno, se sale sola del modo edición y el sello se aplica
+    // al instante, sin pasos extra.
+    // Bug real (detectado por el usuario): el pick que se acaba de tocar
+    // hay que mirarlo con su valor NUEVO, no el guardado hasta ahora — al
+    // deshacer un pick (Ganada → Pendiente otra vez) con otro ya en
+    // Perdida, ese pick recién deshecho es justo el que se ha quedado sin
+    // determinar, y antes no contaba (solo se miraban "los demás").
+    const quedaAlgunoPendiente = grupo.selecciones.some((s) => {
+      const valor = s.indice === pick.indice ? nuevo : s.resultado ?? "pendiente";
+      return valor === "pendiente";
+    });
+    if (quedaAlgunoPendiente) {
       activarEdicionPicks(grupo.indiceLider);
     } else {
       setEditandoPicks((actuales) => {
         if (!actuales.has(grupo.indiceLider)) return actuales;
-        const nuevo = new Set(actuales);
-        nuevo.delete(grupo.indiceLider);
-        return nuevo;
+        const restantes = new Set(actuales);
+        restantes.delete(grupo.indiceLider);
+        return restantes;
       });
     }
     if (nuevo === "nula") {

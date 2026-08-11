@@ -2424,6 +2424,22 @@ separadas, probando cada una antes de pasar a la siguiente.
   al instante, sin pasos extra. Un pick simple no se ve afectado: nunca
   llega a entrar en modo edición para esto, el sello ya aparecía al
   instante desde antes.
+  **Segundo bug real, detectado por el usuario**: en un partido de 2
+  picks, marcar uno verde y otro rojo, y luego deshacer el verde (volver
+  a Pendiente), seguía aplicando el sello rojo de PERDIDA aunque un
+  mercado se hubiera quedado sin determinar. Causa doble:
+  1. En `ApuestaItem.jsx`, la comprobación de "queda algo pendiente" solo
+     miraba los OTROS picks del partido, no el propio que se acababa de
+     tocar — al deshacerlo, ese pick es justo el que se queda pendiente,
+     y no contaba. `marcarPick` ahora calcula el valor de CADA pick con su
+     valor nuevo si es el que se acaba de tocar (`s.indice === pick.indice
+     ? nuevo : ...`), no el guardado hasta ese momento.
+  2. En `App.jsx`, `todosDecididos` comprobaba `resultado != null` — pero
+     deshacer un pick lo guarda como el texto literal `"pendiente"`, no
+     como `null`/`undefined`, así que lo contaba como "ya decidido" por
+     error. Pasa a comprobar `(resultado ?? "pendiente") !== "pendiente"`,
+     mismo patrón ya usado en el resto de la app para leer el resultado de
+     un pick.
 
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes

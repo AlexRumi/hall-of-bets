@@ -231,7 +231,10 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     // ApuestaItem.jsx) sigue reaccionando al instante, esto solo retrasa
     // el resultado real guardado. "Ganada"/"Nula" no necesitan este freno:
     // por cómo se derivan, solo se alcanzan cuando ya está todo decidido.
-    const todosDecididos = nuevasSelecciones.every((s) => s.resultado != null);
+    // Bug real: deshacer un pick (ver marcarPick en ApuestaItem.jsx) lo
+    // guarda como el texto literal "pendiente", no como null/undefined —
+    // "!= null" por sí solo lo contaba como "ya decidido" por error.
+    const todosDecididos = nuevasSelecciones.every((s) => (s.resultado ?? "pendiente") !== "pendiente");
     if (nuevoResultado === "perdida" && !todosDecididos) return;
     if (nuevoResultado !== apuesta.resultado) {
       manejarMarcarResultado(id, nuevoResultado);
