@@ -86,7 +86,7 @@ export default function ObjetivoPersonal({ categoria, apuestasDelBankroll, objet
         <div className="flex gap-2">
           <button
             type="submit"
-            className="flex items-center gap-1.5 bg-felt text-paper px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors"
+            className="flex items-center gap-1.5 bg-gold text-feltDark px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors"
           >
             <Check size={14} />
             Guardar

@@ -82,7 +82,7 @@ export default function PantallaLogin({
           <button
             type="submit"
             disabled={enviando}
-            className="w-full flex items-center justify-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors disabled:opacity-60"
           >
             <LogIn size={16} />
             {enviando ? "Entrando…" : "Entrar"}

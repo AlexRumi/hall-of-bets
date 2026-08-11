@@ -133,7 +133,7 @@ export default function ArchivarDatos({
           type="button"
           onClick={() => setConfirmando(true)}
           disabled={!rangoListo || totalAfectado === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-felt text-paper hover:bg-feltDark transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gold text-feltDark hover:bg-goldDark transition-colors disabled:opacity-50"
         >
           {desarchivando ? <ArchiveRestore size={16} /> : <Archive size={16} />}
           {desarchivando ? "Desarchivar" : "Archivar"}

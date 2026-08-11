@@ -82,7 +82,7 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
 
       <button
         type="submit"
-        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-felt text-paper px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-feltDark transition-colors"
+        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-gold text-feltDark px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-goldDark transition-colors"
       >
         <PlusCircle size={14} />
         Añadir

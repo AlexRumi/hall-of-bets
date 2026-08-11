@@ -98,6 +98,23 @@ export default function SelectorMercado({
   onCambiar,
   equipoLocalId = null,
   equipoVisitanteId = null,
+  // Petición directa: en "Crear multi de este partido" (ConstructorPartido.jsx),
+  // elegir un mercado no es la acción final — hay un paso de confirmación
+  // aparte ("Añadir mercado") que lo empuja a la lista del bloque. Colapsar
+  // el panel de golpe ahí se sentía como un salto brusco a "otra pantalla"
+  // sin relación (el usuario lo describió como "dos ventanas"). En el resto
+  // de sitios (pick simple, editar un mercado ya guardado) elegir SÍ es la
+  // acción final, así que ahí se mantiene el colapso de siempre.
+  colapsarAlElegir = true,
+  // Petición directa (flujo multi-mercado de ConstructorPartido.jsx): se
+  // llama con el texto ya definitivo justo cuando el panel colapsa de
+  // verdad (al elegir una opción de la lista, o al pulsar "Listo" en
+  // "Otro mercado") — a diferencia de onCambiar, que en el campo de texto
+  // libre se dispara en cada tecla, esto solo dispara una vez, cuando el
+  // usuario ya ha terminado. El texto se pasa como argumento (no se lee de
+  // ningún estado) para no depender de si React ya aplicó o no el cambio
+  // de onCambiar de esa misma pulsación.
+  onFinalizar,
 }) {
   const equipos = equiposDesdeEvento(evento);
   const [seleccion, setSeleccion] = useState(() => seleccionInicial(valor, equipos));
@@ -115,14 +132,18 @@ export default function SelectorMercado({
   // Ruta (categoría → subcategoría → Local/Visitante) de la selección ya
   // guardada, para abrir el árbol justo donde vive — se calcula una sola
   // vez aquí y se reutiliza en los tres useState de abajo.
+  // Petición directa: sin selección previa, ninguno de los tres niveles
+  // arranca con nada elegido (antes se abría directo en la primera
+  // categoría/subcategoría) — mismo principio de "crece progresivamente"
+  // que ya tiene BuscadorEvento.jsx: solo se ven las pestañas de
+  // categoría, y las de subcategoría/la lista de opciones van apareciendo
+  // según se elige cada nivel, nunca antes.
   const rutaInicial =
     seleccion && seleccion !== OTRO ? rutaEnArbol(seleccion) : null;
   const [topActiva, setTopActiva] = useState(
-    () => (seleccion === OTRO ? OTRO : rutaInicial?.categoriaId ?? ARBOL_MERCADOS[0].id)
+    () => (seleccion === OTRO ? OTRO : rutaInicial?.categoriaId ?? null)
   );
-  const [subActiva, setSubActiva] = useState(
-    () => rutaInicial?.subcategoriaId ?? ARBOL_MERCADOS[0].subcategorias[0].id
-  );
+  const [subActiva, setSubActiva] = useState(() => rutaInicial?.subcategoriaId ?? null);
   const [nivel3Activa, setNivel3Activa] = useState(() => rutaInicial?.nivel3Id ?? null);
 
   // Bug real (2026-08-10): al elegir un mercado, el panel (buscador +
@@ -171,9 +192,10 @@ export default function SelectorMercado({
 
   function elegirTop(id) {
     setTopActiva(id);
-    if (id === OTRO) return;
-    const nuevoTop = ARBOL_MERCADOS.find((c) => c.id === id);
-    setSubActiva(nuevoTop?.subcategorias[0]?.id ?? "");
+    // Sin auto-elegir la primera subcategoría (crecimiento progresivo):
+    // hace falta tocarla a propósito, igual que país no auto-elige
+    // competición en BuscadorEvento.jsx.
+    setSubActiva(null);
     setNivel3Activa(null);
   }
 
@@ -192,8 +214,13 @@ export default function SelectorMercado({
     setBusqueda("");
     if (nuevaSeleccion === OTRO) return;
     const opcion = buscarOpcionPorId(nuevaSeleccion);
-    if (opcion) onCambiar(opcion.texto(equipos, jugadorTexto));
-    setExpandido(false);
+    if (!opcion) return;
+    const texto = opcion.texto(equipos, jugadorTexto);
+    onCambiar(texto);
+    if (colapsarAlElegir) {
+      setExpandido(false);
+      onFinalizar?.(texto);
+    }
   }
 
   function elegirOtro(texto) {
@@ -205,8 +232,11 @@ export default function SelectorMercado({
 
   const subNode = topNode?.subcategorias.find((s) => s.id === subActiva) ?? null;
   const tieneNivel3 = !!(subNode && subNode.subcategorias);
+  // Sin reserva al primer Local/Visitante (crecimiento progresivo): la
+  // lista de opciones no aparece hasta que se elige a propósito, ni
+  // siquiera en las subcategorías con este tercer nivel.
   const nivel3Node = tieneNivel3
-    ? subNode.subcategorias.find((n) => n.id === nivel3Activa) ?? subNode.subcategorias[0]
+    ? subNode.subcategorias.find((n) => n.id === nivel3Activa) ?? null
     : null;
   const opcionesActuales = tieneNivel3 ? nivel3Node?.opciones ?? [] : subNode?.opciones ?? [];
 
@@ -305,7 +335,10 @@ export default function SelectorMercado({
               />
               <button
                 type="button"
-                onClick={() => setExpandido(false)}
+                onClick={() => {
+                  setExpandido(false);
+                  onFinalizar?.(valor);
+                }}
                 disabled={!(seleccion === OTRO && valor.trim())}
                 className="text-xs font-semibold text-gold border border-gold/40 rounded-full px-3 py-1 hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -314,12 +347,16 @@ export default function SelectorMercado({
             </div>
           )}
 
-          {topNode && (
+          {/* compacto: pestañas más pequeñas sobre fondo propio (paperDim)
+              — se nota de un vistazo que es un nivel anidado dentro de las
+              de categoría, no una fila más al mismo nivel. */}
+          {topNode && topActiva !== OTRO && (
             <TabsDesplazables
               opciones={topNode.subcategorias.map((s) => ({ valor: s.id, texto: s.etiqueta }))}
               valor={subActiva}
               onElegir={elegirSub}
               colorActivo="gold"
+              compacto
             />
           )}
 
@@ -331,7 +368,7 @@ export default function SelectorMercado({
                   type="button"
                   onClick={() => setNivel3Activa(n.id)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-colors ${
-                    (nivel3Activa ?? subNode.subcategorias[0].id) === n.id
+                    nivel3Activa === n.id
                       ? "bg-gold text-feltDark border-gold"
                       : "border-line text-slate hover:text-ink"
                   }`}

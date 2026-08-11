@@ -2518,6 +2518,178 @@ separadas, probando cada una antes de pasar a la siguiente.
     texto detectadas (Goles total vs Goles 1ª/2ª mitad) se quedan sin
     tocar por ahora, mismo aviso de arriba.
 
+- **Pestañas de categoría/subcategoría desbordaban en móvil** (bug real,
+  detectado por el usuario con una captura). `TabsDesplazables.jsx`
+  arrancaba pegado a los bordes de su contenedor, sin el mismo margen que
+  el resto de la tarjeta (p.ej. el buscador de texto, con su propio
+  `p-3`) — en pantallas donde no cabían todas las pestañas, se veían
+  cortadas a media palabra justo en el borde, sin ningún indicio de que
+  se podía deslizar. Arreglo con el patrón habitual para esto: `-mx-3` en
+  el contenedor exterior (deja que todo el bloque —incluida la posición
+  de las flechas y el desvanecido, hermanos del scroll— llegue hasta el
+  borde real de la tarjeta) y `px-3` en el propio scroll (lo recupera por
+  dentro, para que la primera/última pestaña arranquen alineadas con el
+  resto del contenido en reposo, aunque el área deslizable en sí llegue
+  hasta el borde). El desvanecido del borde derecho ya era siempre
+  visible en móvil (no solo con ratón, a diferencia de las flechas ‹ ›) —
+  no hizo falta tocar esa parte, solo quedaba mal posicionado por el
+  mismo desbordamiento.
+  **Segunda vuelta, tras verlo con una captura real**: el desbordamiento
+  fuera de la tarjeta se corrigió, pero el desvanecido seguía sin notarse.
+  Causa real: iba de transparente a `surface` (blanco) — las pestañas
+  inactivas no tienen relleno propio (son casi blancas de por sí), así
+  que ese degradado no generaba ningún contraste visible contra ellas,
+  solo se notaba algo sobre la pestaña activa (dorada). Pasa a
+  `from-transparent via-paperDim to-surface` (`paperDim`, el mismo gris
+  cálido que ya usa el resto de la app para superficies "recogidas") —
+  con esa parada intermedia sí se nota, contra cualquier pestaña, antes
+  de volver al blanco justo en el borde real de la tarjeta.
+
+- **Botón "+ Añadir mercado" baja debajo del selector, ya no al lado**
+  (petición directa, detectado en el mismo repaso móvil de arriba). En
+  "Crear multi de este partido" (`ConstructorPartido.jsx`), el botón que
+  añade el mercado elegido a la lista del multi iba en una fila `flex`
+  junto a `SelectorMercado.jsx`, compartiendo ancho con él — apretaba
+  demasiado en móvil, sobre todo una vez el selector colapsaba a su
+  píldora dorada tras elegir un mercado. Pasa a ir debajo, a todo el
+  ancho, mismo estilo que "Añadir otro mercado" (el botón que aparece
+  para los mercados siguientes) — solo cambia el texto, "Añadir mercado"
+  a secas para el primero.
+  **Ronda siguiente, tras probarlo**: el usuario describió el flujo como
+  "dos ventanas" — elegir un mercado colapsaba `SelectorMercado.jsx` de
+  golpe a su píldora resumen, un salto brusco justo cuando aquí SÍ hay un
+  paso de confirmación aparte ("Añadir mercado", recién movido debajo).
+  En el resto de sitios donde se usa este selector (pick simple, editar
+  un mercado ya guardado) elegir SÍ es la acción final, así que colapsar
+  ahí tiene sentido. Nuevo prop `colapsarAlElegir` (por defecto `true`,
+  sin cambios en ningún otro sitio) — `elegir()` solo llama a
+  `setExpandido(false)` si viene a `true`. `ConstructorPartido.jsx` lo
+  pasa a `false` solo en el `SelectorMercado` de "Crear multi de este
+  partido": ahora, al elegir, el panel se queda abierto (con la opción
+  marcada con ✓ en su sitio, más la píldora resumen arriba) hasta que se
+  pulsa "Añadir mercado" a propósito.
+
+- **Botones de acción principal unificados en dorado** (petición directa:
+  en modo claro seguían en verde fieltro apagado, que además no coincidía
+  con el verde vivo de la cabecera; en modo oscuro ya eran dorados). Se
+  confirmó el alcance con `AskUserQuestion` antes de tocar nada: solo los
+  botones que EJECUTAN una acción (Guardar/Crear/Añadir/Exportar/
+  Archivar...), no las pestañas ni filtros activos (Real/Freebet,
+  Apuestas/Entretenimiento, país del buscador...), que se quedan en verde
+  fieltro como marcador de selección — mantiene la distinción visual
+  entre "acción" y "estado elegido". 10 botones cambian de
+  `bg-felt text-paper ... hover:bg-feltDark` a `bg-gold text-feltDark
+  ... hover:bg-goldDark` (mismo patrón que ya usaba "Confirmar →" en
+  `FormularioApuesta.jsx`, reutilizado tal cual): "Guardar" (objetivo),
+  login, "Subir mi historial a la nube", "Exportar copia (JSON)", las 3
+  de `ConstructorPartido.jsx` ("Elegir este partido →", "Guardar
+  selección", "Guardar grupo del partido"), "Añadir casa", "Añadir
+  movimiento", "Archivar"/"Desarchivar", "Añadir" (Otro bono) y "Crear
+  apuesta"/"Guardar cambios". Revisado también `bg-win` (verde) en toda
+  la app: solo aparece en indicadores de resultado (insignias, calendario
+  de actividad, barra de progreso de objetivo) y en los botones de marcar
+  un pick como Ganada — estos últimos son ellos mismos el indicador de
+  estado (verde=ganada, rojo=perdida, gris=nula), no un CTA genérico, así
+  que se quedan igual. `--felt` sigue de fondo en cabecera/sidebar/barra
+  inferior/bordes, sin ningún cambio ahí.
+
+- **Subtítulo de categoría bajo cada mercado en "Apuesta en
+  construcción"** (petición directa, mismo sesión): cada selección de la
+  lista de un bloque pasa de "punto + texto" en gris a mercado en negrita
+  con la categoría del catálogo en gris debajo — mismo patrón mercado/
+  categoría que ya usa `ApuestaItem.jsx` con `etiquetaCategoriaDeTexto`,
+  reutilizado tal cual (null si no coincide con nada del catálogo, sin
+  pintar subtítulo en ese caso).
+
+- **Selector de mercado: crecimiento progresivo, quitar el "+" suelto, y
+  flujo multi-mercado con añadido directo** (petición directa, misma
+  sesión, a partir de 3 maquetas HTML de referencia:
+  `mobile-responsive-fix-demo.html`, `picker-visual-fix-demo.html`,
+  `multi-market-collapsed-demo.html` — solo se recibió la descripción por
+  texto de las tres, no su contenido real, así que no se pudieron
+  contrastar visualmente pixel a pixel).
+  - **Responsive en móvil**: ya solucionado en una ronda anterior de esta
+    misma sesión (patrón "bleed-and-recover" `-mx-3`/`px-3` +
+    desvanecido siempre visible en `TabsDesplazables.jsx`, con
+    `via-paperDim` para que se note el degradado contra pestañas
+    inactivas). No hizo falta ningún cambio nuevo para este punto.
+  - **`SelectorMercado.jsx` empieza cerrado, crecimiento progresivo**:
+    `topActiva`/`subActiva`/`nivel3Activa` pasan de auto-elegir el primer
+    valor a arrancar en `null` sin selección previa — mismo principio que
+    ya usa `BuscadorEvento.jsx` con país→competición: cada nivel (pestañas
+    de subcategoría, tercer nivel Local/Visitante, lista de opciones) solo
+    aparece una vez se ha tocado el nivel anterior a propósito, nunca por
+    defecto. `elegirTop`/`elegirSub` ya no reservan ningún hijo por
+    defecto al cambiar de nivel.
+  - **Diferenciación visual nivel 1/nivel 2**: `TabsDesplazables.jsx` gana
+    un prop `compacto` (pestañas más pequeñas, `px-2.5 py-1 text-[11px]`
+    en vez de `px-3 py-1.5 text-xs`, sobre un fondo propio `bg-paperDim`
+    — sólido, para que el desvanecido del borde termine en ese mismo
+    color sin que se note la costura) usado solo en el nivel 2
+    (subcategoría) de `SelectorMercado.jsx`, para que se note de un
+    vistazo que es un nivel anidado dentro del nivel 1 (categoría), no
+    una fila más al mismo nivel.
+  - **Quitar el botón "+" suelto**: `SelectorMercado.jsx` ya añadía la
+    opción directamente al elegir una fila de la lista (`elegir()` llama
+    a `onCambiar` en el momento) — el "+" que hacía falta vivía en
+    `ConstructorPartido.jsx`, ver el punto de flujo multi-mercado justo
+    debajo.
+  - **Flujo multi-mercado de "Crear multi de este partido" con añadido
+    directo**: el paso "multi" de `ConstructorPartido.jsx` ya no tiene un
+    botón "+ Añadir mercado" ni el estado intermedio
+    `mostrandoSelectorMercado` de la ronda anterior — elegir una opción
+    del selector la añade de inmediato a la lista acumulada (visible
+    ahora ARRIBA del selector, con su ✕ para quitarla, en vez de debajo)
+    y el propio selector se resetea del todo (sin categoría ni
+    subcategoría elegidas, listo para el mercado siguiente, que puede ser
+    de otra categoría). El campo "Cuota de este partido" pasa a estar
+    deshabilitado (`disabled`) hasta que haya al menos un mercado en la
+    lista — el botón "Guardar grupo del partido" ya lo estaba desde
+    antes.
+    - **`SelectorMercado.jsx` gana el prop `onFinalizar(texto)`**: se
+      llama con el texto YA DEFINITIVO justo en el momento en que el
+      panel colapsa de verdad — al elegir una fila de la lista (dentro
+      de `elegir()`, junto a `setExpandido(false)`) o al pulsar "Listo"
+      en el modo "Otro mercado" (texto libre). Se necesitó un prop
+      aparte de `onCambiar` porque `onCambiar` se dispara en cada tecla
+      mientras se escribe el texto libre de "Otro mercado" — si
+      `ConstructorPartido.jsx` hubiera añadido a la lista directamente
+      desde `onCambiar`, habría añadido fragmentos de texto a medio
+      escribir. El texto se pasa como argumento a `onFinalizar` (no se
+      lee de ningún estado del padre) para no depender de si React ya
+      había aplicado o no el `onCambiar` de esa misma pulsación.
+    - `ConstructorPartido.jsx` reutiliza el mismo `resetId` que ya movía
+      `BuscadorEvento`/el `SelectorMercado` del paso "simple" (comparten
+      la clave `key={resetId}` para forzar el remount con estado limpio)
+      — se incrementa también dentro de `finalizarMercadoMulti`, y como
+      cada paso ("partido"/"simple"/"multi") es una rama de renderizado
+      condicional distinta, no hay colisión entre remontar el selector
+      del paso "multi" varias veces seguidas y el resto de componentes
+      que comparten el mismo contador, que en ese momento ni siquiera
+      están montados.
+  - **Pendiente**: seguir probando en el navegador de verdad — no hay
+    herramienta de navegador en esta sesión, así que solo se pudo
+    comprobar que `npx vite build` compila limpio.
+
+- **"Guardar selección"/"Guardar grupo del partido" en verde, excepción a
+  la unificación en dorado** (petición directa, con dos capturas de
+  referencia claro/oscuro). Motivo: en la pantalla de `ConstructorPartido.jsx`
+  ya hay dorado por todas partes (pestañas de categoría, la píldora del
+  mercado elegido, el chip del partido...), así que el botón de guardar
+  final se perdía entre el resto — el usuario pidió diferenciarlo con
+  verde. Es una excepción puntual a la regla de la ronda anterior ("el
+  verde `--win` queda reservado para indicadores de resultado, no como
+  color interactivo") — aquí se reutiliza el mismo token `--win` (no un
+  verde nuevo) porque estas dos acciones sí funcionan como una señal de
+  "esto ya está listo/confirmado", cercana a un resultado positivo, y
+  porque el contraste `bg-win text-paper` ya tenía precedente en los
+  botones ✓ de marcar un pick como Ganada (`ApuestaItem.jsx`). Sin
+  `winDark` como token (a diferencia de `gold`/`goldDark`), el hover usa
+  `hover:brightness-90` en vez de un color distinto. El resto de botones
+  de `ConstructorPartido.jsx` ("Elegir este partido →") se queda en
+  dorado — no se mencionó en la petición, y ese botón es solo un paso
+  intermedio de navegación, no una acción de guardado final.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PlusCircle, Save, X, AlertTriangle, Globe, Pencil } from "lucide-react";
 import { agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
-import { equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
+import { equiposDesdeEvento, esFormatoEquipos, etiquetaCategoriaDeTexto } from "../utils/mercados";
 import CampoCasa from "./CampoCasa";
 import ConstructorPartido from "./ConstructorPartido";
 import SelectorMercado from "./SelectorMercado";
@@ -501,6 +501,7 @@ export default function FormularioApuesta({
                 {bloques.map((bloque, index) => {
                   const editando = bloqueEditando === index;
                   const esMulti = bloque.mercados.length > 1;
+                  const equiposBloque = equiposDesdeEvento(bloque.evento);
                   return (
                     <div key={index} className="bg-surface border border-line rounded-lg p-3">
                       <div className="flex items-start justify-between gap-2">
@@ -555,22 +556,37 @@ export default function FormularioApuesta({
                           />
                         </div>
                       ) : (
-                        <ul className="mt-2 pt-2 border-t border-line/60 space-y-0.5">
-                          {bloque.mercados.map((mercado, i) => (
-                            <li key={i} className="flex items-center justify-between gap-2 text-xs text-slate">
-                              <span>• {mercado}</span>
-                              {editando && (
-                                <button
-                                  type="button"
-                                  onClick={() => quitarMercadoDeBloque(index, i)}
-                                  aria-label="Quitar mercado"
-                                  className="text-slate hover:text-lose transition-colors shrink-0"
-                                >
-                                  <X size={12} />
-                                </button>
-                              )}
-                            </li>
-                          ))}
+                        <ul className="mt-2 pt-2 border-t border-line/60 space-y-1.5">
+                          {bloque.mercados.map((mercado, i) => {
+                            // Mismo patrón mercado en negrita + categoría en
+                            // gris debajo que ya usa ApuestaItem.jsx (petición
+                            // directa) — null si no coincide con nada del
+                            // catálogo (escrito a mano en "Otro mercado"), sin
+                            // pintar ningún subtítulo en ese caso.
+                            const categoria = etiquetaCategoriaDeTexto(mercado, equiposBloque);
+                            return (
+                              <li key={i} className="flex items-start justify-between gap-2">
+                                <span className="min-w-0">
+                                  <span className="block text-xs font-semibold text-ink break-words">
+                                    {mercado}
+                                  </span>
+                                  {categoria && (
+                                    <span className="block text-[11px] text-slate">{categoria}</span>
+                                  )}
+                                </span>
+                                {editando && (
+                                  <button
+                                    type="button"
+                                    onClick={() => quitarMercadoDeBloque(index, i)}
+                                    aria-label="Quitar mercado"
+                                    className="text-slate hover:text-lose transition-colors shrink-0"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                )}
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                       <div className="mt-2 flex items-center gap-2">
@@ -638,7 +654,7 @@ export default function FormularioApuesta({
         <button
           type="submit"
           disabled={bloques.length === 0}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors disabled:opacity-50"
         >
           {esEdicion ? <Save size={16} /> : <PlusCircle size={16} />}
           {esEdicion ? "Guardar cambios" : "Crear apuesta"}

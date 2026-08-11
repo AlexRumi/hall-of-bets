@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Globe, Plus, RefreshCw, X } from "lucide-react";
+import { Globe, RefreshCw, X } from "lucide-react";
 import BuscadorEvento from "./BuscadorEvento";
 import SelectorMercado from "./SelectorMercado";
 
@@ -46,13 +46,6 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
   const [mercadosMulti, setMercadosMulti] = useState([]);
   const [mercadoMultiActual, setMercadoMultiActual] = useState("");
   const [cuotaMulti, setCuotaMulti] = useState("");
-  // Bug real (petición directa): tras "+" el selector de mercado volvía a
-  // abrirse solo, listo para el siguiente — pero si la combinada ya tenía
-  // los mercados que hacían falta, se quedaba ahí ocupando sitio sin motivo
-  // aparente. Ahora, tras añadir uno, el selector se colapsa del todo a un
-  // botón pequeño "+ Añadir otro mercado"; solo se vuelve a mostrar el
-  // buscador de verdad si se pulsa ese botón a propósito.
-  const [mostrandoSelectorMercado, setMostrandoSelectorMercado] = useState(true);
 
   function reiniciar() {
     setResetId((n) => n + 1);
@@ -63,7 +56,6 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
     setMercadosMulti([]);
     setMercadoMultiActual("");
     setCuotaMulti("");
-    setMostrandoSelectorMercado(true);
   }
 
   function elegirPartido(partidoElegido) {
@@ -97,12 +89,19 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
     reiniciar();
   }
 
-  function añadirMercadoMulti() {
-    if (!mercadoMultiActual.trim()) return;
-    setMercadosMulti((actuales) => [...actuales, mercadoMultiActual.trim()]);
+  // Petición directa: elegir una opción del selector ya es la acción
+  // completa — antes hacía falta un botón "+ Añadir mercado" aparte. Se
+  // llama con el texto ya definitivo (onFinalizar de SelectorMercado.jsx,
+  // no onCambiar) desde el mercado elegido, se añade a la lista acumulada
+  // y se fuerza un remount del selector (mismo truco key={resetId} que ya
+  // usaba el resto del componente) para que vuelva a su estado inicial —
+  // sin categoría ni subcategoría elegidas — listo para el siguiente
+  // mercado, que puede ser de una categoría distinta.
+  function finalizarMercadoMulti(texto) {
+    if (!texto.trim()) return;
+    setMercadosMulti((actuales) => [...actuales, texto.trim()]);
     setMercadoMultiActual("");
     setResetId((n) => n + 1);
-    setMostrandoSelectorMercado(false);
   }
 
   function quitarMercadoMulti(index) {
@@ -143,7 +142,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
             type="button"
             onClick={confirmarPartido}
             disabled={!partido.evento.trim()}
-            className="w-full bg-felt text-paper px-4 py-2 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-50"
+            className="w-full bg-gold text-feltDark px-4 py-2 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors disabled:opacity-50"
           >
             Elegir este partido →
           </button>
@@ -211,7 +210,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
             type="button"
             onClick={guardarSimple}
             disabled={!mercadoSimple.trim() || !(Number(cuotaSimple) > 0)}
-            className="w-full bg-felt text-paper px-4 py-2 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-50"
+            className="w-full bg-win text-paper px-4 py-2 rounded-lg text-sm font-medium hover:brightness-90 transition disabled:opacity-50"
           >
             Guardar selección
           </button>
@@ -227,46 +226,6 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
 
       {paso === "multi" && (
         <div className="space-y-2">
-          {mostrandoSelectorMercado ? (
-            <div className="flex gap-2 items-end">
-              {/* min-w-0: sin esto, un hijo flex no se encoge por debajo del
-                  ancho de su contenido — con las pestañas de categoría de
-                  SelectorMercado.jsx (bastantes, en una fila con scroll
-                  propio) esto empujaba todo el bloque más ancho que la
-                  página en vez de dejar que las pestañas hicieran su propio
-                  scroll horizontal contenido. */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-xs text-slate mb-1">Mercado</label>
-                <SelectorMercado
-                  key={resetId}
-                  evento={partido.evento}
-                  valor={mercadoMultiActual}
-                  onCambiar={setMercadoMultiActual}
-                  equipoLocalId={partido.equipoLocalId}
-                  equipoVisitanteId={partido.equipoVisitanteId}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={añadirMercadoMulti}
-                disabled={!mercadoMultiActual.trim()}
-                aria-label="Añadir mercado"
-                className="shrink-0 bg-gold/10 text-gold border border-gold/40 rounded-lg p-2 hover:bg-gold/20 transition-colors disabled:opacity-40"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setMostrandoSelectorMercado(true)}
-              className="w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-gold border border-gold/40 rounded-lg py-2 hover:bg-gold/10 transition-colors"
-            >
-              <Plus size={16} />
-              Añadir otro mercado
-            </button>
-          )}
-
           {mercadosMulti.length > 0 && (
             <ul className="space-y-1.5">
               {mercadosMulti.map((mercado, i) => (
@@ -289,6 +248,21 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
           )}
 
           <div>
+            <label className="block text-xs text-slate mb-1">
+              {mercadosMulti.length === 0 ? "Mercado" : "Añadir otro mercado"}
+            </label>
+            <SelectorMercado
+              key={resetId}
+              evento={partido.evento}
+              valor={mercadoMultiActual}
+              onCambiar={setMercadoMultiActual}
+              onFinalizar={finalizarMercadoMulti}
+              equipoLocalId={partido.equipoLocalId}
+              equipoVisitanteId={partido.equipoVisitanteId}
+            />
+          </div>
+
+          <div>
             <label className="block text-xs text-slate mb-1">Cuota de este partido (la pones tú)</label>
             <input
               type="number"
@@ -297,7 +271,8 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
               value={cuotaMulti}
               onChange={(e) => setCuotaMulti(e.target.value)}
               placeholder="Ej. 7,50"
-              className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
+              disabled={mercadosMulti.length === 0}
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -305,7 +280,7 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
             type="button"
             onClick={guardarMulti}
             disabled={mercadosMulti.length === 0 || !(Number(cuotaMulti) > 0)}
-            className="w-full bg-felt text-paper px-4 py-2 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-50"
+            className="w-full bg-win text-paper px-4 py-2 rounded-lg text-sm font-medium hover:brightness-90 transition disabled:opacity-50"
           >
             Guardar grupo del partido
           </button>

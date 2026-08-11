@@ -143,7 +143,7 @@ export default function FormularioMovimiento({
 
       <button
         type="submit"
-        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors"
+        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors"
       >
         <PlusCircle size={16} />
         Añadir movimiento

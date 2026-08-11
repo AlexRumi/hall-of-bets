@@ -89,7 +89,7 @@ export default function CopiaSeguridad({ userId, fechaAltaCuenta, ultimaCopia, o
             type="button"
             onClick={() => setConfirmandoMigracion(true)}
             disabled={migrando}
-            className="flex items-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors disabled:opacity-60"
           >
             <CloudUpload size={16} />
             {migrando ? "Subiendo…" : "Subir mi historial a la nube"}
@@ -122,7 +122,7 @@ export default function CopiaSeguridad({ userId, fechaAltaCuenta, ultimaCopia, o
           <button
             type="button"
             onClick={manejarExportar}
-            className="flex items-center gap-2 bg-felt text-paper px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-feltDark transition-colors"
+            className="flex items-center gap-2 bg-gold text-feltDark px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-goldDark transition-colors"
           >
             <Download size={16} />
             Exportar copia (JSON)
