@@ -239,9 +239,7 @@ export default function FormularioApuesta({
     );
 
     const cuotaTotalManual =
-      bloques.length > 1 && importeManual && stakeNumero > 0
-        ? Number(importeManual) / stakeNumero
-        : null;
+      importeManual && stakeNumero > 0 ? Number(importeManual) / stakeNumero : null;
 
     onGuardar({
       fecha,
@@ -614,29 +612,29 @@ export default function FormularioApuesta({
                 {bloques.length === 1 ? "partido" : "partidos"}
               </p>
 
-              {bloques.length > 1 && (
-                <div className="pt-2 border-t border-line">
-                  <label className="block text-xs text-slate mb-1">
-                    Importe que paga la casa si aciertas todo (opcional)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={importeManual}
-                    onChange={(e) => setImporteManual(e.target.value)}
-                    placeholder={`Ej. ${(cuotaTotalBloques * stakeNumero).toFixed(2)}`}
-                    className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
-                  />
-                  <p className="text-xs text-slate mt-1">
-                    {importeManual && stakeNumero > 0
-                      ? `Cuota total ajustada: ${(Number(importeManual) / stakeNumero).toFixed(
-                          2
-                        )} (en vez de ${cuotaTotalBloques.toFixed(2)}).`
-                      : "Multiplicar las cuotas de arriba (redondeadas a 2 decimales) puede quedar unos céntimos por debajo de lo que calcula la casa. Si pones aquí el importe real, la app ajusta la cuota total sola."}
-                  </p>
-                </div>
-              )}
+              <div className="pt-2 border-t border-line">
+                <label className="block text-xs text-slate mb-1">
+                  Importe real que paga la casa si ganas (opcional)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={importeManual}
+                  onChange={(e) => setImporteManual(e.target.value)}
+                  placeholder={`Ej. ${(cuotaTotalBloques * stakeNumero).toFixed(2)}`}
+                  className="w-full sm:max-w-xs border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
+                />
+                <p className="text-xs text-slate mt-1">
+                  {importeManual && stakeNumero > 0
+                    ? `Cuota ajustada: ${(Number(importeManual) / stakeNumero).toFixed(
+                        2
+                      )} (en vez de ${cuotaTotalBloques.toFixed(2)}).`
+                    : bloques.length > 1
+                    ? "Multiplicar las cuotas de arriba (redondeadas a 2 decimales) puede quedar unos céntimos por debajo de lo que calcula la casa. Si pones aquí el importe real (visible en el resumen de la apuesta ya liquidada), la app ajusta la cuota sola."
+                    : "La cuota de arriba está redondeada a 2 decimales, así que el beneficio calculado puede quedar unos céntimos por debajo o por encima de lo que paga la casa. Si pones aquí el importe real (visible en el resumen de la apuesta ya liquidada), la app ajusta la cuota sola."}
+                </p>
+              </div>
             </>
           )}
         </div>

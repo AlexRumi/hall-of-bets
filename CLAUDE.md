@@ -2721,6 +2721,28 @@ separadas, probando cada una antes de pasar a la siguiente.
   dedo ya indica que hay más contenido; en escritorio, las flechas ‹ ›
   (solo con ratón, sin cambios) siguen ahí.
 
+- **Cuota ajustada a mano también en apuestas simples, no solo
+  combinadas** (bug real detectado por el usuario: una apuesta de 1 sola
+  selección, cuota 2,62 y 5€, le pagó 8,13€ de beneficio en la casa —
+  Hall of Bets calculaba 8,10€, porque la cuota real interna de la casa
+  tenía más precisión que los 2 decimales que se ven y se guardan). El
+  campo "Importe real que paga la casa" (`cuotaTotalManual`, ver "Cuota
+  total ajustada a mano en combinadas" más arriba) estaba limitado a
+  `bloques.length > 1` — solo combinadas — aunque `calcularCuotaTotal`
+  (`utils/apuestas.js`) ya soportaba el override para cualquier número de
+  selecciones, sin cambios. Se quita esa restricción tanto en
+  `manejarEnvio` (guardar) como en el JSX del campo, así que ahora
+  también aparece con un único partido. El texto de ayuda se separa en
+  dos variantes según `bloques.length` (una habla de "multiplicar las
+  cuotas", la otra de "la cuota está redondeada a 2 decimales"), y el
+  título pasa de "si aciertas todo" a "si ganas" para que tenga sentido
+  también con una sola selección.
+  Como editar una apuesta ya resuelta ya era posible desde antes (el
+  lápiz de `ApuestaItem.jsx` no depende del resultado), esto ya cubre el
+  caso de ajustar la cuota real a toro pasado, con el resumen final de la
+  apuesta liquidada delante — no hizo falta ningún cambio para permitir
+  editar después de resolver, ya funcionaba así.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
