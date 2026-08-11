@@ -174,12 +174,22 @@ export function ordenarCronologicamente(apuestas) {
 }
 
 // Beneficio acumulado a lo largo del tiempo, para el gráfico. Solo cuentan
-// las apuestas ya resueltas (una pendiente todavía no ha movido el bankroll).
+// las apuestas ya resueltas (una pendiente todavía no ha movido el
+// bankroll). Un punto por DÍA (no por apuesta, petición directa: con
+// varias apuestas el mismo día, antes salía un punto por cada una y el eje
+// repetía la misma fecha varias veces seguidas) — cada punto es el
+// acumulado justo después de sumar todo el beneficio de ese día entero.
 export function calcularSerieAcumulada(apuestas) {
+  const beneficioPorDia = new Map();
+  for (const apuesta of ordenarCronologicamente(apuestas)) {
+    const beneficioAnterior = beneficioPorDia.get(apuesta.fecha) ?? 0;
+    beneficioPorDia.set(apuesta.fecha, beneficioAnterior + calcularBeneficio(apuesta));
+  }
+
   let acumulado = 0;
-  return ordenarCronologicamente(apuestas).map((apuesta) => {
-    acumulado += calcularBeneficio(apuesta);
-    return { fecha: apuesta.fecha, acumulado };
+  return [...beneficioPorDia.entries()].map(([fecha, beneficioDia]) => {
+    acumulado += beneficioDia;
+    return { fecha, acumulado };
   });
 }
 

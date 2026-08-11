@@ -63,16 +63,24 @@ export default function EstadisticasDashboard({
   const hayFiltro = filtroCasa !== "todas";
   const rangoListo = verRango && desde && hasta;
 
-  // El filtro de bankroll solo se aplica a las apuestas: los movimientos
-  // (ingresos/retiradas) son de la casa entera, no tienen "categoria" —
-  // Apuestas y Entretenimiento comparten el mismo dinero de cada casa, así
-  // que el bankroll/ROI de "Casas de apuestas" ya combina las dos siempre
-  // (mismo motivo por el que tampoco se filtran al elegir una sola casa).
   const apuestasDelBankroll =
     filtroBankroll === "todas" ? apuestas : apuestas.filter((a) => a.categoria === filtroBankroll);
+  // Bug real: este filtro solo se aplicaba a las apuestas — "movimientos"
+  // se quedó sin filtrar por bankroll desde que se escribió este dashboard,
+  // porque en ese momento ni siquiera tenía columna "categoria" propia (se
+  // añadió después, ver "Bankroll separado de verdad por Apuestas/
+  // Entretenimiento" en CLAUDE.md). Con eso ya resuelto, el comentario que
+  // había aquí ("los movimientos no tienen categoria") ya no era cierto, y
+  // el "Bankroll"/"ROI" del panel de KPIs (y "ROI por casa") seguían
+  // mezclando Apuestas y Entretenimiento aunque la pastilla de arriba
+  // dijera "Apuestas" — así se detectó, con un ingreso solo de
+  // Entretenimiento sumando igualmente al Bankroll con "Apuestas"
+  // seleccionado. Ahora sí se filtra igual que las apuestas.
+  const movimientosDelBankroll =
+    filtroBankroll === "todas" ? movimientos : movimientos.filter((m) => m.categoria === filtroBankroll);
 
-  // Todo el dashboard se recalcula sobre las apuestas (y movimientos, para
-  // el bankroll) de la casa elegida, en vez de sobre todas.
+  // Todo el dashboard se recalcula sobre las apuestas y movimientos de la
+  // casa elegida, en vez de sobre todas.
   const apuestasFiltradas = rangoListo
     ? filtrarPorRango(apuestasDelBankroll, desde, hasta)
     : (hayFiltro
@@ -80,8 +88,8 @@ export default function EstadisticasDashboard({
         : apuestasDelBankroll
       ).filter((a) => incluirArchivado || !a.archivado);
   const movimientosFiltrados = rangoListo
-    ? filtrarPorRango(movimientos, desde, hasta)
-    : (hayFiltro ? movimientos.filter((m) => m.casa === filtroCasa) : movimientos).filter(
+    ? filtrarPorRango(movimientosDelBankroll, desde, hasta)
+    : (hayFiltro ? movimientosDelBankroll.filter((m) => m.casa === filtroCasa) : movimientosDelBankroll).filter(
         (m) => incluirArchivado || !m.archivado
       );
 

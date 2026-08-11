@@ -2743,6 +2743,35 @@ separadas, probando cada una antes de pasar a la siguiente.
   apuesta liquidada delante — no hizo falta ningún cambio para permitir
   editar después de resolver, ya funcionaba así.
 
+- **Bankroll/ROI de Estadísticas ya respeta el filtro Apuestas/
+  Entretenimiento/Todas** (bug real detectado por el usuario: con la
+  pastilla "Apuestas" elegida y 0€ de actividad ahí, el KPI "Bankroll"
+  seguía mostrando 10€ — el dinero de un ingreso hecho solo en
+  Entretenimiento). Causa: `EstadisticasDashboard.jsx` filtraba
+  `apuestasDelBankroll` por `categoria`, pero `movimientosFiltrados` nunca
+  se filtraba por bankroll — el comentario que había ahí ("los
+  movimientos no tienen categoria") ya no era cierto desde la fase
+  "Bankroll separado de verdad por Apuestas/Entretenimiento", que le
+  añadió esa columna a `movimientos`, pero nadie volvió a tocar este
+  archivo para aprovecharla. `calcularBankrollPorCasa` (`utils/
+  movimientos.js`) ya soportaba un tercer parámetro `categoria` desde esa
+  misma fase, sin usar aquí. Se añade `movimientosDelBankroll` (mismo
+  patrón que `apuestasDelBankroll`, filtra por `filtroBankroll` salvo
+  "todas") y `movimientosFiltrados` se calcula a partir de ahí en vez de
+  `movimientos` sin filtrar — así "Bankroll"/"ROI" del panel de KPIs y
+  "ROI por casa" ya reflejan la pastilla elegida, igual que el resto del
+  dashboard.
+
+- **Gráfico de Evolución: un punto por día, no por apuesta** (petición
+  directa: con varias apuestas el mismo día, el eje X repetía la misma
+  fecha varias veces seguidas). `calcularSerieAcumulada` (`utils/
+  apuestas.js`, usada tanto por `GraficoEvolucion.jsx` como por
+  `GraficoBeneficio.jsx`) agrupa primero el beneficio de todas las
+  apuestas de un mismo día (`Map` por fecha, aprovechando que
+  `ordenarCronologicamente` ya deja las apuestas en orden ascendente) y
+  solo entonces calcula el acumulado — un punto por día con el total ya
+  sumado, en vez de un punto por cada apuesta suelta.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
