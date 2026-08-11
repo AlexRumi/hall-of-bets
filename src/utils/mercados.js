@@ -26,15 +26,17 @@ export function esFormatoEquipos(evento) {
 
 const LINEAS_GOLES = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 const LINEAS_GOLES_MEDIO = [0.5, 1.5, 2.5, 3.5];
-// Interpretación de "córners" del pedido (el mensaje original venía
-// incompleto/repetido en esta parte): líneas de 6.5 a 14.5, mismo patrón
-// que goles — fácil de ajustar el rango si no era justo esto.
-const LINEAS_CORNERS = [6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5];
-// Interpretación de "por mitad" para córners de un equipo (el pedido no
-// daba un rango): la mitad de líneas del total ya existente, sin llegar a
-// las líneas altas (14.5 córners de un equipo en 45 minutos no tiene
-// sentido) — fácil de ajustar si no es justo esto.
-const LINEAS_CORNERS_MEDIO = [1.5, 2.5, 3.5, 4.5, 5.5];
+// Córners del partido completo (mercado "Córners", sin equipo): líneas de
+// 4.5 a 14.5 — tiene sentido un rango alto porque suma los córners de los
+// dos equipos. Ampliado desde 6.5 (petición directa) para cubrir también
+// partidos con pocos córners.
+const LINEAS_CORNERS = [4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5];
+// Córners de UN equipo, partido completo (petición directa, ajuste tras
+// probar el catálogo con datos reales: 6.5-14.5 quedaba demasiado alto
+// para un solo equipo, casi nunca se llega): 0.5 a 9.5.
+const LINEAS_CORNERS_EQUIPO = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5];
+// Córners de un equipo por mitad (misma petición, mismo motivo): 0.5 a 4.5.
+const LINEAS_CORNERS_MEDIO = [0.5, 1.5, 2.5, 3.5, 4.5];
 // Tarjetas: mismo patrón que goles (Over/Under), líneas 0.5 a 6.5.
 const LINEAS_TARJETAS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 
@@ -74,15 +76,17 @@ function opcionesCorners() {
   ];
 }
 
-// Mismo patrón que opcionesGolesEquipo: reutiliza las líneas del total
-// (LINEAS_CORNERS), no un rango propio más corto.
+// A diferencia de opcionesGolesEquipo (reutiliza el total), aquí sí hace
+// falta un rango propio más corto (LINEAS_CORNERS_EQUIPO): 6.5-14.5 tiene
+// sentido para el partido completo, pero casi nunca se llega con un solo
+// equipo.
 function opcionesCornersEquipo(clave) {
   return [
-    ...LINEAS_CORNERS.map((l) => ({
+    ...LINEAS_CORNERS_EQUIPO.map((l) => ({
       id: `corners-${clave}-mas-${l}`,
       texto: (eq) => `Córners ${eq[clave]}: +${l} córners`,
     })),
-    ...LINEAS_CORNERS.map((l) => ({
+    ...LINEAS_CORNERS_EQUIPO.map((l) => ({
       id: `corners-${clave}-menos-${l}`,
       texto: (eq) => `Córners ${eq[clave]}: -${l} córners`,
     })),

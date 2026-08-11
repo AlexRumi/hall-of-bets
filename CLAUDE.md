@@ -2441,6 +2441,21 @@ separadas, probando cada una antes de pasar a la siguiente.
      mismo patrón ya usado en el resto de la app para leer el resultado de
      un pick.
 
+- **Rango de líneas de "Córners por equipo" ajustado tras probarlo con
+  datos reales** (petición directa). Antes reutilizaba las mismas líneas
+  que "Córners" (total del partido, 6.5-14.5) — con un solo equipo casi
+  nunca se llega tan alto. Nueva constante propia `LINEAS_CORNERS_EQUIPO`
+  en `utils/mercados.js`: 0.5 a 9.5, usada solo por `opcionesCornersEquipo`
+  (el mercado "Córners" de partido completo se queda igual, con su propia
+  `LINEAS_CORNERS`). "Córners por equipo por mitad" pasa de 1.5-5.5 a
+  0.5-4.5 (`LINEAS_CORNERS_MEDIO`). Apuestas ya guardadas con las líneas
+  antiguas simplemente dejan de coincidir con el catálogo (caen a "Otro
+  mercado" al editarlas) — mismo comportamiento ya aceptado en cualquier
+  otro cambio del catálogo.
+  Ronda siguiente, misma sesión: "Córners" (total, sin equipo) se amplía
+  de 6.5-14.5 a **4.5**-14.5 — añade las líneas 4.5 y 5.5 para cubrir
+  también partidos con pocos córners, sin tocar el límite superior.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
