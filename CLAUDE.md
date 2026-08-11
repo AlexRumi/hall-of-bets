@@ -2712,6 +2712,15 @@ separadas, probando cada una antes de pasar a la siguiente.
   quedaba centrada verticalmente sola, por el `items-center` que ya tenía
   el botón de cada fila — no hizo falta tocar eso.
 
+- **Quitado el desvanecido del borde derecho de las pestañas deslizantes**
+  (petición directa, con captura): en `TabsDesplazables.jsx`, cuando la
+  pestaña ACTIVA caía justo en el borde derecho (p.ej. "Competición
+  Europea" en el país, ya elegida), el degradado le tapaba parte del
+  texto — se veía feo, y encima quitaba legibilidad justo a la opción ya
+  seleccionada. Se quita del todo: en táctil, el propio deslizado con el
+  dedo ya indica que hay más contenido; en escritorio, las flechas ‹ ›
+  (solo con ratón, sin cambios) siguen ahí.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

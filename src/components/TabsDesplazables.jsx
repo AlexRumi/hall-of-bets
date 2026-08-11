@@ -3,12 +3,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // Fila de pestañas horizontales con scroll, reutilizada por
 // SelectorMercado.jsx (categorías de mercado) y BuscadorEvento.jsx (país):
-// desvanecido en el borde derecho para insinuar que hay más contenido —
-// siempre visible, también en táctil (a diferencia de las flechas ‹ ›,
-// que solo se pintan con ratón de verdad vía `.mq-solo-raton`, ver
-// index.css — en táctil el deslizado con el dedo ya es suficiente y las
-// flechas solo estorban, pero el desvanecido sigue haciendo falta como
-// pista de que hay más pestañas).
+// en táctil el deslizado con el dedo ya indica que se puede seguir
+// deslizando; en escritorio las flechas ‹ › (solo con ratón de verdad, vía
+// `.mq-solo-raton`, ver index.css) hacen ese mismo papel. Hubo un
+// desvanecido en el borde derecho a modo de pista visual, pero se quitó
+// (petición directa): con una pestaña activa justo en el borde, el
+// degradado le tapaba el texto y quedaba feo.
 //
 // "opciones" es [{ valor, texto, icono? }]; "icono" (opcional, p.ej. una
 // bandera) se pinta solo SIN ratón (`.mq-oculto-raton`) delante del texto.
@@ -16,10 +16,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 // defecto, mismo tono que el resto de toggles de la app) o "gold" (mercado,
 // para distinguirla del resto de acentos dorados de esa pantalla).
 // "compacto" (petición directa, para el nivel 2 de SelectorMercado.jsx):
-// pestañas más pequeñas sobre un fondo propio (paperDim, sólido para que
-// el desvanecido del borde pueda terminar exactamente en ese mismo color
-// sin que se note la costura) — para que se note de un vistazo que es un
-// nivel anidado dentro del nivel 1, no una fila más al mismo nivel.
+// pestañas más pequeñas sobre un fondo propio (paperDim) — para que se note
+// de un vistazo que es un nivel anidado dentro del nivel 1, no una fila más
+// al mismo nivel.
 export default function TabsDesplazables({
   opciones,
   valor,
@@ -90,19 +89,6 @@ export default function TabsDesplazables({
       >
         <ChevronRight size={14} />
       </button>
-
-      {/* Bug real: de transparente a "surface" (blanco) no se notaba nada
-          contra las pestañas inactivas, que ya son casi blancas de por sí
-          (sin relleno propio) — el degradado no generaba ningún contraste
-          visible ahí, solo se veía algo sobre la pestaña activa (dorada).
-          Pasar por "paperDim" (el mismo gris cálido que ya usa el resto
-          de la app para superficies "recogidas") antes de volver al
-          blanco justo en el borde sí se nota contra cualquier pestaña. */}
-      <div
-        className={`absolute top-0 right-0 bottom-0 w-10 bg-gradient-to-r from-transparent via-paperDim pointer-events-none ${
-          compacto ? "to-paperDim" : "to-surface"
-        }`}
-      />
     </div>
   );
 }
