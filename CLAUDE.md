@@ -2456,6 +2456,68 @@ separadas, probando cada una antes de pasar a la siguiente.
   de 6.5-14.5 a **4.5**-14.5 — añade las líneas 4.5 y 5.5 para cubrir
   también partidos con pocos córners, sin tocar el límite superior.
 
+- **`SelectorMercado.jsx` gana navegación en 3 niveles** (petición
+  directa, a partir de una maqueta HTML de referencia —
+  `real-demo-v3.html`— construida con los 433 mercados reales del
+  catálogo). Las 18 categorías planas de siempre se reagrupan en 9
+  principales (Resultado, Jugador, Goles, Hándicap Asiático, Córners,
+  Tarjetas, Equipo — Mayor número, Especiales, + "Otro mercado" fijo al
+  final), cada una con subcategorías, y un tercer nivel Local/Visitante
+  donde aplica (p.ej. Goles → Por equipo → Local/Visitante). Sin cambiar
+  ningún id ni función `texto()` existente — verificado a mano con un
+  script (433 = 433 opciones en las dos formas, sin duplicados, sin
+  huérfanos en ninguna dirección, cada opción con ruta en el árbol nuevo).
+  - `utils/mercados.js`: cada lista de opciones (`OPCIONES_1X2`,
+    `OPCIONES_GOLES_OVER`, `opcionesCornersEquipo("local")`...) se calcula
+    UNA sola vez y se reutiliza tanto en `CATEGORIAS_MERCADO` (18 planas,
+    sin tocar — la sigue usando `buscarMercadoPorTexto`/
+    `etiquetaCategoriaDeTexto`, y por tanto el desglose por mercado de
+    Estadísticas, que no cambia) como en el nuevo `ARBOL_MERCADOS` (9
+    principales). Nueva `rutaEnArbol(opcionId)`: busca en qué categoría →
+    subcategoría → Local/Visitante vive una opción por su id — la usa
+    `SelectorMercado.jsx` para abrir en las pestañas correctas al editar
+    una selección ya guardada (`buscarMercadoPorTexto`, sin cambios, sigue
+    diciendo QUÉ opción es; esto solo dice DÓNDE vive en el árbol nuevo).
+  - `SelectorMercado.jsx`: el valor interno de "seleccion" pasa de
+    `"categoriaId|opcionId"` a solo `opcionId` (más simple, ya que los ids
+    son únicos en todo el catálogo) — `buscarOpcionPorId` sustituye a
+    `buscarOpcion`. Pestañas de categoría principal → pestañas de
+    subcategoría (las dos con `TabsDesplazables.jsx`, igual que antes) →
+    una fila más pequeña y compacta de Local/Visitante cuando la
+    subcategoría la tiene, sin scroll (solo 2 opciones). El buscador de
+    texto libre recorre TODO el árbol a la vez (menos "Jugador"), con la
+    ruta completa como cabecera de cada grupo de resultados (p.ej. "Goles
+    · Por equipo · Local").
+  - **Filtro Local/Visitante en "Jugador"** (petición directa, no es un
+    mercado nuevo): antes de elegir el jugador, dos botones con el nombre
+    de cada equipo acotan qué plantilla se pide — ya no se piden las de
+    los dos equipos a la vez en cuanto se abre esta categoría, solo la del
+    filtrado. Cambiar de equipo limpia el jugador ya escrito (pertenecía
+    al otro equipo). Encaja con el arreglo de la sesión anterior (las
+    plantillas ya solo se pedían al tocar "Jugador"): ahora, además, solo
+    se pide la mitad.
+  - Un mismo texto de mercado que coincide con dos opciones distintas del
+    catálogo (p.ej. "Empate" en 1X2 y en Descanso; "Over 0.5 goles" en
+    Goles total y en Goles 1ª mitad) ya era ambiguo antes de este cambio
+    — `buscarMercadoPorTexto` siempre elegía la primera coincidencia por
+    orden de `CATEGORIAS_MERCADO`, sin tocar ese orden. No es una
+    regresión de esta ronda, pero queda anotado por si algún día se
+    decide resolverlo (p.ej. guardando también la categoría elegida, no
+    solo el texto).
+  - **"Empate al descanso" arreglado** (bug real, detectado por el
+    usuario al verificar la reorganización): "ht-x" (Resultado al
+    descanso) decía solo "Empate" desde una petición anterior para
+    acortarlo — con el mismo texto que el "Empate" de Resultado Final
+    (que va antes en `CATEGORIAS_MERCADO`), `buscarMercadoPorTexto`
+    siempre encontraba el de Resultado Final, así que una selección de
+    "Empate al descanso" se abría en la pestaña equivocada al editarla y
+    su subtítulo en el detalle decía "Resultado Final" — dos mercados
+    con resultados que pueden no coincidir, confundidos entre sí. Vuelve
+    a decir "Empate al descanso" (confirmado con el usuario, deshaciendo
+    el acortamiento anterior a propósito). El resto de colisiones de
+    texto detectadas (Goles total vs Goles 1ª/2ª mitad) se quedan sin
+    tocar por ahora, mismo aviso de arriba.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
