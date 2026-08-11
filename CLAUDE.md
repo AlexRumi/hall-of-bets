@@ -2361,6 +2361,70 @@ separadas, probando cada una antes de pasar a la siguiente.
   Especiales tenía 10 y Rachas solo 5. `SalaTrofeos.jsx` no necesitó
   ningún cambio, ya agrupa por `categoria` de forma dinámica.
 
+- **Plantillas de jugador solo se piden al tocar la pestaña "Jugador"**
+  (bug real, detectado por el usuario con el panel "Today Requests" del
+  dashboard de API-Football: 2 llamadas de sobra por cada partido en
+  cuanto se abría el selector de mercado, sin haber tocado esa pestaña —
+  en una combinada de 7 partidos, 14 llamadas de más). Causa:
+  `SelectorMercado.jsx` llamaba a `usePlantilla(equipoLocalId)` y
+  `usePlantilla(equipoVisitanteId)` sin condición, en cuanto se montaba el
+  selector de mercado de un partido — daba igual qué pestaña estuviera
+  activa. Ahora solo se les pasa el id real de cada equipo mientras la
+  pestaña activa es "jugador" (`enTabJugador = tabActiva === "jugador"`);
+  en cualquier otra pestaña se les pasa `null`, y `usePlantilla` ni
+  siquiera llama a `api/jugadores.js`. Volver a la pestaña "Jugador" más
+  tarde no repite la llamada — su caché por equipo (a nivel de módulo) ya
+  la tiene guardada de la primera vez.
+
+- **Marcado de pick con 3 botones directos, sin ciclar** (petición
+  directa: para marcar "Perdida" había que pasar primero por "Ganada" —el
+  ciclo era Pendiente → Ganada → Perdida → Nula—, y si te dabas cuenta
+  tarde, el partido ya se consideraba resuelto y hacía falta el lápiz
+  otra vez para corregirlo). `ciclarPick` se sustituye por `marcarPick(grupo,
+  pick, resultado)`: marca directamente el resultado pulsado, sin pasar
+  por los demás. Cada pick editable (`puedeCiclar`, sin cambios en cuándo
+  se activa) muestra ahora tres botones pequeños (✓ verde / ✕ roja / –
+  gris) en vez de un único círculo — tocar el que ya está marcado lo
+  deja de nuevo en Pendiente (deshacer). Fuera de edición se sigue viendo
+  el único icono de estado de siempre (`ESTILOS_ICONO_PICK`), sin
+  cambios. Se quita `ORDEN_CICLO_PICK`, sin más uso.
+  Ronda de ajuste, misma sesión: en un "multi" con varios mercados del
+  mismo partido, marcar uno como Perdida ya deja todo el partido como
+  "perdida" (basta con que falle uno) — pero si aún quedaban otros
+  mercados de ESE partido sin decidir, el sello los tapaba y hacía falta
+  tocar el lápiz otra vez para seguir marcándolos. `marcarPick` ahora
+  entra en modo edición sola (sin que se toque el lápiz) mientras
+  `grupo.selecciones` tenga otro pick distinto todavía pendiente, para
+  poder marcarlos todos de un tirón sin que el sello interrumpa a medias
+  — en un pick simple (sin hermanos pendientes) esto no cambia nada, el
+  sello sigue apareciendo al instante como siempre.
+  **Decisión de diseño confirmada con el usuario** (con `AskUserQuestion`,
+  porque tocaba cuándo se aplican beneficio/freebet/racha/trofeos): en un
+  "multi" o combinada, un solo mercado perdido ya deja matemáticamente
+  perdida toda la apuesta (`derivarResultadoApuesta` así lo calcula, con
+  razón — basta con que falle uno), pero el usuario prefiere NO sellar la
+  derrota real hasta haber marcado también el resto de mercados
+  pendientes. `manejarMarcarResultadoPick` (`App.jsx`) ahora comprueba
+  `todosDecididos` (ningún pick con `resultado == null` en toda la
+  apuesta) y, si el resultado derivado es "perdida" pero todavía no está
+  todo decidido, no llama a `manejarMarcarResultado` — se queda como
+  estaba (normalmente "pendiente") hasta que se complete. El sello de
+  cada partido (`colorResultado`, en `ApuestaItem.jsx`, y el icono junto a
+  "Multi Apuesta"/"Pick simple") sigue reaccionando al instante sin
+  esperar a nada — solo se retrasa el resultado REAL guardado y sus
+  efectos. "Ganada"/"Nula" no necesitan este freno: por cómo se derivan,
+  solo se alcanzan cuando ya está todo decidido, nunca antes.
+  **Bug real de esta misma ronda**, detectado por el usuario con capturas:
+  el modo edición que entraba solo (más arriba) se quedaba "pegado" para
+  siempre — aunque ya se marcara el último pick pendiente de ese partido,
+  el sello nunca se aplicaba solo, hacía falta tocar el ojo a mano o
+  cerrar y reabrir la tarjeta para verlo. `marcarPick` ahora también sale
+  del modo edición sola en cuanto ese partido se queda sin ningún pick
+  pendiente (incluido el que se acaba de marcar) — el sello se superpone
+  al instante, sin pasos extra. Un pick simple no se ve afectado: nunca
+  llega a entrar en modo edición para esto, el sello ya aparecía al
+  instante desde antes.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

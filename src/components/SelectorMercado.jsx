@@ -77,8 +77,18 @@ export default function SelectorMercado({
   // buscador (ver BuscadorEvento.jsx / ConstructorPartido.jsx) — con
   // texto libre, o en apuestas de antes de esta función, no hay id de
   // equipo y el campo cae solo al texto libre de más abajo.
-  const jugadoresLocal = usePlantilla(equipoLocalId);
-  const jugadoresVisitante = usePlantilla(equipoVisitanteId);
+  // Bug real (2026-08-11, detectado por el usuario con el panel "Today
+  // Requests" de API-Football): antes se pedían las dos plantillas en
+  // cuanto se abría el selector de CUALQUIER mercado, sin haber tocado
+  // "Jugador" — en una combinada de 7 partidos eso son 14 llamadas de
+  // sobra. Ahora solo se pide de verdad mientras la pestaña activa es
+  // "jugador" (o si la apuesta ya editada empieza en esa pestaña); en
+  // cualquier otra pestaña se pasa null, y usePlantilla ni llama a nada.
+  // Volver a la pestaña "Jugador" más tarde no repite la llamada: su
+  // caché por equipo (a nivel de módulo) ya la tiene guardada.
+  const enTabJugador = tabActiva === "jugador";
+  const jugadoresLocal = usePlantilla(enTabJugador ? equipoLocalId : null);
+  const jugadoresVisitante = usePlantilla(enTabJugador ? equipoVisitanteId : null);
   const gruposJugadores = [
     ...(jugadoresLocal.length > 0
       ? [{ etiqueta: equipos.local, opciones: jugadoresLocal.map((j) => ({ valor: j.nombre, texto: j.nombre })) }]

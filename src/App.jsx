@@ -222,6 +222,17 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
       i === indiceSeleccion ? { ...s, resultado } : s
     );
     const nuevoResultado = derivarResultadoApuesta(agruparSeleccionesPorPartido(nuevasSelecciones));
+    // Petición directa: en un "multi", un solo mercado perdido ya deja
+    // matemáticamente perdida toda la apuesta (derivarResultadoApuesta lo
+    // calcula así, con razón), pero el usuario prefiere no sellar la
+    // derrota real (con sus efectos: beneficio, freebet, racha, trofeos)
+    // hasta haber marcado también el resto de mercados pendientes de esa
+    // combinada/multi — el sello de cada partido (colorResultado, en
+    // ApuestaItem.jsx) sigue reaccionando al instante, esto solo retrasa
+    // el resultado real guardado. "Ganada"/"Nula" no necesitan este freno:
+    // por cómo se derivan, solo se alcanzan cuando ya está todo decidido.
+    const todosDecididos = nuevasSelecciones.every((s) => s.resultado != null);
+    if (nuevoResultado === "perdida" && !todosDecididos) return;
     if (nuevoResultado !== apuesta.resultado) {
       manejarMarcarResultado(id, nuevoResultado);
     }

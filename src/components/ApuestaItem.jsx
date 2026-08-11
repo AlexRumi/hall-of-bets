@@ -70,8 +70,6 @@ const ESTILOS_ICONO_PICK = {
   nula: "bg-void border-2 border-void",
 };
 
-const ORDEN_CICLO_PICK = ["pendiente", "ganada", "perdida", "nula"];
-
 // Fondo sólido para el "sello" de resultado sobre cada partido — ver
 // "colorResultado !== pendiente" más abajo.
 const TINTE_SELLO = {
@@ -221,17 +219,54 @@ export default function ApuestaItem({
     cerrarPromptCuota(grupo.indiceLider);
   }
 
-  function ciclarPick(grupo, pick) {
+  // Petición directa (2026-08-11): antes cada pick era un único círculo que
+  // ciclaba Pendiente → Ganada → Perdida → Nula — para marcar "Perdida"
+  // había que pasar primero por "Ganada", y si te dabas cuenta después de
+  // soltar el dedo, el partido ya se consideraba resuelto (aparecía el
+  // sello) y hacía falta el lápiz otra vez para corregirlo. Ahora cada pick
+  // tiene sus 3 botones (✓/✕/–) tocables directamente — se marca el
+  // resultado que quieras de un solo toque, sin pasar por los demás.
+  // Tocar el que ya está marcado lo vuelve a dejar en Pendiente (deshacer).
+  function marcarPick(grupo, pick, resultado) {
     const actual = pick.resultado ?? "pendiente";
-    const siguiente = ORDEN_CICLO_PICK[(ORDEN_CICLO_PICK.indexOf(actual) + 1) % ORDEN_CICLO_PICK.length];
-    onMarcarResultadoSeleccion(apuesta.id, pick.indice, siguiente);
-    if (siguiente === "nula") {
+    const nuevo = actual === resultado ? "pendiente" : resultado;
+    onMarcarResultadoSeleccion(apuesta.id, pick.indice, nuevo);
+    // Petición directa: en un "multi" con varios mercados del mismo
+    // partido, marcar uno como Perdida ya deja el partido entero como
+    // "perdida" (basta con que falle uno) — pero si todavía quedan otros
+    // mercados de ESE MISMO partido sin decidir, antes había que tocar el
+    // lápiz para poder seguir marcándolos (el sello ya tapaba la fila).
+    // Mientras queden hermanos pendientes, el partido se queda en modo
+    // edición solo (sin sello) para poder marcarlos de un tirón.
+    // Bug real de esta misma ronda: ese modo edición se quedaba "pegado"
+    // aunque ya se hubiera marcado el último pick pendiente — el sello
+    // nunca llegaba a aplicarse solo, hacía falta tocar el ojo a mano o
+    // cerrar y reabrir la tarjeta. Ahora, en cuanto este partido se queda
+    // sin ningún pick pendiente (el propio, incluido), se sale del modo
+    // edición sola — el sello se superpone al instante, sin pasos extra.
+    // En un pick simple (sin hermanos) esto no cambia nada: nunca llega a
+    // entrar en modo edición, el sello ya aparecía al instante.
+    const hayOtroPendiente = grupo.selecciones.some(
+      (s) => s.indice !== pick.indice && (s.resultado ?? "pendiente") === "pendiente"
+    );
+    if (hayOtroPendiente) {
+      activarEdicionPicks(grupo.indiceLider);
+    } else {
+      setEditandoPicks((actuales) => {
+        if (!actuales.has(grupo.indiceLider)) return actuales;
+        const nuevo = new Set(actuales);
+        nuevo.delete(grupo.indiceLider);
+        return nuevo;
+      });
+    }
+    if (nuevo === "nula") {
       abrirPromptCuota(grupo);
     } else if (actual === "nula") {
-      // Bug real: si se ciclaba de vuelta a Ganada/Perdida/Pendiente tras
-      // haber anulado el pick, el aviso de "ajustar cuota" se quedaba
-      // abierto — solo se cerraba a mano (Guardar o la "X"). Se anuló por
-      // error, así que se cierra solo al dejar de estarlo.
+      // Bug real (ya corregido con el ciclo, se mantiene aquí): si se
+      // cambiaba de vuelta a Ganada/Perdida/Pendiente tras haber anulado
+      // el pick, el aviso de "ajustar cuota" se quedaba abierto — solo se
+      // cerraba a mano (Guardar o la "X"). Se anuló por error, así que se
+      // cierra solo al dejar de estarlo.
       cerrarPromptCuota(grupo.indiceLider);
     }
   }
@@ -490,15 +525,63 @@ export default function ApuestaItem({
                                 // solo cambia el FORMATO, el texto guardado
                                 // (pick.apuesta) sigue siendo el mismo.
                                 const etiquetaCategoria = etiquetaCategoriaDeTexto(pick.apuesta, equipos);
-                                const contenidoPick = (
-                                  <>
-                                    <span
-                                      className={`w-4 h-4 rounded-full shrink-0 mt-0.5 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[estadoPick]}`}
-                                    >
-                                      {estadoPick === "ganada" && <Check size={10} strokeWidth={3} />}
-                                      {estadoPick === "perdida" && <X size={10} strokeWidth={3} />}
-                                      {estadoPick === "nula" && <Minus size={10} strokeWidth={3} />}
-                                    </span>
+                                // Mientras el partido sigue pendiente no hay
+                                // sello todavía (solo se pinta con
+                                // colorResultado !== "pendiente"), así que
+                                // no hay riesgo de tocar algo sin querer:
+                                // cada pick es marcable directamente, sin
+                                // pasar por el lápiz. En cuanto se resuelve
+                                // (bug real de origen: al tocar el sello,
+                                // que es pointer-events-none, el toque
+                                // pasaba a lo que hubiera debajo y cambiaba
+                                // el resultado sin querer), los tres
+                                // botones desaparecen — hace falta el lápiz
+                                // para volver a editarlo.
+                                const puedeCiclar = enEdicion || colorResultado === "pendiente";
+                                return (
+                                  <div key={pick.indice} className="w-full flex items-start gap-2">
+                                    {puedeCiclar ? (
+                                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => marcarPick(grupo, pick, "ganada")}
+                                          aria-label="Marcar como Ganada"
+                                          className={`w-5 h-5 rounded-full flex items-center justify-center text-paper transition-colors ${
+                                            estadoPick === "ganada" ? "bg-win" : "bg-win/25 hover:bg-win/60"
+                                          }`}
+                                        >
+                                          <Check size={11} strokeWidth={3} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => marcarPick(grupo, pick, "perdida")}
+                                          aria-label="Marcar como Perdida"
+                                          className={`w-5 h-5 rounded-full flex items-center justify-center text-paper transition-colors ${
+                                            estadoPick === "perdida" ? "bg-lose" : "bg-lose/25 hover:bg-lose/60"
+                                          }`}
+                                        >
+                                          <X size={11} strokeWidth={3} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => marcarPick(grupo, pick, "nula")}
+                                          aria-label="Marcar como Nula"
+                                          className={`w-5 h-5 rounded-full flex items-center justify-center text-paper transition-colors ${
+                                            estadoPick === "nula" ? "bg-void" : "bg-void/25 hover:bg-void/60"
+                                          }`}
+                                        >
+                                          <Minus size={11} strokeWidth={3} />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span
+                                        className={`w-4 h-4 rounded-full shrink-0 mt-0.5 flex items-center justify-center text-paper ${ESTILOS_ICONO_PICK[estadoPick]}`}
+                                      >
+                                        {estadoPick === "ganada" && <Check size={10} strokeWidth={3} />}
+                                        {estadoPick === "perdida" && <X size={10} strokeWidth={3} />}
+                                        {estadoPick === "nula" && <Minus size={10} strokeWidth={3} />}
+                                      </span>
+                                    )}
                                     <span className="flex-1 min-w-0">
                                       <span
                                         className={`flex flex-wrap items-baseline gap-1.5 text-sm font-semibold break-words ${
@@ -520,33 +603,6 @@ export default function ApuestaItem({
                                         </span>
                                       )}
                                     </span>
-                                  </>
-                                );
-                                // Mientras el partido sigue pendiente no hay
-                                // sello todavía (solo se pinta con
-                                // colorResultado !== "pendiente"), así que
-                                // no hay riesgo de tocarlo sin querer: cada
-                                // pick es tocable directamente, sin pasar
-                                // por el lápiz. En cuanto se resuelve (bug
-                                // real de origen: al tocar el sello, que es
-                                // pointer-events-none, el toque pasaba a lo
-                                // que hubiera debajo y cambiaba el resultado
-                                // sin querer), la fila vuelve a ser solo
-                                // visual — hace falta el lápiz para volver a
-                                // editarlo.
-                                const puedeCiclar = enEdicion || colorResultado === "pendiente";
-                                return puedeCiclar ? (
-                                  <button
-                                    key={pick.indice}
-                                    type="button"
-                                    onClick={() => ciclarPick(grupo, pick)}
-                                    className="w-full flex items-start gap-2 text-left"
-                                  >
-                                    {contenidoPick}
-                                  </button>
-                                ) : (
-                                  <div key={pick.indice} className="w-full flex items-start gap-2">
-                                    {contenidoPick}
                                   </div>
                                 );
                               })}
