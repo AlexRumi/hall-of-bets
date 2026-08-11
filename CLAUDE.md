@@ -2690,6 +2690,28 @@ separadas, probando cada una antes de pasar a la siguiente.
   dorado — no se mencionó en la petición, y ese botón es solo un paso
   intermedio de navegación, no una acción de guardado final.
 
+- **Competiciones también deslizantes en `BuscadorEvento.jsx`** (petición
+  directa, con captura de referencia en móvil). Las píldoras de
+  competición (La Liga, Segunda División, Copa del Rey...) iban en
+  `flex flex-wrap`, así que con varias competiciones en pantallas
+  estrechas se partían en más de una fila. Pasan a usar
+  `TabsDesplazables.jsx` — el mismo componente ya usado para el País, una
+  fila justo encima — con scroll horizontal, flechas ‹ › en escritorio y
+  desvanecido en el borde, `colorActivo="gold"` para que la competición
+  elegida se distinga del país (en felt) por encima.
+
+- **Equipos en dos líneas en la lista de partidos del buscador** (petición
+  directa, con captura de referencia en móvil: nombres largos como "Kauno
+  Žalgiris - Dinamo ..." se truncaban a media palabra en una sola línea).
+  Nuevo `NombresEquipos` en `BuscadorEvento.jsx` (reutiliza
+  `esFormatoEquipos`/`equiposDesdeEvento`, ya usadas para el mismo patrón
+  en `ApuestaItem.jsx`/`FormularioApuesta.jsx`): pinta el equipo local y
+  el visitante uno debajo del otro en vez de "evento" en una única línea,
+  en las dos listas de partidos (resultados de búsqueda por texto y la
+  cascada país→competición→partidos). La hora/resultado a la derecha ya
+  quedaba centrada verticalmente sola, por el `items-center` que ya tenía
+  el botón de cada fila — no hizo falta tocar eso.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

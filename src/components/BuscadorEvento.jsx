@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Globe, Pencil, Search, X } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
 import { PAISES_CONECTADOS, BANDERAS_PAIS } from "../utils/ligasConectadas";
+import { esFormatoEquipos, equiposDesdeEvento } from "../utils/mercados";
 import { normalizarTexto } from "../utils/texto";
 import TabsDesplazables from "./TabsDesplazables";
 
@@ -34,6 +35,27 @@ function EtiquetaPartido({ partido }) {
     >
       {texto}
     </span>
+  );
+}
+
+// Nombre de los dos equipos en fila, uno debajo del otro (petición
+// directa, con captura de referencia en móvil): antes "evento" iba en una
+// sola línea y se truncaba a media palabra con nombres largos ("Kauno
+// Žalgiris - Dinamo ..."). Apilarlos, igual que ya hace CabeceraPartido en
+// ApuestaItem.jsx, deja leer el nombre completo de cada equipo. Sin el
+// formato "Local - Visitante" (no debería pasar con partidos que vienen
+// del buscador, pero por si acaso) cae al texto tal cual, en una sola
+// línea.
+function NombresEquipos({ evento }) {
+  if (!esFormatoEquipos(evento)) {
+    return <span className="block text-sm font-medium text-ink truncate">{evento}</span>;
+  }
+  const equipos = equiposDesdeEvento(evento);
+  return (
+    <>
+      <span className="block text-sm font-medium text-ink truncate">{equipos.local}</span>
+      <span className="block text-sm font-medium text-ink truncate">{equipos.visitante}</span>
+    </>
   );
 }
 
@@ -185,7 +207,7 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
                     className="w-full flex items-center justify-between gap-2 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
                   >
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-ink truncate">{partido.evento}</span>
+                      <NombresEquipos evento={partido.evento} />
                       <span className="block text-xs text-slate truncate">{partido.pais}</span>
                     </span>
                     <EtiquetaPartido partido={partido} />
@@ -200,22 +222,15 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           <TabsDesplazables opciones={TABS_PAIS} valor={paisFiltro} onElegir={elegirPais} colorActivo="felt" />
 
           {paisFiltro && !modoManual && (
-            <div className="flex flex-wrap gap-1.5 p-3 border-b border-line">
-              {competicionesDisponibles.map((competicion) => (
-                <button
-                  key={competicion}
-                  type="button"
-                  onClick={() => setCompeticionFiltro(competicion)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                    competicionFiltro === competicion
-                      ? "bg-gold text-feltDark border-gold"
-                      : "border-line text-ink hover:border-gold/40"
-                  }`}
-                >
-                  {competicion}
-                </button>
-              ))}
-            </div>
+            <TabsDesplazables
+              opciones={competicionesDisponibles.map((competicion) => ({
+                valor: competicion,
+                texto: competicion,
+              }))}
+              valor={competicionFiltro}
+              onElegir={setCompeticionFiltro}
+              colorActivo="gold"
+            />
           )}
 
           {competicionFiltro && (
@@ -232,7 +247,9 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
                     onClick={() => elegir(partido)}
                     className="w-full flex items-center justify-between gap-2 px-4 py-2 text-left hover:bg-paperDim transition-colors border-b border-line/60 last:border-b-0"
                   >
-                    <span className="text-sm font-medium text-ink truncate">{partido.evento}</span>
+                    <span className="min-w-0">
+                      <NombresEquipos evento={partido.evento} />
+                    </span>
                     <EtiquetaPartido partido={partido} />
                   </button>
                 ))
