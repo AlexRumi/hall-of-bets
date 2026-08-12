@@ -1,24 +1,74 @@
 import { useState } from "react";
 import { Globe, Pencil, Search, X } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
-import { PAISES_CONECTADOS, BANDERAS_PAIS } from "../utils/ligasConectadas";
+import { GRUPOS_LIGAS, BANDERAS_PAIS } from "../utils/ligasConectadas";
 import { esFormatoEquipos, equiposDesdeEvento } from "../utils/mercados";
 import { normalizarTexto } from "../utils/texto";
 import TabsDesplazables from "./TabsDesplazables";
 
 // Sentinela para "Otras ligas": no puede coincidir con ningún nombre real
-// de país de PAISES_CONECTADOS.
+// de grupo/país de GRUPOS_LIGAS.
 const OTRAS_LIGAS = "otras";
-
-const TABS_PAIS = [
-  ...PAISES_CONECTADOS.map((p) => ({ valor: p.pais, texto: p.pais, icono: BANDERAS_PAIS[p.pais] })),
-  { valor: OTRAS_LIGAS, texto: "Otras ligas" },
-];
 
 // Estados "terminado" de API-Football (tiempo reglamentario, prórroga o
 // penaltis) — en cualquier otro estado (por jugar, en juego...) se enseña
-// la hora en vez del resultado, que todavía no es definitivo.
+// la hora en vez del resultado, que todavía no es definitivo. También se
+// usa para saber si una competición "temporal" (ver más abajo) ya ha
+// terminado del todo.
 const ESTADOS_FINALIZADOS = new Set(["FT", "AET", "PEN"]);
+
+// Petición directa: solo mostrar en los desplegables los grupos/países/
+// competiciones de GRUPOS_LIGAS que de verdad tengan algún partido ESE
+// día — con muchas ligas conectadas, la mayoría de días la mayoría no
+// tiene nada, y era ruido ver un grupo o país entero para elegir cuando
+// no tenía nada. Usa los partidos ya traídos por usePartidos(fecha) para
+// esa fecha, sin ninguna llamada nueva. Se aplica en cascada a los tres
+// niveles (grupo, país, competición).
+// Además, una competición "temporal" (Supercopa de Europa, de momento —
+// api/partidos.js, campo "temporal") se oculta también el MISMO día en
+// cuanto todos sus partidos de esa edición ya están en
+// ESTADOS_FINALIZADOS — así no se queda "fantasma" en el desplegable el
+// resto de la temporada tras jugarse su único partido.
+function competicionTienePartidosActivos(partidos, pais, competicion) {
+  const partidosComp = partidos.filter((p) => p.pais === pais && p.competicion === competicion);
+  if (partidosComp.length === 0) return false;
+  const esTemporal = partidosComp.some((p) => p.temporal);
+  if (esTemporal && partidosComp.every((p) => ESTADOS_FINALIZADOS.has(p.estado))) return false;
+  return true;
+}
+
+// "Competición Europea" es un grupo especial sin países debajo (ver
+// GRUPOS_LIGAS): sus competiciones cuelgan directamente del grupo. El
+// resto de grupos sí tienen países, cada uno con sus propias
+// competiciones.
+function esGrupoDirecto(grupo) {
+  return !!grupo.competiciones;
+}
+
+// Países visibles de un grupo con países (Grandes ligas/Europa/América):
+// cada país se queda solo con las competiciones que tengan partidos hoy,
+// y el país entero desaparece si se queda sin ninguna.
+function paisesVisiblesDeGrupo(partidos, grupo) {
+  return grupo.paises
+    .map((p) => ({
+      ...p,
+      competiciones: p.competiciones.filter((c) => competicionTienePartidosActivos(partidos, p.pais, c)),
+    }))
+    .filter((p) => p.competiciones.length > 0);
+}
+
+// Competiciones visibles de un grupo directo (Competición Europea).
+function competicionesVisiblesDeGrupoDirecto(partidos, grupo) {
+  return grupo.competiciones.filter((c) => competicionTienePartidosActivos(partidos, grupo.grupo, c));
+}
+
+// Un grupo entero se oculta si ninguno de sus países (o, en un grupo
+// directo, ninguna de sus competiciones) tiene partidos hoy.
+function grupoTienePartidosHoy(partidos, grupo) {
+  return esGrupoDirecto(grupo)
+    ? competicionesVisiblesDeGrupoDirecto(partidos, grupo).length > 0
+    : paisesVisiblesDeGrupo(partidos, grupo).length > 0;
+}
 
 // Píldora de hora/resultado a la derecha de cada partido (petición
 // directa): mismos datos "hora"/"estado"/"golesLocal"/"golesVisitante"
@@ -63,16 +113,18 @@ function NombresEquipos({ evento }) {
 // aportada por el usuario): un único buscador de texto libre arriba (a la
 // vez el campo "Evento" real) que, en cuanto se escribe algo, busca en
 // TODOS los partidos conectados de la fecha elegida y agrupa los
-// resultados por competición — sin depender de haber elegido país antes.
-// Sin texto escrito, aparece en su lugar una cascada estricta en 3 pasos,
-// cada uno visible solo cuando el anterior ya está completo (nada de
-// secciones vacías con texto de relleno): país (pestañas) → competición
-// (chips, si ese país tiene datos conectados) → partidos de esa
-// competición. Elegir un país reinicia la búsqueda y la competición, para
-// no dejar una combinación a medias.
-// "Otras ligas" no tiene competición ni partidos conectados: se queda solo
+// resultados por competición — sin depender de haber elegido nada de la
+// cascada de abajo.
+// Sin texto escrito, aparece en su lugar una cascada estricta, cada paso
+// visible solo cuando el anterior ya está completo: grupo (pestañas) →
+// país (si el grupo los tiene — Competición Europea no, sus 4 entradas
+// van directas) → competición (solo si el país tiene más de una; con una
+// sola se salta este paso solo) → partidos. Elegir un grupo o un país
+// reinicia lo que cuelgue de él, para no dejar una combinación a medias.
+// "Otras ligas" no tiene país ni competición conectados: se queda solo
 // con el buscador de arriba, en modo texto libre de toda la vida.
 export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartido }) {
+  const [grupoFiltro, setGrupoFiltro] = useState("");
   const [paisFiltro, setPaisFiltro] = useState("");
   const [competicionFiltro, setCompeticionFiltro] = useState("");
   // Bug real (2026-08-10): al elegir un partido, el panel se quedaba
@@ -83,20 +135,59 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
   const [expandido, setExpandido] = useState(() => !valor);
   const { partidos, fueraDeRango, cuotaAgotada } = usePartidos(fecha);
 
-  function elegirPais(nuevoPais) {
-    setPaisFiltro(nuevoPais);
+  // Todo esto depende de "partidos" (la fecha elegida), así que se
+  // recalcula en cada render — no puede ser una constante de módulo.
+  const gruposVisibles = GRUPOS_LIGAS.filter((g) => grupoTienePartidosHoy(partidos, g));
+  const tabsGrupo = [
+    ...gruposVisibles.map((g) => ({ valor: g.grupo, texto: g.grupo, icono: g.icono })),
+    { valor: OTRAS_LIGAS, texto: "Otras ligas" },
+  ];
+
+  const modoManual = grupoFiltro === OTRAS_LIGAS;
+  const grupoActivo = GRUPOS_LIGAS.find((g) => g.grupo === grupoFiltro) ?? null;
+  const grupoActivoEsDirecto = grupoActivo ? esGrupoDirecto(grupoActivo) : false;
+
+  const paisesDelGrupo = grupoActivo && !grupoActivoEsDirecto ? paisesVisiblesDeGrupo(partidos, grupoActivo) : [];
+  const competicionesDelGrupoDirecto =
+    grupoActivo && grupoActivoEsDirecto ? competicionesVisiblesDeGrupoDirecto(partidos, grupoActivo) : [];
+  // Competiciones del país ya elegido (dentro de un grupo con países) —
+  // solo hace falta mostrar sus pestañas si hay más de una: con una sola,
+  // elegirPaisDeGrupo ya la ha dejado seleccionada sola.
+  const competicionesDelPais = paisFiltro
+    ? paisesDelGrupo.find((p) => p.pais === paisFiltro)?.competiciones ?? []
+    : [];
+
+  // "País" efectivo para filtrar partidos: en un grupo directo (Competición
+  // Europea) es el propio nombre del grupo (así se guardó en cada partido
+  // desde api/partidos.js); en un grupo con países, el país elegido.
+  const paisEfectivo = grupoActivoEsDirecto ? grupoFiltro : paisFiltro;
+
+  function elegirGrupo(nuevoGrupo) {
+    setGrupoFiltro(nuevoGrupo);
+    setPaisFiltro("");
     setCompeticionFiltro("");
     onCambiar("");
   }
 
-  const modoManual = paisFiltro === OTRAS_LIGAS;
-  const competicionesDisponibles = paisFiltro && !modoManual
-    ? PAISES_CONECTADOS.find((p) => p.pais === paisFiltro)?.competiciones ?? []
-    : [];
+  function elegirPaisDeGrupo(nuevoPais) {
+    setPaisFiltro(nuevoPais);
+    // Auto-selecciona la única competición si el país solo tiene una (tras
+    // filtrar por partidos de hoy) — salta directo a los partidos, sin un
+    // paso intermedio con una sola pestaña que no ofrece ninguna
+    // alternativa real.
+    const competicionesDeEsePais = paisesDelGrupo.find((p) => p.pais === nuevoPais)?.competiciones ?? [];
+    setCompeticionFiltro(competicionesDeEsePais.length === 1 ? competicionesDeEsePais[0] : "");
+    onCambiar("");
+  }
 
-  // Buscador global: agrupa por competición, sin importar el país/
-  // competición elegidos en las pestañas de abajo — igual que la demo,
-  // escribir algo siempre busca en todo lo conectado para esa fecha.
+  function elegirCompeticionDirecta(nuevaCompeticion) {
+    setCompeticionFiltro(nuevaCompeticion);
+    onCambiar("");
+  }
+
+  // Buscador global: agrupa por competición, sin importar la cascada de
+  // abajo — igual que la demo, escribir algo siempre busca en todo lo
+  // conectado para esa fecha.
   const competicionesConCoincidencias = valor.trim()
     ? [...new Set(partidos.map((p) => p.competicion))]
         .map((competicion) => ({
@@ -110,8 +201,8 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
 
   // Cascada sin buscador: partidos de la competición ya elegida.
   const partidosDeCompeticion =
-    !valor.trim() && paisFiltro && competicionFiltro
-      ? partidos.filter((p) => p.pais === paisFiltro && p.competicion === competicionFiltro)
+    !valor.trim() && paisEfectivo && competicionFiltro
+      ? partidos.filter((p) => p.pais === paisEfectivo && p.competicion === competicionFiltro)
       : [];
 
   function elegir(partido) {
@@ -219,17 +310,38 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
         </div>
       ) : (
         <>
-          <TabsDesplazables opciones={TABS_PAIS} valor={paisFiltro} onElegir={elegirPais} colorActivo="felt" />
+          <TabsDesplazables opciones={tabsGrupo} valor={grupoFiltro} onElegir={elegirGrupo} colorActivo="felt" />
 
-          {paisFiltro && !modoManual && (
+          {grupoActivo && grupoActivoEsDirecto && (
             <TabsDesplazables
-              opciones={competicionesDisponibles.map((competicion) => ({
+              opciones={competicionesDelGrupoDirecto.map((competicion) => ({
                 valor: competicion,
                 texto: competicion,
               }))}
               valor={competicionFiltro}
+              onElegir={elegirCompeticionDirecta}
+              colorActivo="gold"
+              compacto
+            />
+          )}
+
+          {grupoActivo && !grupoActivoEsDirecto && (
+            <TabsDesplazables
+              opciones={paisesDelGrupo.map((p) => ({ valor: p.pais, texto: p.pais, icono: BANDERAS_PAIS[p.pais] }))}
+              valor={paisFiltro}
+              onElegir={elegirPaisDeGrupo}
+              colorActivo="gold"
+              compacto
+            />
+          )}
+
+          {grupoActivo && !grupoActivoEsDirecto && paisFiltro && competicionesDelPais.length > 1 && (
+            <TabsDesplazables
+              opciones={competicionesDelPais.map((competicion) => ({ valor: competicion, texto: competicion }))}
+              valor={competicionFiltro}
               onElegir={setCompeticionFiltro}
               colorActivo="gold"
+              compacto
             />
           )}
 

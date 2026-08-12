@@ -4,30 +4,39 @@
 // a esta ruta (/api/partidos?fecha=YYYY-MM-DD), nunca a API-Football
 // directamente.
 //
-// Se filtran estas 32 competiciones (las que se pidió conectar); el resto
-// de partidos del mundo que devuelve API-Football para ese día se
-// descartan. IDs de las 22 primeras verificados a mano en el panel de
-// API-Football del usuario el 2026-08-06; los 10 añadidos el 2026-08-10
-// (Austria, Dinamarca, Suiza, Turquía, Noruega, Suecia, Argentina, Brasil,
-// México, Estados Unidos) se verificaron por curl directo contra la API
-// con la key real — se comprobó que el id correspondía al nombre de liga
+// Se filtran estas competiciones (las que se pidió conectar); el resto de
+// partidos del mundo que devuelve API-Football para ese día se descartan.
+// IDs de las 22 primeras verificados a mano en el panel de API-Football
+// del usuario el 2026-08-06; los 10 añadidos el 2026-08-10 (Austria,
+// Dinamarca, Suiza, Turquía, Noruega, Suecia, Argentina, Brasil, México,
+// Estados Unidos) se verificaron por curl directo contra la API con la
+// key real — se comprobó que el id correspondía al nombre de liga
 // correcto y que el plan gratuito devolvía datos reales (no
 // "errors.plan") tanto en el rango de fechas cercano a hoy como en un
 // rango histórico de control. Si algún día cambian de nombre de
 // patrocinador (ya pasó con "LaLiga Hypermotion" y "Carabao Cup"), el id
 // numérico no cambia. "pais" tiene que coincidir exactamente con el
 // desplegable de src/components/BuscadorEvento.jsx (mismos nombres:
-// "Reino Unido" en vez de "Inglaterra", "Holanda" en vez de "Países
+// "Inglaterra" en vez de "Reino Unido" — las 4 ligas conectadas son
+// inglesas, no del resto del Reino Unido —, "Holanda" en vez de "Países
 // Bajos", "Competición Europea" en vez de "Europa" — para no confundirlo
 // con el país), y con src/utils/ligasConectadas.js.
+//
+// "temporal: true" (petición directa): competiciones de un solo partido o
+// edición corta (Supercopa de Europa, y en el futuro Supercopa de España,
+// Nations League...) — además del filtro normal de "sin partidos ese día"
+// (BuscadorEvento.jsx, con los datos de esta misma respuesta), estas se
+// ocultan también el mismo día en cuanto TODOS sus partidos de esa
+// edición ya han terminado, para no dejar la competición "fantasma" en el
+// desplegable el resto de la temporada hasta la próxima edición.
 const LIGAS = {
   140: { pais: "España", competicion: "La Liga" },
   141: { pais: "España", competicion: "Segunda División" },
   143: { pais: "España", competicion: "Copa del Rey" },
-  39: { pais: "Reino Unido", competicion: "Premier League" },
-  40: { pais: "Reino Unido", competicion: "Championship" },
-  45: { pais: "Reino Unido", competicion: "FA Cup" },
-  48: { pais: "Reino Unido", competicion: "EFL Cup" },
+  39: { pais: "Inglaterra", competicion: "Premier League" },
+  40: { pais: "Inglaterra", competicion: "Championship" },
+  45: { pais: "Inglaterra", competicion: "FA Cup" },
+  48: { pais: "Inglaterra", competicion: "EFL Cup" },
   78: { pais: "Alemania", competicion: "Bundesliga" },
   79: { pais: "Alemania", competicion: "2. Bundesliga" },
   81: { pais: "Alemania", competicion: "DFB Pokal" },
@@ -43,6 +52,12 @@ const LIGAS = {
   2: { pais: "Competición Europea", competicion: "Champions League" },
   3: { pais: "Competición Europea", competicion: "Europa League" },
   848: { pais: "Competición Europea", competicion: "Conference League" },
+  // Verificado por curl directo el 2026-08-12 (mismo patrón que las 10
+  // ligas anteriores): id 531 = "UEFA Super Cup" (país "World" en
+  // API-Football), temporada 2026 activa. GET /fixtures?date=2026-08-12
+  // (el mismo método que usa esta función) devolvió el partido real de
+  // hoy sin "errors.plan" — PSG - Aston Villa, 19:00 UTC, estado "NS".
+  531: { pais: "Competición Europea", competicion: "Supercopa de Europa", temporal: true },
   218: { pais: "Austria", competicion: "Bundesliga austríaca" },
   119: { pais: "Dinamarca", competicion: "Superliga" },
   207: { pais: "Suiza", competicion: "Super League" },
@@ -115,6 +130,11 @@ export default async function handler(req, res) {
         evento: `${p.teams.home.name} - ${p.teams.away.name}`,
         pais: LIGAS[p.league.id].pais,
         competicion: LIGAS[p.league.id].competicion,
+        // Competición de un solo partido/edición corta (ver LIGAS más
+        // arriba) — BuscadorEvento.jsx la oculta sola en cuanto todos sus
+        // partidos de esa edición han terminado, sin esperar a la
+        // temporada siguiente.
+        temporal: !!LIGAS[p.league.id].temporal,
         fecha: p.fixture.date.slice(0, 10),
         hora: p.fixture.date.slice(11, 16),
         // Estado y resultado: ya venían en la misma respuesta, sin
