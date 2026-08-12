@@ -90,6 +90,12 @@ export function agruparSeleccionesPorPartido(selecciones) {
         hora: seleccion.hora ?? null,
         fecha: seleccion.fecha ?? null,
         cuota: Number(seleccion.cuota),
+        // Marcador escrito a mano (petición directa, solo tiene sentido en
+        // "Otras ligas": sin partidoId no hay forma de traer el resultado
+        // automático, así que es la única manera de dejarlo anotado) — ver
+        // ApuestaItem.jsx.
+        golesLocalManual: seleccion.golesLocalManual ?? null,
+        golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
         selecciones: [{ ...seleccion, indice }],
       });
     }

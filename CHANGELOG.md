@@ -3142,3 +3142,54 @@ separadas, probando cada una antes de pasar a la siguiente.
     League, Eurocopa —clasificación y torneo—, Mundial —clasificación
     Europa y torneo—), a la espera de valorar cobertura en el plan
     gratuito de API-Football cuando se retome.
+
+- **Campo "Competición" opcional en "Otras ligas"** (petición directa,
+  para que un evento escrito a mano también pueda mostrar la liga en el
+  detalle de la apuesta, igual que ya hace un partido elegido del
+  buscador conectado). Solo un campo, sin país: pedir también un país
+  para una liga que por definición no está en la lista curada habría sido
+  más fricción de la que aporta, en un modo pensado como la vía de
+  escape más simple posible.
+  - `BuscadorEvento.jsx` gana un input opcional "Competición" (solo en
+    modo manual, junto al botón "Listo"), con sus props `competicion`/
+    `onCambiarCompeticion`. `ConstructorPartido.jsx` ya tenía
+    `partido.competicion` en su estado (hasta ahora solo se rellenaba al
+    elegir un partido real) — solo hizo falta conectar el campo nuevo a
+    ese mismo campo, sin tocar nada del resto de la cadena
+    (`FormularioApuesta.jsx`, `useApuestas.js`) porque ya sabían leer y
+    guardar `competicion` desde que existen los partidos conectados.
+  - `ApuestaItem.jsx`: la línea "Competición · País" que solo se pintaba
+    con `grupo.pais` pasa a `etiquetaLiga` (nueva constante local, en los
+    dos sitios del archivo que la mostraban) — "Competición · País" si
+    hay los dos, solo "Competición" si solo hay eso (el caso de Otras
+    ligas), `null` si no hay nada, igual que antes.
+
+- **Marcador final escrito a mano, solo en "Otras ligas"** (petición
+  directa, tras confirmar que un partido de Otras ligas nunca puede tener
+  el marcador automático — sin `partidoId` no hay nada que consultar en
+  `usePartidoInfo.js`). Dos campos nuevos por selección (jsonb, sin
+  migración de esquema, mismo patrón que `pais`/`competicion`/`hora`):
+  `golesLocalManual`/`golesVisitanteManual`, guardados en la selección
+  líder del partido — mismo sitio que ya usa `cuota`.
+  - Nueva `actualizarMarcadorManual(id, indice, golesLocal, golesVisitante)`
+    en `useApuestas.js`, mismo patrón que `actualizarCuotaSeleccion`
+    (reescribe el array `selecciones` completo, no hay columna propia).
+    Enhebrado como prop (`onActualizarMarcadorManual`) por la misma
+    cadena que ya llevaba `onActualizarCuotaSeleccion`: `App.jsx` →
+    `PantallaInicio.jsx`/`ListaApuestas.jsx`/`EstadisticasDashboard.jsx`
+    → `ApuestaItem.jsx`.
+  - `agruparSeleccionesPorPartido` (`utils/apuestas.js`) expone los dos
+    campos en cada grupo; `bloquesDesdeApuesta` y `manejarEnvio`
+    (`FormularioApuesta.jsx`) los preservan al editar una apuesta por el
+    formulario completo — mismo motivo que ya llevó a preservar
+    `resultado` ahí: sin esto, "Editar todo" habría borrado en silencio
+    un marcador ya anotado.
+  - `ApuestaItem.jsx`: el bloque del marcador (equipo + gol a la derecha,
+    ya existente para partidos conectados) pasa a mostrarse también con
+    `hayMarcadorManual`, no solo con `terminado` — mismo diseño, los
+    números salen de `grupo.golesLocalManual`/`golesVisitanteManual` en
+    vez de `info.golesLocal`/`golesVisitante`. Debajo, un enlace "✎ Añadir
+    marcador"/"✎ Editar marcador" (solo si el partido es de Otras ligas —
+    `!grupo.partidoId` — y no está en `soloLectura`) abre dos campos
+    numéricos + Guardar/Cancelar, mismo patrón que el aviso de "Ajustar
+    cuota" tras anular un pick.

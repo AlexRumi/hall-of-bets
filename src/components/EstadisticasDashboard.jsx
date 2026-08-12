@@ -35,6 +35,7 @@ export default function EstadisticasDashboard({
   onMarcarResultado,
   onMarcarResultadoSeleccion,
   onActualizarCuotaSeleccion,
+  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
 }) {
@@ -309,6 +310,7 @@ export default function EstadisticasDashboard({
               onMarcarResultado={onMarcarResultado}
               onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
+              onActualizarMarcadorManual={onActualizarMarcadorManual}
               onBorrar={onBorrar}
               onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}

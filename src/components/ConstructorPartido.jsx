@@ -136,6 +136,8 @@ export default function ConstructorPartido({ fecha, onFechaPartido, onGuardarBlo
               fecha={fecha}
               onCambiar={(valor) => setPartido((actual) => ({ ...actual, evento: valor }))}
               onElegirPartido={elegirPartido}
+              competicion={partido.competicion}
+              onCambiarCompeticion={(valor) => setPartido((actual) => ({ ...actual, competicion: valor }))}
             />
           </div>
           <button

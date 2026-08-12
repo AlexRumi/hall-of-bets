@@ -85,6 +85,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     marcarResultado,
     marcarResultadoSeleccion,
     actualizarCuotaSeleccion,
+    actualizarMarcadorManual,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango: archivarApuestasPorRango,
@@ -336,6 +337,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onMarcarResultado={manejarMarcarResultado}
                 onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
+                onActualizarMarcadorManual={actualizarMarcadorManual}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
                 onIrASeccion={setSeccionActiva}
@@ -440,6 +442,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     onMarcarResultado={manejarMarcarResultado}
                     onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
                     onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
+                    onActualizarMarcadorManual={actualizarMarcadorManual}
                     onBorrar={manejarBorrarApuesta}
                     onEditar={editarApuesta}
                   />
@@ -491,6 +494,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onMarcarResultado={manejarMarcarResultado}
                 onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
+                onActualizarMarcadorManual={actualizarMarcadorManual}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
               />

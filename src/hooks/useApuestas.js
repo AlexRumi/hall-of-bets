@@ -113,6 +113,8 @@ export function useApuestas(userId) {
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
           hora: seleccion.hora ?? null,
           fecha: seleccion.fecha ?? null,
+          golesLocalManual: seleccion.golesLocalManual ?? null,
+          golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
         })),
       })
       .select()
@@ -170,6 +172,8 @@ export function useApuestas(userId) {
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
           hora: seleccion.hora ?? null,
           fecha: seleccion.fecha ?? null,
+          golesLocalManual: seleccion.golesLocalManual ?? null,
+          golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
           resultado: seleccion.resultado,
         })),
       })
@@ -261,6 +265,35 @@ export function useApuestas(userId) {
     }
   }
 
+  // Marcador final escrito a mano (petición directa, solo para "Otras
+  // ligas": sin partidoId no hay forma de traer el resultado automático de
+  // API-Football — ver ApuestaItem.jsx/usePartidoInfo.js — así que es la
+  // única manera de dejarlo anotado). Mismo patrón que
+  // actualizarCuotaSeleccion: se guarda en la selección líder del partido.
+  async function actualizarMarcadorManual(id, indice, golesLocal, golesVisitante) {
+    const apuestaActual = apuestas.find((a) => a.id === id);
+    if (!apuestaActual) return;
+
+    const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
+      i === indice
+        ? { ...seleccion, golesLocalManual: golesLocal, golesVisitanteManual: golesVisitante }
+        : seleccion
+    );
+
+    const { data, error } = await supabase
+      .from("apuestas")
+      .update({ selecciones: nuevasSelecciones })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) => (a.id === id ? desdeFila(data) : a))
+      );
+    }
+  }
+
   async function borrarApuesta(id) {
     const { error } = await supabase.from("apuestas").delete().eq("id", id);
     if (!error) {
@@ -309,6 +342,7 @@ export function useApuestas(userId) {
     marcarResultado,
     marcarResultadoSeleccion,
     actualizarCuotaSeleccion,
+    actualizarMarcadorManual,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango,

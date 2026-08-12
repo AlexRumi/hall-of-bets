@@ -14,6 +14,7 @@ export default function PantallaInicio({
   onMarcarResultado,
   onMarcarResultadoSeleccion,
   onActualizarCuotaSeleccion,
+  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
   onIrASeccion,
@@ -87,6 +88,7 @@ export default function PantallaInicio({
           onMarcarResultado={onMarcarResultado}
           onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
           onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
+          onActualizarMarcadorManual={onActualizarMarcadorManual}
           onBorrar={onBorrar}
           onEditar={onEditar}
           agrupada={false}

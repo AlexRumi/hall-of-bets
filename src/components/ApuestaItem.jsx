@@ -100,6 +100,7 @@ export default function ApuestaItem({
   onMarcarResultado,
   onMarcarResultadoSeleccion,
   onActualizarCuotaSeleccion,
+  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
   onCerrar,
@@ -136,6 +137,13 @@ export default function ApuestaItem({
   // aunque se haya cerrado sin guardar.
   const [promptsCuota, setPromptsCuota] = useState(() => new Set());
   const [cuotasEditando, setCuotasEditando] = useState({});
+  // Marcador final escrito a mano (petición directa, solo para partidos de
+  // "Otras ligas": sin partidoId no hay forma de traer el resultado
+  // automático, así que es la única manera de dejarlo anotado). Mismo
+  // patrón que promptsCuota/cuotasEditando: un Set con el indiceLider en
+  // edición, más los dos valores que se están escribiendo en cada uno.
+  const [marcadoresEditando, setMarcadoresEditando] = useState(() => new Set());
+  const [valoresMarcador, setValoresMarcador] = useState({});
   const esPendiente = apuesta.resultado === "pendiente";
   const cuotaTotal = calcularCuotaTotal(apuesta);
   const beneficio = calcularBeneficio(apuesta);
@@ -217,6 +225,34 @@ export default function ApuestaItem({
     if (!(valor > 0)) return;
     onActualizarCuotaSeleccion(apuesta.id, grupo.indiceLider, valor);
     cerrarPromptCuota(grupo.indiceLider);
+  }
+
+  function abrirMarcadorManual(grupo) {
+    setMarcadoresEditando((actuales) => new Set(actuales).add(grupo.indiceLider));
+    setValoresMarcador((actuales) => ({
+      ...actuales,
+      [grupo.indiceLider]: {
+        local: grupo.golesLocalManual ?? "",
+        visitante: grupo.golesVisitanteManual ?? "",
+      },
+    }));
+  }
+
+  function cerrarMarcadorManual(indiceLider) {
+    setMarcadoresEditando((actuales) => {
+      const nuevo = new Set(actuales);
+      nuevo.delete(indiceLider);
+      return nuevo;
+    });
+  }
+
+  function guardarMarcadorManual(grupo) {
+    const valores = valoresMarcador[grupo.indiceLider] ?? {};
+    const local = Number(valores.local);
+    const visitante = Number(valores.visitante);
+    if (!Number.isInteger(local) || local < 0 || !Number.isInteger(visitante) || visitante < 0) return;
+    onActualizarMarcadorManual(apuesta.id, grupo.indiceLider, local, visitante);
+    cerrarMarcadorManual(grupo.indiceLider);
   }
 
   // Petición directa (2026-08-11): antes cada pick era un único círculo que
@@ -417,6 +453,7 @@ export default function ApuestaItem({
           const revelado = revelados.has(grupo.indiceLider);
           const enEdicion = editandoPicks.has(grupo.indiceLider);
           const promptAbierto = promptsCuota.has(grupo.indiceLider);
+          const marcadorEnEdicion = marcadoresEditando.has(grupo.indiceLider);
           const hayPickAnulado = grupo.selecciones.some((s) => s.resultado === "nula");
 
           return (
@@ -444,6 +481,15 @@ export default function ApuestaItem({
                         const conEquipos = esFormatoEquipos(grupo.evento);
                         const equipos = equiposDesdeEvento(grupo.evento);
                         const esMultiPartido = grupo.selecciones.length > 1;
+                        // "Competición · País" cuando hay los dos (partido
+                        // elegido del buscador conectado); solo la
+                        // competición cuando el evento se escribió a mano en
+                        // "Otras ligas" con el campo opcional relleno (sin
+                        // país, ese modo no lo pide) — null si no hay nada.
+                        const etiquetaLiga =
+                          grupo.competicion && grupo.pais
+                            ? `${grupo.competicion} · ${grupo.pais}`
+                            : grupo.competicion || grupo.pais || null;
                         return (
                           <>
                             {/* Cabecera "MULTI"/"PICK SIMPLE" + cuota
@@ -488,13 +534,9 @@ export default function ApuestaItem({
                             </div>
 
                             {conEquipos ? (
-                              (grupo.pais || (!terminado && grupo.hora)) && (
+                              (etiquetaLiga || (!terminado && grupo.hora)) && (
                                 <p className="flex flex-wrap items-center gap-2 text-xs text-slate mt-0.5">
-                                  {grupo.pais && (
-                                    <span>
-                                      {grupo.competicion} · {grupo.pais}
-                                    </span>
-                                  )}
+                                  {etiquetaLiga && <span>{etiquetaLiga}</span>}
                                   {!terminado && grupo.hora && (
                                     <span className="inline-block font-mono text-xs font-semibold px-2 py-0.5 rounded bg-gold/10 text-gold">
                                       {grupo.hora}
@@ -507,11 +549,7 @@ export default function ApuestaItem({
                                 <p className="text-base font-semibold text-ink break-words mt-0.5">
                                   {grupo.evento}
                                 </p>
-                                {grupo.pais && (
-                                  <p className="text-xs text-slate">
-                                    {grupo.competicion} · {grupo.pais}
-                                  </p>
-                                )}
+                                {etiquetaLiga && <p className="text-xs text-slate">{etiquetaLiga}</p>}
                               </>
                             )}
 
@@ -616,31 +654,120 @@ export default function ApuestaItem({
                                 por fila, local arriba y visitante abajo, con
                                 su gol alineado a la derecha una vez
                                 terminado el partido — nunca en directo
-                                (mismo límite de siempre). */}
-                            {conEquipos && (
-                              <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="flex-1 text-sm font-semibold text-ink truncate">
-                                    {equipos.local}
-                                  </span>
-                                  {terminado && (
-                                    <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
-                                      {info.golesLocal}
+                                (mismo límite de siempre).
+                                Sin partidoId (partido de "Otras ligas") no
+                                hay forma de traer esto automático — se
+                                muestra el mismo diseño, pero con los goles
+                                escritos a mano (golesLocalManual/
+                                golesVisitanteManual), editables con el
+                                lápiz de abajo. */}
+                            {conEquipos && (() => {
+                              const esManual = !grupo.partidoId;
+                              const hayMarcadorManual =
+                                grupo.golesLocalManual != null && grupo.golesVisitanteManual != null;
+                              const golesLocal = terminado ? info.golesLocal : grupo.golesLocalManual;
+                              const golesVisitante = terminado
+                                ? info.golesVisitante
+                                : grupo.golesVisitanteManual;
+                              const hayMarcador = terminado || hayMarcadorManual;
+                              return (
+                                <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="flex-1 text-sm font-semibold text-ink truncate">
+                                      {equipos.local}
                                     </span>
+                                    {hayMarcador && (
+                                      <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
+                                        {golesLocal}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="flex-1 text-sm font-semibold text-ink truncate">
+                                      {equipos.visitante}
+                                    </span>
+                                    {hayMarcador && (
+                                      <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
+                                        {golesVisitante}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {esManual && !soloLectura && !marcadorEnEdicion && (
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirMarcadorManual(grupo)}
+                                      className="text-[11px] font-semibold text-gold hover:underline"
+                                    >
+                                      ✎ {hayMarcadorManual ? "Editar marcador" : "Añadir marcador"}
+                                    </button>
+                                  )}
+
+                                  {esManual && !soloLectura && marcadorEnEdicion && (
+                                    <div className="pt-1 space-y-1.5">
+                                      <div className="flex items-center gap-2">
+                                        <span className="flex-1 text-xs text-slate truncate">
+                                          {equipos.local}
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={valoresMarcador[grupo.indiceLider]?.local ?? ""}
+                                          onChange={(e) =>
+                                            setValoresMarcador((actuales) => ({
+                                              ...actuales,
+                                              [grupo.indiceLider]: {
+                                                ...actuales[grupo.indiceLider],
+                                                local: e.target.value,
+                                              },
+                                            }))
+                                          }
+                                          className="w-16 border border-line rounded-lg px-2 py-1 text-sm font-mono bg-surface"
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="flex-1 text-xs text-slate truncate">
+                                          {equipos.visitante}
+                                        </span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={valoresMarcador[grupo.indiceLider]?.visitante ?? ""}
+                                          onChange={(e) =>
+                                            setValoresMarcador((actuales) => ({
+                                              ...actuales,
+                                              [grupo.indiceLider]: {
+                                                ...actuales[grupo.indiceLider],
+                                                visitante: e.target.value,
+                                              },
+                                            }))
+                                          }
+                                          className="w-16 border border-line rounded-lg px-2 py-1 text-sm font-mono bg-surface"
+                                        />
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => guardarMarcadorManual(grupo)}
+                                          className="px-3 py-1 rounded-lg text-xs font-semibold bg-gold text-feltDark hover:opacity-90 transition-opacity"
+                                        >
+                                          Guardar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => cerrarMarcadorManual(grupo.indiceLider)}
+                                          className="px-3 py-1 rounded-lg text-xs font-semibold text-slate hover:text-ink transition-colors"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="flex-1 text-sm font-semibold text-ink truncate">
-                                    {equipos.visitante}
-                                  </span>
-                                  {terminado && (
-                                    <span className="font-mono text-sm font-bold text-ink bg-paperDim rounded px-2 py-0.5 shrink-0">
-                                      {info.golesVisitante}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </>
                         );
                       }}

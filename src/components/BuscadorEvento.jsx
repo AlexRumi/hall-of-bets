@@ -123,7 +123,18 @@ function NombresEquipos({ evento }) {
 // reinicia lo que cuelgue de él, para no dejar una combinación a medias.
 // "Otras ligas" no tiene país ni competición conectados: se queda solo
 // con el buscador de arriba, en modo texto libre de toda la vida.
-export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartido }) {
+export default function BuscadorEvento({
+  valor,
+  fecha,
+  onCambiar,
+  onElegirPartido,
+  // Campo opcional "Competición", solo en modo manual ("Otras ligas") —
+  // ahí no hay país/competición conectados que elegir, pero sí interesa
+  // poder anotar la liga a mano para que el detalle de la apuesta la
+  // muestre igual que un partido del buscador (ver ApuestaItem.jsx).
+  competicion = "",
+  onCambiarCompeticion,
+}) {
   const [grupoFiltro, setGrupoFiltro] = useState("");
   const [paisFiltro, setPaisFiltro] = useState("");
   const [competicionFiltro, setCompeticionFiltro] = useState("");
@@ -267,14 +278,23 @@ export default function BuscadorEvento({ valor, fecha, onCambiar, onElegirPartid
           </p>
         )}
         {modoManual && (
-          <button
-            type="button"
-            onClick={() => setExpandido(false)}
-            disabled={!valor.trim()}
-            className="mt-1.5 text-xs font-semibold text-gold border border-gold/40 rounded-full px-3 py-1 hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Listo
-          </button>
+          <>
+            <input
+              type="text"
+              value={competicion}
+              onChange={(e) => onCambiarCompeticion(e.target.value)}
+              placeholder="Competición (opcional)"
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm mt-1.5"
+            />
+            <button
+              type="button"
+              onClick={() => setExpandido(false)}
+              disabled={!valor.trim()}
+              className="mt-1.5 text-xs font-semibold text-gold border border-gold/40 rounded-full px-3 py-1 hover:bg-gold/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Listo
+            </button>
+          </>
         )}
       </div>
 
