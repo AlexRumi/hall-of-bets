@@ -1,4 +1,4 @@
-import { agruparSeleccionesPorPartido, horaInicioPartido, MARGEN_RESULTADO_MS, ESTADOS_TERMINADOS_PARTIDO } from "../src/utils/apuestas.js";
+import { agruparSeleccionesPorPartido, horaInicioPartido, ESTADOS_TERMINADOS_PARTIDO } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
 
@@ -11,14 +11,22 @@ import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numerac
 // TELEGRAM_OWNER_ID/secret_token del webhook, porque quien llama no es
 // Telegram.
 //
-// Mismo criterio que usePartidoInfo.js para decidir cuándo mirar (margen
-// de 2,5h tras la hora de inicio) y qué guardar en la caché compartida
-// (resultados_partidos) — MARGEN_RESULTADO_MS/ESTADOS_TERMINADOS_PARTIDO
-// vienen de src/utils/apuestas.js, no se reimplementan aquí. Esa caché
-// sigue siendo por PARTIDO (compartida entre todas las apuestas que lo
-// mencionen): un partido en 5 apuestas a la vez sigue costando como mucho
-// 1 llamada a la API de fútbol, sea cual sea el número de avisos que acabe
-// mandando.
+// Margen propio, más corto que el de la app (2,5h en usePartidoInfo.js):
+// ahí da igual tardar más porque solo se consulta cuando el usuario abre el
+// detalle a mano, pero aquí sí importa avisar pronto. Un partido normal
+// (90 min + 1-2' de añadido en la 1ª parte + 5-6' en la 2ª + 15-17' de
+// descanso) termina sobre los 111-115' desde el inicio — 1h55 (115 min)
+// lo cubre justo, sin margen de sobra. Si no ha terminado a esa hora (caso
+// raro: prórroga), se sigue revisando cada tick del cron hasta que sí lo
+// esté — igual que ya pasaba antes, solo que empezando antes.
+const MARGEN_AVISO_MS = 115 * 60 * 1000;
+
+// ESTADOS_TERMINADOS_PARTIDO viene de src/utils/apuestas.js (compartido con
+// usePartidoInfo.js), no se reimplementa aquí. La caché de resultados
+// (resultados_partidos) sigue siendo por PARTIDO (compartida entre todas
+// las apuestas que lo mencionen): un partido en 5 apuestas a la vez sigue
+// costando como mucho 1 llamada a la API de fútbol, sea cual sea el número
+// de avisos que acabe mandando.
 //
 // Petición directa: un partido puede estar en varias apuestas pendientes a
 // la vez (de la misma categoría o de categorías distintas) — en vez de un
@@ -104,7 +112,7 @@ export default async function handler(req, res) {
       if (!grupo.partidoId) continue;
       idsPartidosTotales.add(grupo.partidoId);
       const horaInicioMs = horaInicioPartido(grupo.fecha ?? apuesta.fecha, grupo.hora);
-      if (horaInicioMs && ahora >= horaInicioMs + MARGEN_RESULTADO_MS) {
+      if (horaInicioMs && ahora >= horaInicioMs + MARGEN_AVISO_MS) {
         idsElegibles.add(grupo.partidoId);
       }
     }

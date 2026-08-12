@@ -3551,3 +3551,29 @@ separadas, probando cada una antes de pasar a la siguiente.
   - Pendiente de que el usuario configure el Database Webhook en Supabase
     y rellene `REGISTRO_WEBHOOK_SECRET` en Vercel — ninguno de los dos
     pasos se puede hacer desde aquí.
+  - **Puesto en marcha por el usuario**: el Database Webhook de Supabase
+    no aparecía como "Webhooks" en el menú de Database de este panel en
+    concreto — tras un par de intentos fallidos (primero "Triggers", que
+    resultó ser el sistema de triggers puro de Postgres, no esto), se
+    encontró en **Integrations > Database Webhooks** (función oficial de
+    Supabase, con su propio formulario de "HTTP Request": tabla, evento,
+    URL, cabeceras). Configurado con éxito.
+  - **Bug real detectado por el usuario en producción, con una apuesta del
+    PSG que no recibió el aviso**: no fue un fallo del código — el
+    partido empezó más tarde de lo que el usuario asumía al principio, y
+    las revisiones automáticas de las 23:30/23:45 cayeron justo antes de
+    que el margen de 2,5h terminara de cumplirse; la siguiente revisión
+    (la manual, minutos después) sí lo cogió. Pero la pregunta del propio
+    usuario ("¿el aviso siempre va a llegar mucho más tarde de que acabe
+    el partido?") destapó un problema de diseño real, no un bug: las 2,5h
+    son el margen pensado para la app (dar igual cuándo se abra el
+    detalle a mano), pero para un aviso que se quiere rápido, sobran unos
+    40-55 minutos en un partido sin prórroga. Se creó `MARGEN_AVISO_MS`,
+    propio de `api/telegram-avisos.js` (no toca el margen de 2,5h que
+    sigue usando el resto de la app) — el usuario aportó el cálculo
+    exacto (90' + 1-2' de añadido en la 1ª parte + 5-6' en la 2ª + 15-17'
+    de descanso ≈ 111-115' reales desde el inicio) y se fijó en **115
+    minutos (1h55)**, justo ese cálculo, sin margen de sobra. Si a esa
+    hora el partido aún no ha terminado (prórroga), se sigue revisando
+    cada tick del cron hasta que sí lo esté, como ya pasaba — solo que
+    empezando antes.
