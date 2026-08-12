@@ -43,13 +43,23 @@ const MARGEN_AVISO_MS = 120 * 60 * 1000;
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 const URL_APP = "https://hall-of-bets.vercel.app";
 
+// Devuelve siempre la respuesta de Telegram, aunque sea un fallo (nunca
+// tira una excepción por un "ok: false" de Telegram) — quien llama decide
+// qué hacer con `datos.ok`. Bug real corregido: antes esta función no
+// comprobaba nada, así que un envío fallido se trataba como si hubiera
+// funcionado (el aviso se marcaba "enviado" sin haberse entregado de
+// verdad, y nunca se reintentaba).
 async function tg(method, payload) {
   const respuesta = await fetch(`${TELEGRAM_API}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return respuesta.json();
+  const datos = await respuesta.json();
+  if (!datos.ok) {
+    console.error("telegram-avisos: Telegram respondió con error", method, datos);
+  }
+  return datos;
 }
 
 function escapeHtml(texto = "") {
@@ -168,16 +178,27 @@ export default async function handler(req, res) {
       if (!grupo.partidoId || !cachePorId.has(grupo.partidoId)) continue;
       if (selecciones[grupo.indiceLider]?.avisoEnviado) continue;
 
-      await tg("sendMessage", {
-        chat_id: process.env.TELEGRAM_OWNER_ID,
-        text: renderAviso(apuesta, grupos, grupo, cachePorId, numerosPorId.get(apuesta.id) ?? "?"),
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${apuesta.id}` } }],
-          ],
-        },
-      });
+      let enviado;
+      try {
+        enviado = await tg("sendMessage", {
+          chat_id: process.env.TELEGRAM_OWNER_ID,
+          text: renderAviso(apuesta, grupos, grupo, cachePorId, numerosPorId.get(apuesta.id) ?? "?"),
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${apuesta.id}` } }],
+            ],
+          },
+        });
+      } catch (envioError) {
+        console.error("telegram-avisos: fallo de red al enviar", apuesta.id, grupo.partidoId, envioError);
+        continue; // no se marca avisoEnviado: se reintenta en el siguiente tick del cron
+      }
+
+      // Si Telegram rechazó el mensaje (ok: false), tampoco se marca como
+      // enviado — de lo contrario nunca se volvería a intentar y el aviso
+      // se perdería para siempre.
+      if (!enviado.ok) continue;
 
       selecciones = selecciones.map((s, i) => (i === grupo.indiceLider ? { ...s, avisoEnviado: true } : s));
       cambiada = true;
@@ -185,7 +206,17 @@ export default async function handler(req, res) {
     }
 
     if (cambiada) {
-      await supabaseAdmin.from("apuestas").update({ selecciones }).eq("id", apuesta.id);
+      // Si esto falla, el mensaje ya se envió pero "avisoEnviado" no queda
+      // guardado — el siguiente tick lo reintentaría y llegaría un aviso
+      // duplicado. Poco probable, pero mejor dejarlo en el log que
+      // tragárselo en silencio.
+      const { error: errorGuardado } = await supabaseAdmin
+        .from("apuestas")
+        .update({ selecciones })
+        .eq("id", apuesta.id);
+      if (errorGuardado) {
+        console.error("telegram-avisos: no se pudo guardar avisoEnviado", apuesta.id, errorGuardado);
+      }
     }
   }
 

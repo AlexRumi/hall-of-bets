@@ -3577,3 +3577,41 @@ separadas, probando cada una antes de pasar a la siguiente.
     hora el partido aún no ha terminado (prórroga), se sigue revisando
     cada tick del cron hasta que sí lo esté, como ya pasaba — solo que
     empezando antes.
+  - Subido después a **2h (120 min)**, a petición del usuario: 1h55
+    quedaba demasiado ajustado a la duración real, disparando una
+    segunda llamada de más en varios partidos — 2h deja 5-9' de aire sin
+    llegar a costar esa llamada extra en la mayoría de los casos.
+
+- **Investigación de un aviso que no llegó solo (apuesta real del PSG /
+  Supercopa de Europa) — sin causa raíz confirmada, pero con un fallo real
+  encontrado y corregido de paso.** El usuario reportó que, con casi 3h
+  pasadas desde el inicio del partido, no había llegado ningún aviso
+  automático — solo saltó al forzar una "Ejecución de prueba" en
+  cron-job.org. Investigado juntos paso a paso: primero se descartó que el
+  cron estuviera deshabilitado (reloj verde, próximas ejecuciones
+  correctas); después, mirando los Logs de Vercel, se confirmó que las
+  peticiones automáticas SÍ llegaban (200 OK, user-agent de cron-job.org)
+  y que una de ellas, a las 23:33, sí había guardado el partido en
+  `resultados_partidos` como terminado (confirmado con una consulta SQL
+  directa) — pero el campo `avisoEnviado` de esa selección seguía en
+  `false` hasta la prueba manual. Es decir: el partido se detectó
+  terminado bastante antes de lo que parecía, pero el aviso de Telegram no
+  se entregó en los intentos automáticos de en medio, sin ningún error
+  visible en los logs.
+  - No se pudo confirmar la causa exacta (se descartó timeout de Vercel:
+    con Fluid Compute, Hobby da 300s por función, de sobra) — pero se
+    encontró un fallo real de todas formas: `tg()` nunca comprobaba si
+    Telegram había aceptado el mensaje de verdad. Si el envío fallaba por
+    cualquier motivo, el código lo marcaba igualmente como "enviado" (o,
+    en el peor caso, ni siquiera eso, dejando el estado a medias sin
+    ningún registro de qué había pasado) — nunca se habría reintentado, y
+    tampoco quedaba ningún rastro en los logs para saberlo después.
+  - Corregido: `tg()` ahora revisa `ok` en la respuesta de Telegram y deja
+    un `console.error` claro si algo falla; el envío de cada aviso va
+    en su propio `try/catch` (un fallo de red o un rechazo de Telegram NO
+    marca `avisoEnviado`, así que se reintenta solo en el siguiente tick
+    del cron en vez de perderse para siempre); y el guardado final de
+    `avisoEnviado` en Supabase también registra un error claro si falla,
+    en vez de fallar en silencio. Con esto, si vuelve a pasar algo
+    parecido, los logs de Vercel deberían dejar claro el motivo exacto en
+    vez de tener que investigarlo a ciegas como esta vez.
