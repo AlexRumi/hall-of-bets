@@ -90,11 +90,17 @@ function renderApuesta(apuesta) {
           : texto;
       lineas.push(`${contador}. ${marca} ${textoFormateado}`);
 
+      // Mismos emoji que "marca" arriba (✅/❌/➖), para que los botones se
+      // parezcan a los iconos de colores que ya usa ApuestaItem.jsx —
+      // Telegram no admite iconos SVG propios en un botón, solo texto/emoji.
+      // Sin número delante: la fila de botones ya sale en el mismo orden que
+      // su pick en el texto (Telegram no deja pegar botones a cada línea),
+      // así que la posición basta para saber a cuál corresponde.
       const base = `p|${apuesta.id}|${pick.indice}|`;
       filas.push([
-        { text: `${contador}) V`, callback_data: base + "g" },
-        { text: `${contador}) X`, callback_data: base + "x" },
-        { text: `${contador}) -`, callback_data: base + "n" },
+        { text: "✅", callback_data: base + "g" },
+        { text: "❌", callback_data: base + "x" },
+        { text: "➖", callback_data: base + "n" },
       ]);
     }
     lineas.push("");
