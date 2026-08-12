@@ -15,13 +15,14 @@ import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numerac
 // ahí da igual tardar más porque solo se consulta cuando el usuario abre el
 // detalle a mano, pero aquí sí importa avisar pronto. Un partido normal
 // (90 min + 1-2' de añadido en la 1ª parte + 5-6' en la 2ª + 15-17' de
-// descanso) termina sobre los 111-115' desde el inicio — 2h (120 min) deja
-// esos 5-9' de aire extra (petición directa) sin disparar una segunda
-// llamada de más en la mayoría de los casos. Si no ha terminado a esa hora
-// (caso raro: prórroga, sin partidos así por ahora), se sigue revisando
-// cada tick del cron hasta que sí lo esté — igual que ya pasaba antes,
-// solo que empezando antes.
-const MARGEN_AVISO_MS = 120 * 60 * 1000;
+// descanso) termina sobre los 111-115' desde el inicio, más 1-5' que suele
+// tardar la propia API-Football en certificar el estado "terminado" tras
+// el pitido final — 2h05 (125 min) cubre ambas cosas con un poco de aire,
+// sin disparar una segunda llamada de más en la mayoría de los casos. Si
+// no ha terminado a esa hora (caso raro: prórroga, sin partidos así por
+// ahora), se sigue revisando cada tick del cron hasta que sí lo esté —
+// igual que ya pasaba antes, solo que empezando antes.
+const MARGEN_AVISO_MS = 125 * 60 * 1000;
 
 // ESTADOS_TERMINADOS_PARTIDO viene de src/utils/apuestas.js (compartido con
 // usePartidoInfo.js), no se reimplementa aquí. La caché de resultados
