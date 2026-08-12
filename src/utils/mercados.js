@@ -51,6 +51,18 @@ const LINEAS_CORNERS_MEDIO = [0.5, 1.5, 2.5, 3.5, 4.5];
 // Tarjetas: mismo patrón que goles (Over/Under), líneas 0.5 a 6.5.
 const LINEAS_TARJETAS = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5];
 
+// Genera líneas desde/hasta (ambos incluidos) saltando de "paso" en paso —
+// para rangos más largos que ya no compensa escribir a mano como el resto
+// de LINEAS_* de arriba (usado por "Remates"/"Remates a puerta" del
+// equipo, más abajo).
+function lineasDesde(desde, hasta, paso) {
+  const lineas = [];
+  for (let v = desde; v <= hasta + 0.001; v += paso) {
+    lineas.push(Math.round(v * 10) / 10);
+  }
+  return lineas;
+}
+
 // ---------------------------------------------------------------------
 // Resultado
 // ---------------------------------------------------------------------
@@ -139,6 +151,32 @@ const OPCIONES_MARGEN_VICTORIA = [
 ];
 
 // ---------------------------------------------------------------------
+// Clasificación — eliminatorias a doble partido o a partido único con
+// prórroga/penaltis (Champions, Copa del Rey...): quién pasa a la
+// siguiente ronda, y por qué vía.
+// ---------------------------------------------------------------------
+
+const OPCIONES_EQUIPO_CLASIFICA = [
+  { id: "clasifica-local", texto: (eq) => `${eq.local} clasificará` },
+  { id: "clasifica-visitante", texto: (eq) => `${eq.visitante} clasificará` },
+];
+
+function opcionesMetodoClasificacion(clave) {
+  return [
+    { id: `metodo-${clave}-90`, texto: (eq) => `${eq[clave]} clasificará en 90 minutos` },
+    { id: `metodo-${clave}-prorroga`, texto: (eq) => `${eq[clave]} clasificará en la prórroga` },
+    { id: `metodo-${clave}-penaltis`, texto: (eq) => `${eq[clave]} clasificará en los penaltis` },
+  ];
+}
+const OPCIONES_METODO_CLASIFICACION_LOCAL = opcionesMetodoClasificacion("local");
+const OPCIONES_METODO_CLASIFICACION_VISITANTE = opcionesMetodoClasificacion("visitante");
+
+const OPCIONES_GANADOR_TROFEO = [
+  { id: "trofeo-local", texto: (eq) => `${eq.local} gana el trofeo` },
+  { id: "trofeo-visitante", texto: (eq) => `${eq.visitante} gana el trofeo` },
+];
+
+// ---------------------------------------------------------------------
 // Jugador — a diferencia del resto del catálogo, el texto final no se
 // puede generar solo con los equipos: hace falta también el jugador,
 // elegido en el desplegable propio que abre SelectorMercado.jsx
@@ -149,19 +187,34 @@ const OPCIONES_MARGEN_VICTORIA = [
 // interpretarMercadoJugador).
 // ---------------------------------------------------------------------
 
+// Líneas de jugador (remates/faltas/entradas): siempre de 0.5 en 0.5,
+// ampliadas a 4.5 (petición directa — remates llegaba solo a 2.5, faltas/
+// entradas ni siquiera tenían línea, eran un único mercado "comete una
+// falta").
+const LINEAS_JUGADOR = lineasDesde(0.5, 4.5, 1);
+
+// Añade una plantilla por cada línea de LINEAS_JUGADOR, con el id
+// "prefijoId-línea" (p.ej. "falta-cometida-1.5") y el sufijo que genere
+// "generarSufijo(linea)" — para no repetir la lista a mano en Faltas/
+// Entradas/Remates, que comparten exactamente este patrón.
+function plantillasLinea(prefijoId, generarSufijo) {
+  return LINEAS_JUGADOR.map((l) => ({ id: `${prefijoId}-${l}`, sufijo: generarSufijo(l) }));
+}
+
 const PLANTILLAS_JUGADOR = [
   { id: "gol", sufijo: " anota un gol" },
   { id: "gol-2", sufijo: " anota 2+ goles" },
-  { id: "asistencia", sufijo: " da una asistencia" },
-  { id: "remates-puerta-0.5", sufijo: ": +0.5 remates a puerta" },
-  { id: "remates-puerta-1.5", sufijo: ": +1.5 remates a puerta" },
-  { id: "remates-puerta-2.5", sufijo: ": +2.5 remates a puerta" },
-  { id: "remates-totales-0.5", sufijo: ": +0.5 remates totales" },
-  { id: "remates-totales-1.5", sufijo: ": +1.5 remates totales" },
-  { id: "remates-totales-2.5", sufijo: ": +2.5 remates totales" },
-  { id: "falta-cometida", sufijo: " comete una falta" },
-  { id: "falta-recibida", sufijo: " recibe una falta" },
-  { id: "tarjeta", sufijo: " recibe tarjeta" },
+  { id: "asistencia", sufijo: " asistirá" },
+  { id: "anota-o-asiste", sufijo: " anota o asiste" },
+  ...plantillasLinea("remates-puerta", (l) => `: +${l} remates a puerta`),
+  ...plantillasLinea("remates-totales", (l) => `: +${l} remates totales`),
+  ...plantillasLinea("falta-cometida", (l) => ` comete +${l} faltas`),
+  ...plantillasLinea("falta-recibida", (l) => ` recibe +${l} faltas`),
+  ...plantillasLinea("entrada", (l) => ` comete +${l} entradas`),
+  { id: "tarjeta", sufijo: " será amonestado" },
+  // Paradas del portero: sin línea "under" a propósito (pedido así:
+  // "1+, 2+, 3+..."), números enteros del 1 al 7.
+  ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({ id: `paradas-${n}`, sufijo: `: ${n}+ paradas` })),
 ];
 
 function opcionesJugador(ids) {
@@ -173,16 +226,19 @@ function opcionesJugador(ids) {
 const OPCIONES_JUGADOR_TODAS = opcionesJugador(PLANTILLAS_JUGADOR.map((p) => p.id));
 const OPCIONES_JUGADOR_GOLES = opcionesJugador(["gol", "gol-2"]);
 const OPCIONES_JUGADOR_ASISTENCIAS = opcionesJugador(["asistencia"]);
-const OPCIONES_JUGADOR_REMATES = opcionesJugador([
-  "remates-puerta-0.5",
-  "remates-puerta-1.5",
-  "remates-puerta-2.5",
-  "remates-totales-0.5",
-  "remates-totales-1.5",
-  "remates-totales-2.5",
-]);
-const OPCIONES_JUGADOR_FALTAS = opcionesJugador(["falta-cometida", "falta-recibida"]);
+const OPCIONES_JUGADOR_ANOTA_O_ASISTE = opcionesJugador(["anota-o-asiste"]);
+// "Remates" y "Remates a puerta" del jugador, separados (petición
+// directa: antes eran una única categoría "Remates" con las dos cosas
+// mezcladas).
+const OPCIONES_JUGADOR_REMATES = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-totales-${l}`));
+const OPCIONES_JUGADOR_REMATES_PUERTA = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-puerta-${l}`));
+// "Faltas" se divide en Comete/Recibe (petición directa, subcategoría
+// nueva) — ver ARBOL_MERCADOS más abajo.
+const OPCIONES_JUGADOR_FALTAS_COMETE = opcionesJugador(LINEAS_JUGADOR.map((l) => `falta-cometida-${l}`));
+const OPCIONES_JUGADOR_FALTAS_RECIBE = opcionesJugador(LINEAS_JUGADOR.map((l) => `falta-recibida-${l}`));
+const OPCIONES_JUGADOR_ENTRADAS = opcionesJugador(LINEAS_JUGADOR.map((l) => `entrada-${l}`));
 const OPCIONES_JUGADOR_TARJETAS = opcionesJugador(["tarjeta"]);
+const OPCIONES_JUGADOR_PARADAS = opcionesJugador([1, 2, 3, 4, 5, 6, 7].map((n) => `paradas-${n}`));
 
 // Si el texto ya guardado de una selección termina en el sufijo de alguna
 // plantilla de jugador, separa el nombre del jugador del resto —
@@ -242,11 +298,11 @@ function opcionesGolesEquipo(clave) {
   return [
     ...LINEAS_GOLES.map((l) => ({
       id: `goles-${clave}-mas-${l}`,
-      texto: (eq) => `Goles ${eq[clave]}: +${l} goles`,
+      texto: (eq) => `${eq[clave]}: +${l} goles`,
     })),
     ...LINEAS_GOLES.map((l) => ({
       id: `goles-${clave}-menos-${l}`,
-      texto: (eq) => `Goles ${eq[clave]}: -${l} goles`,
+      texto: (eq) => `${eq[clave]}: -${l} goles`,
     })),
   ];
 }
@@ -257,34 +313,111 @@ const OPCIONES_GOLES_EQUIPO_VISITANTE = opcionesGolesEquipo("visitante");
 // equipo", que es del partido completo) — a diferencia de
 // opcionesGolesMedioTiempo (que no menciona la mitad en el texto), aquí sí
 // hace falta decir "1ª mitad"/"2ª mitad": si no, un mismo texto como
-// "Goles Real Madrid: Over 1.5" podría venir tanto del partido completo
+// "Real Madrid: Over 1.5 goles" podría venir tanto del partido completo
 // como de una mitad, y no habría forma de distinguirlos al editar.
+// Devuelve { over, under } por separado (en vez de una lista plana) para
+// poder combinar los dos equipos por Over/Under más abajo — necesario
+// para el 4º nivel de navegación (mitad → Over/Under) del árbol.
 function opcionesGolesEquipoMedioTiempo(clave, prefijoId, etiquetaMitad) {
-  return [
-    ...LINEAS_GOLES_MEDIO.map((l) => ({
+  return {
+    over: LINEAS_GOLES_MEDIO.map((l) => ({
       id: `goles-${clave}-${prefijoId}-over-${l}`,
-      texto: (eq) => `Goles ${eq[clave]} ${etiquetaMitad}: Over ${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Over ${l} goles`,
     })),
-    ...LINEAS_GOLES_MEDIO.map((l) => ({
+    under: LINEAS_GOLES_MEDIO.map((l) => ({
       id: `goles-${clave}-${prefijoId}-under-${l}`,
-      texto: (eq) => `Goles ${eq[clave]} ${etiquetaMitad}: Under ${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Under ${l} goles`,
     })),
-  ];
+  };
 }
-const OPCIONES_GOLES_EQUIPO_MITAD_LOCAL = [
-  ...opcionesGolesEquipoMedioTiempo("local", "1t", "1ª mitad"),
-  ...opcionesGolesEquipoMedioTiempo("local", "2t", "2ª mitad"),
-];
-const OPCIONES_GOLES_EQUIPO_MITAD_VISITANTE = [
-  ...opcionesGolesEquipoMedioTiempo("visitante", "1t", "1ª mitad"),
-  ...opcionesGolesEquipoMedioTiempo("visitante", "2t", "2ª mitad"),
-];
+const GOLES_EQUIPO_LOCAL_1T = opcionesGolesEquipoMedioTiempo("local", "1t", "1ª mitad");
+const GOLES_EQUIPO_VISITANTE_1T = opcionesGolesEquipoMedioTiempo("visitante", "1t", "1ª mitad");
+const GOLES_EQUIPO_LOCAL_2T = opcionesGolesEquipoMedioTiempo("local", "2t", "2ª mitad");
+const GOLES_EQUIPO_VISITANTE_2T = opcionesGolesEquipoMedioTiempo("visitante", "2t", "2ª mitad");
+// Combinados por mitad + Over/Under (los dos equipos juntos) — petición
+// directa: agrupado solo por mitad (sin este último nivel) seguía
+// juntando de golpe el Over Y el Under de los dos equipos, una lista
+// larga. Con este 4º nivel, cada pestaña final solo tiene las líneas de
+// los dos equipos para ese Over/Under de esa mitad.
+const OPCIONES_GOLES_EQUIPO_1T_OVER = [...GOLES_EQUIPO_LOCAL_1T.over, ...GOLES_EQUIPO_VISITANTE_1T.over];
+const OPCIONES_GOLES_EQUIPO_1T_UNDER = [...GOLES_EQUIPO_LOCAL_1T.under, ...GOLES_EQUIPO_VISITANTE_1T.under];
+const OPCIONES_GOLES_EQUIPO_2T_OVER = [...GOLES_EQUIPO_LOCAL_2T.over, ...GOLES_EQUIPO_VISITANTE_2T.over];
+const OPCIONES_GOLES_EQUIPO_2T_UNDER = [...GOLES_EQUIPO_LOCAL_2T.under, ...GOLES_EQUIPO_VISITANTE_2T.under];
 
 const OPCIONES_MITAD_MAS_GOLES = [
   { id: "mitad-1", texto: () => "Mitad con más goles: 1ª mitad" },
   { id: "mitad-2", texto: () => "Mitad con más goles: 2ª mitad" },
   { id: "mitad-igual", texto: () => "Mitad con más goles: Igualadas" },
 ];
+
+// ---------------------------------------------------------------------
+// Remates y Remates a puerta (del EQUIPO, no del jugador — ver más abajo
+// en "Jugador" para los suyos, con ids distintos para no chocar con
+// estos). Cada uno con Totales (los dos equipos juntos) / Local /
+// Visitante, y dentro de cada uno, Over/Under — a diferencia de
+// "Córners"/"Tarjetas" por equipo (que usan notación "+X"), aquí se pidió
+// Over/Under explícito como tercer nivel del árbol, así que el texto
+// también lo usa.
+// ---------------------------------------------------------------------
+
+const LINEAS_REMATES_EQUIPO_TOTAL = lineasDesde(16.5, 34.5, 2);
+const LINEAS_REMATES_EQUIPO_LADO = lineasDesde(5.5, 23.5, 2);
+const LINEAS_REMATES_PUERTA_EQUIPO_TOTAL = lineasDesde(4.5, 12.5, 1);
+const LINEAS_REMATES_PUERTA_EQUIPO_LADO = lineasDesde(0.5, 9.5, 1);
+
+function opcionesOverUnderTotalEquipo(lineas, prefijoId, etiquetaMercado) {
+  return {
+    over: lineas.map((l) => ({ id: `${prefijoId}-total-over-${l}`, texto: () => `Over ${l} ${etiquetaMercado}` })),
+    under: lineas.map((l) => ({ id: `${prefijoId}-total-under-${l}`, texto: () => `Under ${l} ${etiquetaMercado}` })),
+  };
+}
+// "etiquetaMercado" en minúsculas: el nombre del mercado va al FINAL del
+// texto ("Real Madrid: Over 1.5 remates"), no delante del equipo — mismo
+// orden "Equipo: ..." que el resto del catálogo (petición directa).
+function opcionesOverUnderLadoEquipo(lineas, clave, prefijoId, etiquetaMercado) {
+  return {
+    over: lineas.map((l) => ({
+      id: `${prefijoId}-${clave}-over-${l}`,
+      texto: (eq) => `${eq[clave]}: Over ${l} ${etiquetaMercado}`,
+    })),
+    under: lineas.map((l) => ({
+      id: `${prefijoId}-${clave}-under-${l}`,
+      texto: (eq) => `${eq[clave]}: Under ${l} ${etiquetaMercado}`,
+    })),
+  };
+}
+
+const REMATES_EQUIPO_TOTAL = opcionesOverUnderTotalEquipo(LINEAS_REMATES_EQUIPO_TOTAL, "remates-equipo", "remates");
+const REMATES_EQUIPO_LOCAL = opcionesOverUnderLadoEquipo(
+  LINEAS_REMATES_EQUIPO_LADO,
+  "local",
+  "remates-equipo",
+  "remates"
+);
+const REMATES_EQUIPO_VISITANTE = opcionesOverUnderLadoEquipo(
+  LINEAS_REMATES_EQUIPO_LADO,
+  "visitante",
+  "remates-equipo",
+  "remates"
+);
+
+const REMATES_PUERTA_EQUIPO_TOTAL = opcionesOverUnderTotalEquipo(
+  LINEAS_REMATES_PUERTA_EQUIPO_TOTAL,
+  "remates-puerta-equipo",
+  "remates a puerta"
+);
+const REMATES_PUERTA_EQUIPO_LOCAL = opcionesOverUnderLadoEquipo(
+  LINEAS_REMATES_PUERTA_EQUIPO_LADO,
+  "local",
+  "remates-puerta-equipo",
+  "remates a puerta"
+);
+const REMATES_PUERTA_EQUIPO_VISITANTE = opcionesOverUnderLadoEquipo(
+  LINEAS_REMATES_PUERTA_EQUIPO_LADO,
+  "visitante",
+  "remates-puerta-equipo",
+  "remates a puerta"
+);
 
 // ---------------------------------------------------------------------
 // Hándicap asiático
@@ -354,11 +487,11 @@ function opcionesCornersEquipo(clave) {
   return [
     ...LINEAS_CORNERS_EQUIPO.map((l) => ({
       id: `corners-${clave}-mas-${l}`,
-      texto: (eq) => `Córners ${eq[clave]}: +${l} córners`,
+      texto: (eq) => `${eq[clave]}: +${l} córners`,
     })),
     ...LINEAS_CORNERS_EQUIPO.map((l) => ({
       id: `corners-${clave}-menos-${l}`,
-      texto: (eq) => `Córners ${eq[clave]}: -${l} córners`,
+      texto: (eq) => `${eq[clave]}: -${l} córners`,
     })),
   ];
 }
@@ -366,25 +499,30 @@ const OPCIONES_CORNERS_EQUIPO_LOCAL = opcionesCornersEquipo("local");
 const OPCIONES_CORNERS_EQUIPO_VISITANTE = opcionesCornersEquipo("visitante");
 
 function opcionesCornersEquipoMedioTiempo(clave, prefijoId, etiquetaMitad) {
-  return [
-    ...LINEAS_CORNERS_MEDIO.map((l) => ({
+  return {
+    over: LINEAS_CORNERS_MEDIO.map((l) => ({
       id: `corners-${clave}-${prefijoId}-over-${l}`,
-      texto: (eq) => `Córners ${eq[clave]} ${etiquetaMitad}: Over ${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Over ${l} córners`,
     })),
-    ...LINEAS_CORNERS_MEDIO.map((l) => ({
+    under: LINEAS_CORNERS_MEDIO.map((l) => ({
       id: `corners-${clave}-${prefijoId}-under-${l}`,
-      texto: (eq) => `Córners ${eq[clave]} ${etiquetaMitad}: Under ${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Under ${l} córners`,
     })),
-  ];
+  };
 }
-const OPCIONES_CORNERS_EQUIPO_MITAD_LOCAL = [
-  ...opcionesCornersEquipoMedioTiempo("local", "1t", "1ª mitad"),
-  ...opcionesCornersEquipoMedioTiempo("local", "2t", "2ª mitad"),
-];
-const OPCIONES_CORNERS_EQUIPO_MITAD_VISITANTE = [
-  ...opcionesCornersEquipoMedioTiempo("visitante", "1t", "1ª mitad"),
-  ...opcionesCornersEquipoMedioTiempo("visitante", "2t", "2ª mitad"),
-];
+const CORNERS_EQUIPO_LOCAL_1T = opcionesCornersEquipoMedioTiempo("local", "1t", "1ª mitad");
+const CORNERS_EQUIPO_VISITANTE_1T = opcionesCornersEquipoMedioTiempo("visitante", "1t", "1ª mitad");
+const CORNERS_EQUIPO_LOCAL_2T = opcionesCornersEquipoMedioTiempo("local", "2t", "2ª mitad");
+const CORNERS_EQUIPO_VISITANTE_2T = opcionesCornersEquipoMedioTiempo("visitante", "2t", "2ª mitad");
+// Agrupado por mitad y luego por Over/Under (4º nivel, petición directa):
+// separar solo por mitad seguía mezclando de golpe el Over Y el Under de
+// los dos equipos en cada pestaña, una lista larga. Con este nivel extra,
+// cada pestaña final solo tiene las líneas de los dos equipos para ese
+// Over/Under de esa mitad.
+const OPCIONES_CORNERS_EQUIPO_1T_OVER = [...CORNERS_EQUIPO_LOCAL_1T.over, ...CORNERS_EQUIPO_VISITANTE_1T.over];
+const OPCIONES_CORNERS_EQUIPO_1T_UNDER = [...CORNERS_EQUIPO_LOCAL_1T.under, ...CORNERS_EQUIPO_VISITANTE_1T.under];
+const OPCIONES_CORNERS_EQUIPO_2T_OVER = [...CORNERS_EQUIPO_LOCAL_2T.over, ...CORNERS_EQUIPO_VISITANTE_2T.over];
+const OPCIONES_CORNERS_EQUIPO_2T_UNDER = [...CORNERS_EQUIPO_LOCAL_2T.under, ...CORNERS_EQUIPO_VISITANTE_2T.under];
 
 // ---------------------------------------------------------------------
 // Tarjetas
@@ -403,11 +541,11 @@ function opcionesTarjetasEquipo(clave) {
   return [
     ...LINEAS_TARJETAS.map((l) => ({
       id: `tarjetas-${clave}-mas-${l}`,
-      texto: (eq) => `Tarjetas ${eq[clave]}: +${l} tarjetas`,
+      texto: (eq) => `${eq[clave]}: +${l} tarjetas`,
     })),
     ...LINEAS_TARJETAS.map((l) => ({
       id: `tarjetas-${clave}-menos-${l}`,
-      texto: (eq) => `Tarjetas ${eq[clave]}: -${l} tarjetas`,
+      texto: (eq) => `${eq[clave]}: -${l} tarjetas`,
     })),
   ];
 }
@@ -421,6 +559,14 @@ const OPCIONES_PRIMERA_TARJETA = [
 const OPCIONES_AMBOS_TARJETA = [
   { id: "ambos-tarjeta-si", texto: () => "Ambos equipos reciben tarjeta: Sí" },
   { id: "ambos-tarjeta-no", texto: () => "Ambos equipos reciben tarjeta: No" },
+];
+const OPCIONES_AMBOS_DOS_TARJETAS = [
+  { id: "ambos-2-tarjetas-si", texto: () => "Ambos reciben dos tarjetas: Sí" },
+  { id: "ambos-2-tarjetas-no", texto: () => "Ambos reciben dos tarjetas: No" },
+];
+const OPCIONES_EXPULSION = [
+  { id: "expulsion-si", texto: () => "Tarjeta roja: Sí" },
+  { id: "expulsion-no", texto: () => "Tarjeta roja: No" },
 ];
 
 // ---------------------------------------------------------------------
@@ -451,6 +597,14 @@ function opcionesEspecialEquipo(slug, plantilla) {
     { id: `${slug}-visitante`, texto: (eq) => plantilla(eq.visitante) },
   ];
 }
+const OPCIONES_ANOTA_PENALTI = [
+  { id: "penalti-anota-local", texto: (eq) => `${eq.local} anotará un penalti` },
+  { id: "penalti-anota-visitante", texto: (eq) => `${eq.visitante} anotará un penalti` },
+];
+const OPCIONES_PENALTI_ENCUENTRO = [
+  { id: "penalti-encuentro-si", texto: () => "Penalti: Sí" },
+  { id: "penalti-encuentro-no", texto: () => "Penalti: No" },
+];
 const ESPECIALES_SUBCATS = [
   {
     id: "gana-una-mitad",
@@ -482,6 +636,8 @@ const ESPECIALES_SUBCATS = [
     etiqueta: "Gana remontando",
     opciones: opcionesEspecialEquipo("gana-remontando", (equipo) => `${equipo} gana remontando`),
   },
+  { id: "anota-penalti", etiqueta: "Anotará un penalti", opciones: OPCIONES_ANOTA_PENALTI },
+  { id: "penalti-encuentro", etiqueta: "Penalti en el encuentro", opciones: OPCIONES_PENALTI_ENCUENTRO },
 ];
 
 // ---------------------------------------------------------------------
@@ -512,6 +668,13 @@ export const CATEGORIAS_MERCADO = [
     etiqueta: "Resultado descanso/final",
     opciones: OPCIONES_DESCANSO_FINAL,
   },
+  { id: "equipo-clasifica", etiqueta: "Equipo que clasifica", opciones: OPCIONES_EQUIPO_CLASIFICA },
+  {
+    id: "metodo-clasificacion",
+    etiqueta: "Método de clasificación",
+    opciones: [...OPCIONES_METODO_CLASIFICACION_LOCAL, ...OPCIONES_METODO_CLASIFICACION_VISITANTE],
+  },
+  { id: "ganador-trofeo", etiqueta: "Ganador del trofeo", opciones: OPCIONES_GANADOR_TROFEO },
   {
     id: "jugador",
     etiqueta: "Jugador",
@@ -540,9 +703,38 @@ export const CATEGORIAS_MERCADO = [
   {
     id: "goles-equipo-mitad",
     etiqueta: "Goles por equipo por mitad",
-    opciones: [...OPCIONES_GOLES_EQUIPO_MITAD_LOCAL, ...OPCIONES_GOLES_EQUIPO_MITAD_VISITANTE],
+    opciones: [
+      ...OPCIONES_GOLES_EQUIPO_1T_OVER,
+      ...OPCIONES_GOLES_EQUIPO_1T_UNDER,
+      ...OPCIONES_GOLES_EQUIPO_2T_OVER,
+      ...OPCIONES_GOLES_EQUIPO_2T_UNDER,
+    ],
   },
   { id: "mitad-mas-goles", etiqueta: "Mitad con más goles", opciones: OPCIONES_MITAD_MAS_GOLES },
+  {
+    id: "remates-equipo",
+    etiqueta: "Remates",
+    opciones: [
+      ...REMATES_EQUIPO_TOTAL.over,
+      ...REMATES_EQUIPO_TOTAL.under,
+      ...REMATES_EQUIPO_LOCAL.over,
+      ...REMATES_EQUIPO_LOCAL.under,
+      ...REMATES_EQUIPO_VISITANTE.over,
+      ...REMATES_EQUIPO_VISITANTE.under,
+    ],
+  },
+  {
+    id: "remates-puerta-equipo",
+    etiqueta: "Remates a puerta",
+    opciones: [
+      ...REMATES_PUERTA_EQUIPO_TOTAL.over,
+      ...REMATES_PUERTA_EQUIPO_TOTAL.under,
+      ...REMATES_PUERTA_EQUIPO_LOCAL.over,
+      ...REMATES_PUERTA_EQUIPO_LOCAL.under,
+      ...REMATES_PUERTA_EQUIPO_VISITANTE.over,
+      ...REMATES_PUERTA_EQUIPO_VISITANTE.under,
+    ],
+  },
   {
     id: "handicap",
     etiqueta: "Hándicap asiático",
@@ -555,8 +747,10 @@ export const CATEGORIAS_MERCADO = [
     opciones: [
       ...OPCIONES_CORNERS_EQUIPO_LOCAL,
       ...OPCIONES_CORNERS_EQUIPO_VISITANTE,
-      ...OPCIONES_CORNERS_EQUIPO_MITAD_LOCAL,
-      ...OPCIONES_CORNERS_EQUIPO_MITAD_VISITANTE,
+      ...OPCIONES_CORNERS_EQUIPO_1T_OVER,
+      ...OPCIONES_CORNERS_EQUIPO_1T_UNDER,
+      ...OPCIONES_CORNERS_EQUIPO_2T_OVER,
+      ...OPCIONES_CORNERS_EQUIPO_2T_UNDER,
     ],
   },
   {
@@ -569,6 +763,8 @@ export const CATEGORIAS_MERCADO = [
       ...OPCIONES_TARJETAS_EQUIPO_VISITANTE,
       ...OPCIONES_PRIMERA_TARJETA,
       ...OPCIONES_AMBOS_TARJETA,
+      ...OPCIONES_AMBOS_DOS_TARJETAS,
+      ...OPCIONES_EXPULSION,
     ],
   },
   {
@@ -615,8 +811,12 @@ export function etiquetaCategoriaDeTexto(apuestaTexto, equipos) {
 // con los 433 mercados reales de este mismo catálogo. Reutiliza las
 // mismas listas de opciones de arriba (mismos ids, mismas funciones
 // texto) — nunca las vuelve a generar, solo las reagrupa en categoría →
-// subcategoría → (si aplica) Local/Visitante. Cada nodo de subcategoría
-// lleva "opciones" (hoja) o "subcategorias" (un nivel más, nunca los dos.
+// subcategoría → (si aplica) un nivel más (Local/Visitante, o mitad —
+// ver "por-equipo-mitad(es)" de Goles/Córners, que además tienen un 4º
+// nivel: mitad → Over/Under). Cada nodo lleva "opciones" (hoja) O
+// "subcategorias" (un nivel más), nunca los dos — da igual la
+// profundidad, SelectorMercado.jsx soporta hasta 4 niveles fijos
+// (categoría → subcategoría → nivel3 → nivel4).
 // ---------------------------------------------------------------------
 
 export const ARBOL_MERCADOS = [
@@ -635,14 +835,45 @@ export const ARBOL_MERCADOS = [
     ],
   },
   {
+    id: "equipo-clasifica",
+    etiqueta: "Equipo que clasifica",
+    subcategorias: [
+      { id: "clasifica", etiqueta: "Clasifica", opciones: OPCIONES_EQUIPO_CLASIFICA },
+    ],
+  },
+  {
+    id: "metodo-clasificacion",
+    etiqueta: "Método de clasificación",
+    subcategorias: [
+      { id: "local", etiqueta: "Local", opciones: OPCIONES_METODO_CLASIFICACION_LOCAL },
+      { id: "visitante", etiqueta: "Visitante", opciones: OPCIONES_METODO_CLASIFICACION_VISITANTE },
+    ],
+  },
+  {
+    id: "ganador-trofeo",
+    etiqueta: "Ganador del trofeo",
+    subcategorias: [{ id: "trofeo", etiqueta: "Trofeo", opciones: OPCIONES_GANADOR_TROFEO }],
+  },
+  {
     id: "jugador",
     etiqueta: "Jugador",
     requiereJugador: true,
     subcategorias: [
-      { id: "goles", etiqueta: "Goles", opciones: OPCIONES_JUGADOR_GOLES },
-      { id: "asistencias", etiqueta: "Asistencias", opciones: OPCIONES_JUGADOR_ASISTENCIAS },
+      { id: "goles", etiqueta: "Anotará", opciones: OPCIONES_JUGADOR_GOLES },
+      { id: "asistencias", etiqueta: "Asistirá", opciones: OPCIONES_JUGADOR_ASISTENCIAS },
+      { id: "anota-o-asiste", etiqueta: "Anotará o Asistirá", opciones: OPCIONES_JUGADOR_ANOTA_O_ASISTE },
       { id: "remates", etiqueta: "Remates", opciones: OPCIONES_JUGADOR_REMATES },
-      { id: "faltas", etiqueta: "Faltas", opciones: OPCIONES_JUGADOR_FALTAS },
+      { id: "remates-puerta", etiqueta: "Remates a puerta", opciones: OPCIONES_JUGADOR_REMATES_PUERTA },
+      {
+        id: "faltas",
+        etiqueta: "Faltas",
+        subcategorias: [
+          { id: "comete", etiqueta: "Comete", opciones: OPCIONES_JUGADOR_FALTAS_COMETE },
+          { id: "recibe", etiqueta: "Recibe", opciones: OPCIONES_JUGADOR_FALTAS_RECIBE },
+        ],
+      },
+      { id: "entradas", etiqueta: "Entradas", opciones: OPCIONES_JUGADOR_ENTRADAS },
+      { id: "paradas", etiqueta: "Paradas del portero", opciones: OPCIONES_JUGADOR_PARADAS },
       { id: "tarjetas", etiqueta: "Tarjetas", opciones: OPCIONES_JUGADOR_TARJETAS },
     ],
   },
@@ -666,13 +897,87 @@ export const ARBOL_MERCADOS = [
       },
       {
         id: "por-equipo-mitades",
-        etiqueta: "Por equipo y mitades",
+        etiqueta: "Por equipo y mitad",
         subcategorias: [
-          { id: "local", etiqueta: "Local", opciones: OPCIONES_GOLES_EQUIPO_MITAD_LOCAL },
-          { id: "visitante", etiqueta: "Visitante", opciones: OPCIONES_GOLES_EQUIPO_MITAD_VISITANTE },
+          {
+            id: "1t",
+            etiqueta: "1ª mitad",
+            subcategorias: [
+              { id: "over", etiqueta: "Over", opciones: OPCIONES_GOLES_EQUIPO_1T_OVER },
+              { id: "under", etiqueta: "Under", opciones: OPCIONES_GOLES_EQUIPO_1T_UNDER },
+            ],
+          },
+          {
+            id: "2t",
+            etiqueta: "2ª mitad",
+            subcategorias: [
+              { id: "over", etiqueta: "Over", opciones: OPCIONES_GOLES_EQUIPO_2T_OVER },
+              { id: "under", etiqueta: "Under", opciones: OPCIONES_GOLES_EQUIPO_2T_UNDER },
+            ],
+          },
         ],
       },
       { id: "mitad-mas-goles", etiqueta: "Mitad con más goles", opciones: OPCIONES_MITAD_MAS_GOLES },
+    ],
+  },
+  {
+    id: "remates-equipo",
+    etiqueta: "Remates",
+    subcategorias: [
+      {
+        id: "totales",
+        etiqueta: "Totales",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_EQUIPO_TOTAL.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_EQUIPO_TOTAL.under },
+        ],
+      },
+      {
+        id: "local",
+        etiqueta: "Local",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_EQUIPO_LOCAL.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_EQUIPO_LOCAL.under },
+        ],
+      },
+      {
+        id: "visitante",
+        etiqueta: "Visitante",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_EQUIPO_VISITANTE.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_EQUIPO_VISITANTE.under },
+        ],
+      },
+    ],
+  },
+  {
+    id: "remates-puerta-equipo",
+    etiqueta: "Remates a puerta",
+    subcategorias: [
+      {
+        id: "totales",
+        etiqueta: "Totales",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_PUERTA_EQUIPO_TOTAL.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_PUERTA_EQUIPO_TOTAL.under },
+        ],
+      },
+      {
+        id: "local",
+        etiqueta: "Local",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_PUERTA_EQUIPO_LOCAL.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_PUERTA_EQUIPO_LOCAL.under },
+        ],
+      },
+      {
+        id: "visitante",
+        etiqueta: "Visitante",
+        subcategorias: [
+          { id: "over", etiqueta: "Over", opciones: REMATES_PUERTA_EQUIPO_VISITANTE.over },
+          { id: "under", etiqueta: "Under", opciones: REMATES_PUERTA_EQUIPO_VISITANTE.under },
+        ],
+      },
     ],
   },
   {
@@ -701,8 +1006,22 @@ export const ARBOL_MERCADOS = [
         id: "por-equipo-mitad",
         etiqueta: "Por equipo y mitad",
         subcategorias: [
-          { id: "local", etiqueta: "Local", opciones: OPCIONES_CORNERS_EQUIPO_MITAD_LOCAL },
-          { id: "visitante", etiqueta: "Visitante", opciones: OPCIONES_CORNERS_EQUIPO_MITAD_VISITANTE },
+          {
+            id: "1t",
+            etiqueta: "1ª mitad",
+            subcategorias: [
+              { id: "over", etiqueta: "Over", opciones: OPCIONES_CORNERS_EQUIPO_1T_OVER },
+              { id: "under", etiqueta: "Under", opciones: OPCIONES_CORNERS_EQUIPO_1T_UNDER },
+            ],
+          },
+          {
+            id: "2t",
+            etiqueta: "2ª mitad",
+            subcategorias: [
+              { id: "over", etiqueta: "Over", opciones: OPCIONES_CORNERS_EQUIPO_2T_OVER },
+              { id: "under", etiqueta: "Under", opciones: OPCIONES_CORNERS_EQUIPO_2T_UNDER },
+            ],
+          },
         ],
       },
     ],
@@ -723,6 +1042,8 @@ export const ARBOL_MERCADOS = [
       },
       { id: "primera-tarjeta", etiqueta: "Primera tarjeta", opciones: OPCIONES_PRIMERA_TARJETA },
       { id: "ambos-tarjeta", etiqueta: "Ambos reciben tarjeta", opciones: OPCIONES_AMBOS_TARJETA },
+      { id: "ambos-2-tarjetas", etiqueta: "Ambos reciben 2 tarjetas", opciones: OPCIONES_AMBOS_DOS_TARJETAS },
+      { id: "expulsion", etiqueta: "Expulsión", opciones: OPCIONES_EXPULSION },
     ],
   },
   {
@@ -749,12 +1070,26 @@ export function rutaEnArbol(opcionId) {
     for (const sub of categoria.subcategorias) {
       if (sub.opciones) {
         if (sub.opciones.some((o) => o.id === opcionId)) {
-          return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: null };
+          return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: null, nivel4Id: null };
         }
-      } else {
-        for (const nivel3 of sub.subcategorias) {
+        continue;
+      }
+      for (const nivel3 of sub.subcategorias) {
+        if (nivel3.opciones) {
           if (nivel3.opciones.some((o) => o.id === opcionId)) {
-            return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: nivel3.id };
+            return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: nivel3.id, nivel4Id: null };
+          }
+          continue;
+        }
+        // 4º nivel (p.ej. Goles/Córners "por equipo y mitad": mitad → Over/Under).
+        for (const nivel4 of nivel3.subcategorias) {
+          if (nivel4.opciones.some((o) => o.id === opcionId)) {
+            return {
+              categoriaId: categoria.id,
+              subcategoriaId: sub.id,
+              nivel3Id: nivel3.id,
+              nivel4Id: nivel4.id,
+            };
           }
         }
       }

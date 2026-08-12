@@ -15,6 +15,36 @@ import TabsDesplazables from "./TabsDesplazables";
 
 const OTRO = "otro";
 
+// Filtro por posición del desplegable de jugador (petición directa):
+// "Paradas del portero" solo tiene sentido con porteros; el resto de
+// mercados de jugador de esta lista (remates, faltas, entradas,
+// anotará/asistirá...) casi nunca los juega un portero, así que se
+// excluyen para no alargar la lista con nombres que no van a usarse.
+// "Tarjetas" se queda sin filtrar a propósito (un portero sí puede ver
+// tarjeta). "posicion" viene tal cual la da API-Football (api/jugadores.js,
+// campo "position" de /players/squads) — valor en inglés, "Goalkeeper"
+// para porteros; sin verificar a mano contra la cuenta real todavía.
+const PORTERO = "Goalkeeper";
+const SUBCATS_JUGADOR_SOLO_PORTEROS = new Set(["paradas"]);
+const SUBCATS_JUGADOR_SIN_PORTEROS = new Set([
+  "goles",
+  "asistencias",
+  "anota-o-asiste",
+  "remates",
+  "remates-puerta",
+  "faltas",
+  "entradas",
+]);
+function filtrarPorPosicion(jugadores, subcategoriaId) {
+  if (SUBCATS_JUGADOR_SOLO_PORTEROS.has(subcategoriaId)) {
+    return jugadores.filter((j) => j.posicion === PORTERO);
+  }
+  if (SUBCATS_JUGADOR_SIN_PORTEROS.has(subcategoriaId)) {
+    return jugadores.filter((j) => j.posicion !== PORTERO);
+  }
+  return jugadores;
+}
+
 // Los 433 ids del catálogo son únicos en todo el árbol (comprobado a mano
 // al reorganizarlo en categoría → subcategoría → Local/Visitante), así que
 // basta con el id de la opción para encontrarla — ya no hace falta
@@ -87,11 +117,14 @@ function buscarEnArbol(query, equipos) {
 
 // Campo "Apuesta" de una selección (ver FormularioApuesta.jsx): buscador de
 // texto libre (recorre todo el árbol a la vez, agrupando por categoría ·
-// subcategoría) + navegación en 3 niveles debajo — pestañas de categoría
+// subcategoría) + navegación en niveles debajo — pestañas de categoría
 // principal, pestañas de subcategoría, y una fila más pequeña de
-// Local/Visitante cuando la subcategoría la tiene (ver real-demo-v3.html,
-// referencia aportada por el usuario). El panel entero va siempre visible,
-// nunca es un desplegable que se abre/cierra.
+// Local/Visitante (o lo que toque, p.ej. mitad) cuando la subcategoría la
+// tiene (ver real-demo-v3.html, referencia aportada por el usuario). Un
+// puñado de categorías (Goles/Córners "por equipo y mitad") llegan a un 4º
+// nivel — mitad → Over/Under, mismo patrón un escalón más abajo, con una
+// fila aún más pequeña. El panel entero va siempre visible, nunca es un
+// desplegable que se abre/cierra.
 export default function SelectorMercado({
   evento,
   valor,
@@ -145,6 +178,10 @@ export default function SelectorMercado({
   );
   const [subActiva, setSubActiva] = useState(() => rutaInicial?.subcategoriaId ?? null);
   const [nivel3Activa, setNivel3Activa] = useState(() => rutaInicial?.nivel3Id ?? null);
+  // 4º nivel (petición directa, p.ej. Goles/Córners "por equipo y mitad":
+  // mitad → Over/Under) — mismo principio de crecimiento progresivo que
+  // los otros tres, sin auto-elegir nada.
+  const [nivel4Activa, setNivel4Activa] = useState(() => rutaInicial?.nivel4Id ?? null);
 
   // Bug real (2026-08-10): al elegir un mercado, el panel (buscador +
   // pestañas + lista) se quedaba abierto sin ninguna señal de que ya se
@@ -175,15 +212,22 @@ export default function SelectorMercado({
   const jugadoresVisitante = usePlantilla(
     enTabJugador && equipoJugadorFiltro === "visitante" ? equipoVisitanteId : null
   );
+  const jugadoresLocalFiltrados = filtrarPorPosicion(jugadoresLocal, subActiva);
+  const jugadoresVisitanteFiltrados = filtrarPorPosicion(jugadoresVisitante, subActiva);
   const gruposJugadores = [
-    ...(jugadoresLocal.length > 0
-      ? [{ etiqueta: equipos.local, opciones: jugadoresLocal.map((j) => ({ valor: j.nombre, texto: j.nombre })) }]
+    ...(jugadoresLocalFiltrados.length > 0
+      ? [
+          {
+            etiqueta: equipos.local,
+            opciones: jugadoresLocalFiltrados.map((j) => ({ valor: j.nombre, texto: j.nombre })),
+          },
+        ]
       : []),
-    ...(jugadoresVisitante.length > 0
+    ...(jugadoresVisitanteFiltrados.length > 0
       ? [
           {
             etiqueta: equipos.visitante,
-            opciones: jugadoresVisitante.map((j) => ({ valor: j.nombre, texto: j.nombre })),
+            opciones: jugadoresVisitanteFiltrados.map((j) => ({ valor: j.nombre, texto: j.nombre })),
           },
         ]
       : []),
@@ -194,14 +238,26 @@ export default function SelectorMercado({
     setTopActiva(id);
     // Sin auto-elegir la primera subcategoría (crecimiento progresivo):
     // hace falta tocarla a propósito, igual que país no auto-elige
-    // competición en BuscadorEvento.jsx.
-    setSubActiva(null);
+    // competición en BuscadorEvento.jsx. Excepción: una categoría con una
+    // única subcategoría (p.ej. "Equipo que clasifica", solo 2 mercados)
+    // no tiene nada que elegir ahí — se auto-selecciona sola, para no
+    // obligar a un clic sin sentido en una pestaña que no ofrece ninguna
+    // alternativa.
+    const nodo = ARBOL_MERCADOS.find((c) => c.id === id);
+    setSubActiva(nodo?.subcategorias.length === 1 ? nodo.subcategorias[0].id : null);
     setNivel3Activa(null);
+    setNivel4Activa(null);
   }
 
   function elegirSub(id) {
     setSubActiva(id);
     setNivel3Activa(null);
+    setNivel4Activa(null);
+  }
+
+  function elegirNivel3(id) {
+    setNivel3Activa(id);
+    setNivel4Activa(null);
   }
 
   function cambiarEquipoJugador(clave) {
@@ -238,7 +294,17 @@ export default function SelectorMercado({
   const nivel3Node = tieneNivel3
     ? subNode.subcategorias.find((n) => n.id === nivel3Activa) ?? null
     : null;
-  const opcionesActuales = tieneNivel3 ? nivel3Node?.opciones ?? [] : subNode?.opciones ?? [];
+  // 4º nivel (p.ej. mitad → Over/Under) — mismo patrón que tieneNivel3,
+  // un escalón más abajo.
+  const tieneNivel4 = !!(nivel3Node && nivel3Node.subcategorias);
+  const nivel4Node = tieneNivel4
+    ? nivel3Node.subcategorias.find((n) => n.id === nivel4Activa) ?? null
+    : null;
+  const opcionesActuales = tieneNivel4
+    ? nivel4Node?.opciones ?? []
+    : tieneNivel3
+    ? nivel3Node?.opciones ?? []
+    : subNode?.opciones ?? [];
 
   if (!expandido && seleccion) {
     return (
@@ -349,8 +415,10 @@ export default function SelectorMercado({
 
           {/* compacto: pestañas más pequeñas sobre fondo propio (paperDim)
               — se nota de un vistazo que es un nivel anidado dentro de las
-              de categoría, no una fila más al mismo nivel. */}
-          {topNode && topActiva !== OTRO && (
+              de categoría, no una fila más al mismo nivel. Con una única
+              subcategoría (ver elegirTop) no hay nada que elegir, así que
+              tampoco se muestra la fila — solo estorbaría. */}
+          {topNode && topActiva !== OTRO && topNode.subcategorias.length > 1 && (
             <TabsDesplazables
               opciones={topNode.subcategorias.map((s) => ({ valor: s.id, texto: s.etiqueta }))}
               valor={subActiva}
@@ -366,9 +434,32 @@ export default function SelectorMercado({
                 <button
                   key={n.id}
                   type="button"
-                  onClick={() => setNivel3Activa(n.id)}
+                  onClick={() => elegirNivel3(n.id)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-colors ${
                     nivel3Activa === n.id
+                      ? "bg-gold text-feltDark border-gold"
+                      : "border-line text-slate hover:text-ink"
+                  }`}
+                >
+                  {n.etiqueta}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 4º nivel (p.ej. Goles/Córners "por equipo y mitad": mitad →
+              Over/Under) — un escalón más nítido que el nivel3 de arriba
+              (fondo más oscuro, texto más pequeño), para que se note que
+              está un nivel más adentro. */}
+          {tieneNivel4 && (
+            <div className="flex gap-1.5 px-3 py-1.5 border-b border-line bg-paperDim/70">
+              {nivel3Node.subcategorias.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => setNivel4Activa(n.id)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-colors ${
+                    nivel4Activa === n.id
                       ? "bg-gold text-feltDark border-gold"
                       : "border-line text-slate hover:text-ink"
                   }`}

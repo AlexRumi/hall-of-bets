@@ -28,9 +28,16 @@ export default async function handler(req, res) {
     }
 
     const datos = await respuesta.json();
+    // "position" ya viene en la misma respuesta de /players/squads (no
+    // cuesta ninguna llamada aparte) — se expone como "posicion" para que
+    // SelectorMercado.jsx pueda excluir/mostrar solo porteros según el
+    // mercado (Paradas del portero vs Remates/Faltas/Entradas/Anotará...).
+    // Valor tal cual lo da API-Football (en inglés, "Goalkeeper" para
+    // porteros) — sin verificar a mano contra la cuenta real todavía.
     const jugadores = (datos.response?.[0]?.players ?? []).map((j) => ({
       id: j.id,
       nombre: j.name,
+      posicion: j.position ?? null,
     }));
 
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");

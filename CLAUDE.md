@@ -2772,6 +2772,222 @@ separadas, probando cada una antes de pasar a la siguiente.
   solo entonces calcula el acumulado — un punto por día con el total ya
   sumado, en vez de un punto por cada apuesta suelta.
 
+- **Dos categorías nuevas de "Clasificación" (eliminatorias)** (petición
+  directa). `utils/mercados.js` gana "Equipo que clasifica" (2 opciones:
+  quién pasa a la siguiente ronda) y "Método de clasificación" (2
+  subcategorías Local/Visitante, cada una con "en 90 minutos" / "en la
+  prórroga" / "en los penaltis") — las dos justo después de "Resultado" y
+  antes de "Jugador", tanto en `CATEGORIAS_MERCADO` (lista plana) como en
+  `ARBOL_MERCADOS` (con las mismas listas de opciones compartidas entre
+  las dos, igual que el resto del catálogo). "Equipo que clasifica" tiene
+  una única subcategoría ("Clasifica") en el árbol — sin opciones sueltas
+  directamente bajo una categoría principal, todas pasan por al menos un
+  nivel de subcategoría, igual que el resto de `ARBOL_MERCADOS`.
+  **Decisión tomada sin confirmar**: el texto final usa el nombre real del
+  equipo ("Real Madrid clasificará", "Real Madrid clasificará en la
+  prórroga") en vez del literal "Local clasificará" tal cual se pidió —
+  mismo criterio que casi todos los mercados de un solo equipo del
+  catálogo (Gana X, X gana al descanso, Primera tarjeta: X...); solo
+  "Favor/Contra" y "Resultado descanso/final" se quedan con la notación
+  Local/Visitante sin nombre, y en los dos casos porque se pidió así de
+  forma explícita en su momento. Si aquí se quería el texto literal
+  "Local"/"Visitante" sin sustituir, es un cambio de una línea en
+  `OPCIONES_EQUIPO_CLASIFICA`/`opcionesMetodoClasificacion`.
+  Ronda de ajuste (petición directa): con solo 2 mercados, la subcategoría
+  "Clasifica" de en medio no aportaba nada — obligaba a un clic extra sin
+  ninguna alternativa real que elegir ahí. `SelectorMercado.jsx` gana un
+  caso general para esto: cuando una categoría principal tiene una única
+  subcategoría, `elegirTop` la auto-selecciona sola (sin esperar a que se
+  toque, a diferencia del resto del árbol) y la fila de pestañas de
+  subcategoría no se pinta — la categoría muestra sus opciones directas en
+  cuanto se elige. La subcategoría "Clasifica" se queda en los datos (el
+  código sigue esperando que toda categoría tenga `subcategorias`), pero
+  ya no se ve ni hace falta tocarla.
+
+- **Ampliación grande del catálogo de mercados: Ganador del trofeo,
+  jugador (remates separados, faltas/entradas con línea, paradas de
+  portero...), tarjetas de equipo, penaltis, y Remates/Remates a puerta
+  del equipo** (petición directa, de 435 a 594 mercados — verificado con
+  un script de un solo uso, igual que en la reorganización del árbol:
+  mismo total en la lista plana y en el árbol, sin duplicados ni
+  huérfanos en ninguna dirección).
+  - **Ganador del trofeo** (junto a Método de clasificación, mismo grupo
+    de "Clasificación"): "{equipo} gana el trofeo" — con el nombre real
+    del equipo, confirmado por el propio ejemplo del usuario ("PSG gana
+    el trofeo"). Al tener una única subcategoría, se beneficia solo del
+    ajuste de "Equipo que clasifica" (más arriba): sin clic de más.
+  - **Jugador**: "Remates" y "Remates a puerta" pasan de una única
+    categoría mezclada a dos separadas, y sus líneas (antes 0.5/1.5/2.5)
+    se amplían a 0.5-4.5. Nueva "Anotará o Asistirá" (junto a
+    Asistencias): `{jugador} anota o asiste`, un único mercado sin línea.
+    "Faltas" pasa de un único mercado plano ("comete una falta"/"recibe
+    una falta") a líneas 0.5-4.5 en las dos direcciones — al cambiar el
+    texto, las apuestas antiguas con el mercado plano ya no coinciden con
+    el catálogo y caen a "Otro mercado" al editarlas, mismo criterio ya
+    aceptado en cualquier otro cambio de texto del catálogo. Nueva
+    "Entradas" (junto a Faltas): mismas líneas 0.5-4.5, pero solo
+    "comete" (sin "recibe", pedido así explícitamente). Nueva "Paradas
+    del portero": 1+ a 7+ paradas, sin línea "under" (números enteros,
+    "1+, 2+, 3+..."). "Tarjetas" del jugador cambia su texto de "recibe
+    tarjeta" a "será amonestado" (mismo motivo de caída a "Otro mercado"
+    en apuestas ya guardadas con el texto viejo).
+    **Decisión sin confirmar**: "Paradas del portero" reutiliza el mismo
+    desplegable de jugador de siempre (toda la plantilla del equipo, sin
+    filtrar solo porteros) — el pedido decía "al seleccionar el
+    portero", pero filtrar el desplegable por posición necesitaría datos
+    que `api/jugadores.js` no expone todavía (la API sí podría traer la
+    posición de cada jugador, no se ha comprobado). Si se quiere ese
+    filtro de verdad, es una fase aparte.
+    Internamente, `PLANTILLAS_JUGADOR` (la lista de sufijos que se pegan
+    al nombre del jugador) gana un generador `plantillasLinea(prefijoId,
+    generarSufijo)` para no repetir las 5 líneas a mano en Remates/
+    Faltas/Entradas — comparten `LINEAS_JUGADOR` (0.5 a 4.5).
+  - **Tarjetas (equipo)**: dos subcategorías nuevas junto a "Ambos reciben
+    tarjeta" — "Ambos reciben 2 tarjetas" (Sí/No) y "Expulsión" ("Tarjeta
+    roja: Sí/No").
+  - **Especiales**: dos subcategorías nuevas — "Anotará un penalti"
+    ({equipo} anotará un penalti) y "Penalti en el encuentro" (Sí/No).
+  - **Remates y Remates a puerta (equipo)**, junto a "Goles": dos
+    categorías principales nuevas, cada una con Totales/Local/Visitante
+    y, dentro de cada una, Over/Under como tercer nivel (pedido así
+    explícitamente — a diferencia de Córners/Tarjetas por equipo, que
+    usan notación "+X/-X", aquí el texto también dice "Over"/"Under").
+    Líneas: Remates Totales 16.5-34.5 de 2 en 2; Remates Local/Visitante
+    5.5-23.5 de 2 en 2; Remates a puerta Totales 4.5-12.5 de 1 en 1;
+    Remates a puerta Local/Visitante 0.5-9.5 de 1 en 1 (sin salto de 2 en
+    2 pedido explícitamente para estas dos, a diferencia de las de
+    Remates). Nueva función `lineasDesde(desde, hasta, paso)` (junto a
+    las demás constantes `LINEAS_*` de arriba) para generar estos rangos
+    más largos sin escribirlos a mano.
+    Los ids de estas dos categorías llevan el sufijo `-equipo` (p.ej.
+    `remates-equipo-local-over-5.5`) para no chocar con los ids ya
+    existentes de "Remates"/"Remates a puerta" del JUGADOR (p.ej.
+    `remates-totales-1.5`), que usan un formato de id totalmente distinto
+    — comprobado con el mismo script de verificación, sin colisiones.
+  - **Nota del propio usuario**: "no sé si todos los mercados estarán
+    disponibles [en las casas de apuestas reales]" — el catálogo no
+    pretende ser 1:1 con ninguna casa concreta, es una lista de mercados
+    habituales para poder registrar la apuesta que sea; si alguno no
+    encaja nunca, siempre queda "Otro mercado" como vía de escape.
+
+- **Etiquetas "Anotará"/"Asistirá", y filtro de porteros en el desplegable
+  de jugador** (petición directa, misma sesión). "Goles"/"Asistencias"
+  (subcategorías de Jugador) pasan a llamarse "Anotará"/"Asistirá" —
+  solo la etiqueta visible, los ids (`goles`/`asistencias`) no cambian,
+  así que no afecta a nada guardado. El texto de "Jugador da una
+  asistencia" pasa a "Jugador asistirá".
+  - **Filtro por posición**: "Paradas del portero" ahora solo lista
+    porteros; "Remates", "Remates a puerta", "Faltas", "Entradas",
+    "Anotará", "Asistirá" y "Anotará o Asistirá" excluyen a los porteros
+    (pedido así explícitamente — rara vez rematan, faltan, o marcan).
+    "Tarjetas" se queda sin filtrar a propósito, un portero sí puede ver
+    tarjeta. `api/jugadores.js` expone un campo nuevo `posicion` (el
+    `position` que ya devuelve `/players/squads` de API-Football, sin
+    ninguna llamada de más — solo se estaba descartando ese dato de la
+    misma respuesta) y `SelectorMercado.jsx` filtra `gruposJugadores`
+    según la subcategoría activa (`filtrarPorPosicion`, con dos listas
+    fijas — `SUBCATS_JUGADOR_SOLO_PORTEROS`/`SUBCATS_JUGADOR_SIN_PORTEROS`).
+    **Sin verificar a mano todavía**: se asume que API-Football devuelve
+    `"Goalkeeper"` (en inglés) como valor de `position` para los
+    porteros, siguiendo su convención documentada — no se ha comprobado
+    contra la cuenta real con `vercel dev`. Si el valor real es distinto
+    (o viene vacío para algún jugador), el filtro de esa entrada
+    concreta no funcionaría bien; conviene probarlo con un partido real
+    antes de darlo por bueno.
+  - **Llamadas a la API**: este cambio añade CERO llamadas nuevas. El
+    filtro es puro cálculo en el navegador sobre la plantilla que ya se
+    pedía antes — `posicion` viaja en la misma respuesta de
+    `/players/squads` que ya se consulta para el desplegable de jugador,
+    solo que antes se descartaba ese campo. El número de llamadas reales
+    a API-Football sigue exactamente igual que antes de esta fase: como
+    mucho 1 por equipo cada ~24h (`Cache-Control: s-maxage=86400` en
+    `api/jugadores.js`, compartida entre TODOS los visitantes de la web,
+    no por dispositivo), y solo si alguien llega a abrir la pestaña
+    "Jugador" de verdad — la mayoría de partidos no llegan a gastar
+    ninguna. Con una combinada de varios partidos que repite un mismo
+    equipo, tampoco se duplica: la caché de `usePlantilla.js` es por
+    equipo a nivel de módulo, compartida entre todas las instancias del
+    selector abiertas en esa visita. No hay forma de bajar más de ahí sin
+    una respuesta que 1 llamada por equipo — API-Football no ofrece un
+    endpoint que traiga varias plantillas a la vez en el plan gratuito.
+
+- **Orden "Equipo: ..." consistente en todo el catálogo, Faltas del
+  jugador dividida en Comete/Recibe** (petición directa, con "revisa que
+  todos sigan el mismo orden" como cierre — se interpretó como pedir
+  auditar TODO el catálogo de mercados "por equipo", no solo los 2/3
+  mencionados explícitamente). El nombre del equipo pasa a ir siempre
+  primero, seguido de ":", con el nombre del mercado (goles/córners/
+  tarjetas/remates/remates a puerta) al FINAL de la frase en vez de
+  delante — se corrigieron 6 funciones generadoras: `opcionesGolesEquipo`,
+  `opcionesGolesEquipoMedioTiempo`, `opcionesCornersEquipo`,
+  `opcionesCornersEquipoMedioTiempo`, `opcionesTarjetasEquipo` y
+  `opcionesOverUnderLadoEquipo` (Remates/Remates a puerta del equipo,
+  fase de esta misma sesión). Ejemplo: "Córners Real Madrid: +5.5
+  córners" → "Real Madrid: +5.5 córners". Como cambia el texto exacto de
+  mercados que ya existían, cualquier apuesta guardada con la redacción
+  vieja deja de coincidir con el catálogo y cae a "Otro mercado" al
+  editarla — mismo criterio ya aceptado en otros cambios de texto
+  anteriores.
+  "Faltas" (Jugador) gana una subcategoría Comete/Recibe (antes las 10
+  líneas —5 comete + 5 recibe— iban mezcladas en una sola lista) —
+  `OPCIONES_JUGADOR_FALTAS` se divide en `OPCIONES_JUGADOR_FALTAS_COMETE`/
+  `_RECIBE`. No hizo falta tocar `SelectorMercado.jsx`: el árbol de 3
+  niveles (categoría → subcategoría → Local/Visitante) ya es genérico —
+  "Faltas" simplemente empieza a usar ese tercer nivel con Comete/Recibe
+  en vez de Local/Visitante, sin ningún caso especial para "Jugador".
+  **"Córners por equipo y mitad" — resuelto tras preguntar**: pedía
+  añadir 1ª mitad/2ª mitad "antes de Local y Visitante", que habría
+  significado un cuarto nivel de navegación (`SelectorMercado.jsx` solo
+  soporta 3 fijos, a propósito). Preguntado con `AskUserQuestion`, el
+  motivo real era otro: agrupado por equipo, cada pestaña Local/Visitante
+  mezclaba a la vez el over/under de 1ª Y 2ª mitad — una lista demasiado
+  larga. La solución no necesitaba un cuarto nivel: el tercer nivel pasa
+  de Local/Visitante a 1ª mitad/2ª mitad (`OPCIONES_CORNERS_EQUIPO_1T`/
+  `_2T`, sustituyen a `..._MITAD_LOCAL`/`_VISITANTE`) — cada pestaña de
+  mitad ahora solo tiene el over/under de los DOS equipos en esa mitad,
+  la mitad de opciones que antes. El nombre del equipo se queda dentro
+  del texto de cada opción ("Real Madrid 1ª mitad: Over 1.5 córners"),
+  igual que ya hacía "Goles por equipo por mitad" — que comparte
+  exactamente esta misma estructura (equipo como pestaña, mezclando las
+  dos mitades) y por tanto el mismo problema potencial, sin tocar todavía
+  a la espera de que el usuario confirme si también quiere el mismo
+  cambio ahí.
+  - **Ronda siguiente — 4º nivel de navegación** (petición directa,
+    confirmando "Goles por equipo por mitad" con el mismo cambio, y
+    pidiendo ADEMÁS un nivel más: Over/Under). Motivo real (aclarado por
+    el usuario tras la pregunta anterior): separar solo por mitad no
+    bajaba tanto el número de mercados por pestaña como parecía — cada
+    mitad seguía mezclando de golpe el Over Y el Under de los dos
+    equipos (16-20 opciones). `SelectorMercado.jsx` gana un 4º nivel de
+    navegación (antes tope fijo en 3): nuevo estado `nivel4Activa`,
+    `tieneNivel4`/`nivel4Node` (mismo patrón que `tieneNivel3`, un
+    escalón más abajo), y una fila de pestañas más (fondo `bg-paperDim/70`,
+    texto aún más pequeño que el nivel3, para notar la profundidad).
+    `elegirTop`/`elegirSub` resetean también `nivel4Activa`; nueva
+    `elegirNivel3` (sustituye el `setNivel3Activa` suelto) para
+    resetearlo también al cambiar de nivel3. `rutaEnArbol` (`utils/
+    mercados.js`) se amplía para devolver `nivel4Id`, así que editar una
+    apuesta con uno de estos mercados sigue abriendo el árbol en el sitio
+    exacto. Se aplica a las dos categorías con este problema: "Goles por
+    equipo y mitades" y "Córners por equipo y mitad" — ambas pasan de
+    mitad → [Local, Visitante] a mitad → [Over, Under] (con los dos
+    equipos ya combinados dentro de cada Over/Under, en vez de por
+    separado). Las funciones generadoras (`opcionesGolesEquipoMedioTiempo`/
+    `opcionesCornersEquipoMedioTiempo`) cambian de devolver una lista
+    plana a `{ over, under }`, para poder combinar los dos equipos por
+    separado — mismos ids y mismos textos que ya tenían (solo cambia
+    cómo se agrupan para navegar), así que no afecta a nada ya guardado.
+    Se decidió NO generalizar el árbol a profundidad arbitraria (una
+    versión "recursiva" habría servido para cualquier nivel futuro sin
+    tocar código) — de momento solo dos categorías necesitan un 4º
+    nivel, así que se optó por el mismo patrón fijo ya usado para los
+    tres primeros niveles, más simple y consistente con el resto del
+    archivo, en vez de una abstracción a la que aún no le tocaba el
+    turno.
+  - Ajuste final: la etiqueta de esta subcategoría de Goles pasa de "Por
+    equipo y mitades" (plural) a "Por equipo y mitad" (singular), a
+    juego con la de Córners, que ya se llamaba así.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
