@@ -378,3 +378,32 @@ export function desdeFila(fila) {
         : Number(fila.cuota_total_manual),
   };
 }
+
+// Combina la fecha del partido con su hora (las dos guardadas en la
+// selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
+// cuándo tendría sentido pedir el resultado final. "new Date('YYYY-MM-DDTHH:mm:00')"
+// se interpreta en la zona horaria de donde corra el código; como la hora
+// ya viene en hora de España (api/partidos.js pide con timezone=Europe/Madrid)
+// y el uso real es de un usuario en España (navegador) o de Vercel
+// (servidor, que corre en UTC — aquí SÍ importaría la zona si España
+// cambiara de UTC+1/+2 a mitad de una consulta, pero el margen de 2,5h de
+// sobra absorbe ese caso raro), no hace falta ninguna librería de zonas.
+// Vive aquí (no en ApuestaItem.jsx, de donde viene) para poder reutilizarla
+// también en api/telegram-avisos.js (Node, no puede importar un .jsx).
+export function horaInicioPartido(fecha, hora) {
+  if (!fecha || !hora) return null;
+  return new Date(`${fecha}T${hora}:00`).getTime();
+}
+
+// Margen tras la hora de inicio para asumir que un partido ya debería
+// haber terminado (reglamentario + descanso + margen amplio para prórroga
+// o penaltis) — mismo valor que ya usaba solo usePartidoInfo.js, ahora
+// compartido también con api/telegram-avisos.js.
+export const MARGEN_RESULTADO_MS = 2.5 * 60 * 60 * 1000;
+
+// Estados "terminado" de API-Football — en cualquier otro estado (por
+// empezar o en juego) no hay resultado final fiable que mostrar ni que
+// guardar en caché para siempre. Compartido por usePartidoInfo.js,
+// ApuestaItem.jsx y api/telegram-avisos.js: los tres necesitaban
+// exactamente el mismo criterio, antes cada uno con su propia copia.
+export const ESTADOS_TERMINADOS_PARTIDO = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);

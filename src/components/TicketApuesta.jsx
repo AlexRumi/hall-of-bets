@@ -1,7 +1,7 @@
 import { Check, X, Minus } from "lucide-react";
-import { agruparSeleccionesPorPartido, calcularCuotaTotal, calcularBeneficio } from "../utils/apuestas";
+import { agruparSeleccionesPorPartido, calcularCuotaTotal, calcularBeneficio, horaInicioPartido } from "../utils/apuestas";
 import { equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
-import { InfoPartido, horaInicioPartido, ESTADOS_TERMINADOS_API } from "./ApuestaItem";
+import { InfoPartido } from "./ApuestaItem";
 import "./TicketApuesta.css";
 
 const ETIQUETAS_ESTADO = {

@@ -3398,6 +3398,70 @@ separadas, probando cada una antes de pasar a la siguiente.
     informar del trabajo por si se prefiere recuperar los botones planos
     también.
   - No hacen falta variables de entorno nuevas: reutiliza las cinco que ya
-    tenía el bot. Pendiente de que el usuario pruebe el flujo completo
-    dentro de Telegram (el SDK de Mini Apps no se puede simular fuera de
-    la propia app de Telegram).
+    tenía el bot. Probado por el usuario dentro de Telegram de verdad tras
+    desplegar: "GUAU! Funciona! Queda super bien." — confirmado el flujo
+    completo (abrir el ticket, marcar picks, Cash Out).
+
+- **Aviso de "partido terminado" por Telegram** (petición directa, tras
+  varias rondas de preguntas del usuario sobre coste y viabilidad — ver
+  abajo). La idea: en cuanto un partido con apuestas pendientes termina,
+  llega un mensaje "⚽ X ha terminado. Ya puedes confirmar tu apuesta." con
+  botón directo a la Mini App, en vez de tener que acordarse de mirar.
+  - **Primer obstáculo, resuelto consultando la documentación de Vercel en
+    vivo** (`vercel.com/docs/cron-jobs/usage-and-pricing`, no de memoria):
+    el plan Hobby (el del usuario) limita sus cron jobs propios a una vez
+    al día, con hora imprecisa (±59 min) — insuficiente para avisar poco
+    después de que termine un partido. Solución: nada impide que un
+    servicio EXTERNO gratuito llame al endpoint con más frecuencia (el
+    límite de Vercel es solo para SU propio programador de crons, no para
+    peticiones normales de fuera) — se recomendó
+    [cron-job.org](https://cron-job.org), gratis, cada 15 minutos.
+  - El usuario pidió el desglose exacto de llamadas para un caso extremo
+    antes de decidirse: 15 apuestas (8 combinadas de 4 a 7 partidos + 7
+    picks simples) con partidos repetidos entre combinadas. Se explicó
+    el principio central del diseño: el coste va por **partido distinto**,
+    no por apuesta ni por pick, porque la caché (`resultados_partidos`) es
+    compartida por `partido_id` — un partido en 3 combinadas a la vez
+    sigue costando 1 sola llamada. Con los números del usuario: 43
+    partidos-slot en combinadas + 7 en simples = 50 como máximo (si no se
+    repitiera ninguno); el número real baja según cuántos se repitan de
+    verdad. Muy lejos del límite de 100/día en cualquier caso.
+  - Aclarado también, tras una pregunta del usuario, que los 15 minutos
+    son la frecuencia con la que el sistema MIRA en silencio por detrás
+    (sin mandar nada si no hay nada nuevo), no la frecuencia de los
+    avisos que recibe — cada partido genera como mucho 1 mensaje, el día
+    que de verdad termina.
+  - **Refactor sin lógica nueva, para poder construirlo sin duplicar**:
+    `ESTADOS_TERMINADOS`/`MARGEN_MS` vivían duplicados (una copia en
+    `usePartidoInfo.js`, otra en `ApuestaItem.jsx` con otro nombre) y
+    `horaInicioPartido` vivía dentro de `ApuestaItem.jsx` (un `.jsx`, que
+    una Serverless Function de Node no puede importar sin arrastrar JSX/
+    React innecesariamente). Las tres piezas se movieron a
+    `src/utils/apuestas.js` (`ESTADOS_TERMINADOS_PARTIDO`,
+    `MARGEN_RESULTADO_MS`, `horaInicioPartido`), y tanto `usePartidoInfo.js`
+    como `ApuestaItem.jsx` pasaron a importarlas de ahí — mismo
+    comportamiento exacto, una sola copia de cada una, y ya sin nada de
+    JSX en el camino de import de la nueva función de servidor.
+  - Nueva columna `notificado` en `resultados_partidos` (migración en
+    `supabase-setup.sql`, pendiente de que el usuario la ejecute): sin
+    esto, cada revisión del cron habría vuelto a avisar del mismo partido
+    una y otra vez tras detectarlo terminado la primera vez.
+  - `api/telegram-avisos.js`: agrupa las apuestas pendientes por
+    `partidoId` (un partido puede estar en varias apuestas a la vez —
+    ver el caso de las 15 apuestas de arriba), consulta como mucho 1 vez
+    por partido distinto (reutilizando `api/partido.js`, la misma caché
+    de Vercel de siempre), y manda un único mensaje por partido con un
+    botón por cada apuesta afectada — no un aviso repetido por apuesta.
+    Protegido con `AVISOS_CRON_SECRET` (variable nueva, distinta del
+    `secret_token` del webhook: aquí quien llama es cron-job.org, no
+    Telegram, así que no puede demostrar la misma firma).
+  - Probado con un script suelto (fuera del repo) el agrupado por
+    partidoId con un caso parecido al de las 15 apuestas del usuario
+    (varias apuestas compartiendo partido, uno sin pasar aún el margen,
+    uno de Otras ligas sin `partidoId`) — los 8 casos salieron correctos
+    antes de dar el trabajo por bueno.
+  - Pendiente de que el usuario: ejecute la migración SQL en Supabase,
+    rellene `AVISOS_CRON_SECRET` en Vercel, y configure el cron en
+    cron-job.org apuntando a `.../api/telegram-avisos?secret=...` cada 15
+    minutos — ninguno de esos tres pasos se puede hacer desde aquí (son
+    cuentas/paneles del propio usuario).

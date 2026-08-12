@@ -218,3 +218,11 @@ alter table public.resultados_partidos enable row level security;
 create policy "autenticados_resultados_partidos" on public.resultados_partidos
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
+-- Avisos de partido terminado (api/telegram-avisos.js, disparado por un
+-- cron externo gratuito tipo cron-job.org — Vercel Hobby solo deja crons
+-- una vez al día, insuficiente para esto): marca si ya se mandó el aviso
+-- de Telegram de este partido, para no repetirlo en cada revisión. Escrito
+-- con la service role key (salta el RLS de arriba), igual que el resto de
+-- escrituras del bot.
+alter table public.resultados_partidos add column notificado boolean not null default false;
+

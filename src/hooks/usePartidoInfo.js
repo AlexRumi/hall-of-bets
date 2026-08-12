@@ -1,17 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-
-// Mismos estados "terminado" que ApuestaItem.jsx usa para decidir si pinta
-// el marcador en vez de la hora — aquí deciden además si el resultado ya se
-// puede guardar en la caché compartida para siempre (un partido en estos
-// estados no vuelve a cambiar).
-const ESTADOS_TERMINADOS = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
-
-// Margen tras la hora de inicio para asumir que el partido ya debería haber
-// terminado (reglamentario + descanso + un margen amplio para prórroga o
-// penaltis). Antes de eso, ni siquiera merece la pena mirar la caché: nadie
-// habría podido guardar ya un resultado final.
-const MARGEN_MS = 2.5 * 60 * 60 * 1000;
+import { ESTADOS_TERMINADOS_PARTIDO as ESTADOS_TERMINADOS, MARGEN_RESULTADO_MS as MARGEN_MS } from "../utils/apuestas";
 
 // Caché en dos niveles, pensada para gastar como mucho 1 llamada a
 // API-Football por partido EN TODA LA VIDA de la app (no solo por sesión):

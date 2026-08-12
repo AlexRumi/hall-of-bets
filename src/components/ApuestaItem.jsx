@@ -1,34 +1,17 @@
 import { useState } from "react";
 import { X, Pencil, Trash2, Eye, EyeOff, Check, Minus } from "lucide-react";
-import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
+import {
+  calcularBeneficio,
+  calcularCuotaTotal,
+  agruparSeleccionesPorPartido,
+  horaInicioPartido,
+  ESTADOS_TERMINADOS_PARTIDO as ESTADOS_TERMINADOS_API,
+} from "../utils/apuestas";
 import { equiposDesdeEvento, esFormatoEquipos, etiquetaCategoriaDeTexto } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
 import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
 import FormularioApuesta from "./FormularioApuesta";
-
-// Estados "terminado" de API-Football — en cualquier otro estado (por
-// empezar o en juego) se enseña la hora en vez del resultado: sin "en
-// directo" (ver usePartidoInfo.js, se descartó por cuota), un partido en
-// juego solo se sabría con certeza si se ha vuelto a pedir, y no se
-// vuelve a pedir — así que hasta que termine, la hora es lo único fiable
-// que se puede enseñar.
-// Exportado también para src/components/TicketApuesta.jsx (Mini App del bot
-// de Telegram), que necesita el mismo criterio para saber cuándo pintar el
-// marcador en vez de la hora.
-export const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
-
-// Combina la fecha del partido con su hora (las dos guardadas en la
-// selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
-// cuándo tendría sentido pedir el resultado final — usePartidoInfo.js no
-// llama a nada antes de esa hora + margen. "new Date('YYYY-MM-DDTHH:mm:00')"
-// se interpreta en la zona horaria del navegador; como la hora ya viene en
-// hora de España (api/partidos.js pide con timezone=Europe/Madrid) y el uso
-// real es de un usuario en España, no hace falta ninguna librería de zonas.
-export function horaInicioPartido(fecha, hora) {
-  if (!fecha || !hora) return null;
-  return new Date(`${fecha}T${hora}:00`).getTime();
-}
 
 // Envoltorio "render prop": llama a usePartidoInfo UNA sola vez por
 // partido y expone el resultado a los dos sitios que lo necesitan (la
