@@ -18,12 +18,12 @@ const OTRO = "otro";
 // Filtro por posición del desplegable de jugador (petición directa):
 // "Paradas del portero" solo tiene sentido con porteros; el resto de
 // mercados de jugador de esta lista (remates, faltas, entradas,
-// anotará/asistirá...) casi nunca los juega un portero, así que se
+// anotará/asistirá..., y "Tarjetas" — las casas rara vez dejan apostar a
+// que el portero vea tarjeta) casi nunca los juega un portero, así que se
 // excluyen para no alargar la lista con nombres que no van a usarse.
-// "Tarjetas" se queda sin filtrar a propósito (un portero sí puede ver
-// tarjeta). "posicion" viene tal cual la da API-Football (api/jugadores.js,
-// campo "position" de /players/squads) — valor en inglés, "Goalkeeper"
-// para porteros; sin verificar a mano contra la cuenta real todavía.
+// "posicion" viene tal cual la da API-Football (api/jugadores.js, campo
+// "position" de /players/squads) — valor en inglés, "Goalkeeper" para
+// porteros; sin verificar a mano contra la cuenta real todavía.
 const PORTERO = "Goalkeeper";
 const SUBCATS_JUGADOR_SOLO_PORTEROS = new Set(["paradas"]);
 const SUBCATS_JUGADOR_SIN_PORTEROS = new Set([
@@ -34,6 +34,7 @@ const SUBCATS_JUGADOR_SIN_PORTEROS = new Set([
   "remates-puerta",
   "faltas",
   "entradas",
+  "tarjetas",
 ]);
 
 // Filtro adicional por posición (petición directa, tras excluir porteros
@@ -41,8 +42,8 @@ const SUBCATS_JUGADOR_SIN_PORTEROS = new Set([
 // equipos, acotar a Defensas/Centrocampistas/Delanteros ayuda a encontrar
 // el jugador más rápido. Solo tiene sentido en las mismas categorías que
 // ya excluyen porteros (donde SÍ puede salir cualquier jugador de campo)
-// — en "Paradas del portero" (solo porteros) y "Tarjetas" (sin filtrar,
-// puede ser cualquiera) no aporta nada, así que no se ofrece ahí.
+// — en "Paradas del portero" (solo porteros) no aporta nada, así que no
+// se ofrece ahí.
 const POSICIONES_CAMPO = [
   { valor: "todas", etiqueta: "Todas", posicionApi: null },
   { valor: "defensa", etiqueta: "Defensas", posicionApi: "Defender" },

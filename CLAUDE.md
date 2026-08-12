@@ -3053,6 +3053,17 @@ separadas, probando cada una antes de pasar a la siguiente.
   que ya usaba `manejarClickFuera` para reconocer "esto es del propio
   desplegable", solo que aplicado también al listener de scroll.
 
+- **"Tarjetas" (jugador) también excluye porteros y gana el filtro de
+  posición** (petición directa, olvidada en la ronda anterior — las
+  casas rara vez dejan apostar a que el portero vea tarjeta, así que
+  deja de ser la excepción). Solo hizo falta añadir `"tarjetas"` a
+  `SUBCATS_JUGADOR_SIN_PORTEROS` en `SelectorMercado.jsx` — los dos
+  efectos (excluir porteros del desplegable, y ofrecer el filtro
+  Defensas/Centrocampistas/Delanteros) ya dependían de ese mismo
+  conjunto, así que salen solos, sin tocar nada más. El scroll deslizante
+  y el arreglo del desplegable cortado (fases anteriores) también se
+  heredan solos, al ser el mismo componente compartido.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)
