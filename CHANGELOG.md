@@ -3465,3 +3465,89 @@ separadas, probando cada una antes de pasar a la siguiente.
     cron-job.org apuntando a `.../api/telegram-avisos?secret=...` cada 15
     minutos — ninguno de esos tres pasos se puede hacer desde aquí (son
     cuentas/paneles del propio usuario).
+  - **Puesto en marcha y probado de verdad por el usuario, con dudas
+    resueltas sobre la marcha**: al reutilizar el mismo partido de prueba
+    para una segunda "Ejecución de prueba" en cron-job.org, no llegó
+    aviso — no era un fallo, era el propio `notificado` haciendo su
+    trabajo (ya se había avisado de ese partido en la primera prueba); se
+    explicó y se resolvió probando con un partido distinto. Confirmado
+    también que borrar el historial del chat en Telegram (móvil) no corta
+    los avisos — solo borra lo que ves tú, no bloquea al bot. Prueba final
+    con un partido real de un día anterior: "Funciona. Llega notificación
+    al móvil, genial."
+  - Se planteó (y se descartó, con acuerdo del usuario) la idea de que
+    SOLO se pudiera confirmar el resultado de una apuesta desde Telegram,
+    quitándole esa función a la app web: la app sigue siendo la vía fiable
+    sin depender de terceros (Telegram/cron-job.org/Vercel a la vez, ni de
+    tener el móvil a mano) — Telegram es un atajo cómodo, no un sustituto.
+    Ninguna ganancia real tampoco: la lógica ya era 100% compartida antes
+    de esta decisión, quitar los botones de la web no habría reducido
+    duplicación ninguna, solo una vía de resolver que ya funcionaba bien.
+
+- **Número de apuesta por categoría en los mensajes de `/pendientes`**
+  (petición directa: identificar de un vistazo cuál es cuál cuando hay
+  varias pendientes a la vez del mismo bankroll). "Apuesta nº8 ·
+  Entretenimiento" = la octava apuesta de Entretenimiento creada, por
+  orden de `creado_en` — se calcula al vuelo en cada `/pendientes`
+  (`calcularNumerosPorCategoria` en `api/telegram-webhook.js`), sin
+  guardar ningún número en Supabase; si algún día se borra una apuesta
+  antigua de esa categoría, los números posteriores se recolocan solos
+  (aceptado como detalle cosmético menor, no afecta a nada más). Se
+  enseñó primero una maqueta en texto del mensaje resultante antes de
+  tocar código, para confirmar el formato exacto.
+
+- **Ampliación: aviso al registrar + rediseño del aviso de "partido
+  terminado" por apuesta** (petición directa, varias rondas de maquetas en
+  texto antes de tocar código, como ya venía siendo la norma en esta
+  sesión). El pedido original era más amplio de lo que parecía a primera
+  vista — quedó en tres piezas:
+  - `calcularNumerosPorCategoria` se sacó de `api/telegram-webhook.js` a
+    un archivo nuevo, `api/_lib/numeracion.js`, para poder reutilizarlo
+    también en los dos archivos siguientes — el mismo número de apuesta
+    sale igual en los tres sitios.
+  - **Aviso al registrar** (`api/telegram-registro.js`, disparador nuevo
+    que no existía): la app web no puede avisar a Telegram ella sola (el
+    token del bot es secreto, no puede vivir en el navegador) — en vez de
+    una llamada extra desde el frontend, se usa un **Database Webhook de
+    Supabase** (Database > Webhooks, configurado a mano por el usuario;
+    evento `INSERT` en `apuestas`), que dispara siempre pase lo que pase
+    cómo se haya creado la apuesta. Protegido con `REGISTRO_WEBHOOK_SECRET`
+    (variable nueva) vía una cabecera HTTP personalizada, configurada al
+    crear el webhook en el panel de Supabase.
+  - **Rediseño del aviso de partido terminado**: petición directa de que,
+    si el mismo partido está en una apuesta de Entretenimiento y otra de
+    Apuestas, sean dos mensajes separados en vez de uno combinado con dos
+    botones (como se había construido inicialmente) — el mensaje pasa a
+    estar centrado en LA APUESTA (con su número, categoría y la lista
+    completa de sus partidos), no en el partido. Tras una pregunta directa
+    ("¿cómo lo harías?"), se combinó nombrar el partido que dispara ESE
+    aviso en el título ("⚽ X ha terminado") con marcarlo en la lista de
+    abajo — usando 🏁, no ✅, porque el ✅ ya significa "pick marcado como
+    Ganada" en el resto del bot y hubiera confundido los dos significados.
+    Segunda pregunta directa (con el ejemplo de una combinada de 3
+    partidos, uno ya terminado y otro terminando ahora) aclaró que la
+    lista debía mostrar el estado ACUMULADO (los ya sabidos de antes
+    siguen marcados 🏁, no solo el nuevo), no solo el del aviso actual.
+  - Como un mismo partido ahora puede tener que avisar por separado a
+    varias apuestas, "ya avisado" dejó de poder vivir en la caché
+    compartida `resultados_partidos` (es por partido, no por apuesta) —
+    pasa a guardarse en la propia selección líder de cada grupo
+    (`avisoEnviado`, jsonb, mismo patrón que `golesLocalManual`, sin
+    migración de esquema). Añadido a las listas blancas de
+    `useApuestas.js`/`FormularioApuesta.jsx` y expuesto en
+    `agruparSeleccionesPorPartido` (`utils/apuestas.js`) para que editar
+    una apuesta por el formulario completo no lo borre en silencio —
+    mismo motivo que ya llevó a proteger `resultado`/`golesLocalManual`
+    antes: sin esto, un partido ya avisado podría volver a avisarse tras
+    editar esa apuesta (fallo menor, no de dinero, pero evitable con el
+    mismo cuidado de siempre).
+  - Probado con un script suelto (fuera del repo) el caso completo de la
+    combinada de 3 partidos que se van resolviendo uno a uno en distintos
+    "ticks" del cron (primer partido termina → 1 aviso con la lista
+    parcial; segundo termina más tarde → 1 aviso nuevo con la lista ya
+    acumulada, sin repetir el primero; nada nuevo → 0 avisos), más el caso
+    de un partido compartido por una apuesta de cada categoría (2 mensajes
+    separados, no 1) — los 11 casos salieron correctos.
+  - Pendiente de que el usuario configure el Database Webhook en Supabase
+    y rellene `REGISTRO_WEBHOOK_SECRET` en Vercel — ninguno de los dos
+    pasos se puede hacer desde aquí.

@@ -40,6 +40,7 @@ function bloquesDesdeApuesta(apuestaInicial) {
     fecha: grupo.fecha ?? null,
     golesLocalManual: grupo.golesLocalManual ?? null,
     golesVisitanteManual: grupo.golesVisitanteManual ?? null,
+    avisoEnviado: grupo.avisoEnviado ?? null,
     cuota: grupo.cuota,
     mercados: grupo.selecciones.map((s) => s.apuesta),
   }));
@@ -238,6 +239,7 @@ export default function FormularioApuesta({
         fecha: bloque.fecha || null,
         golesLocalManual: bloque.golesLocalManual ?? null,
         golesVisitanteManual: bloque.golesVisitanteManual ?? null,
+        avisoEnviado: bloque.avisoEnviado ?? null,
         resultado: resultadosPrevios.get(`${bloque.evento}|${mercado}`),
       }))
     );

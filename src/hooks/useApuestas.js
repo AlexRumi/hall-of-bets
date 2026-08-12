@@ -151,6 +151,12 @@ export function useApuestas(userId) {
           golesLocalManual: seleccion.golesLocalManual ?? null,
           golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
           resultado: seleccion.resultado,
+          // Marca interna del bot (api/telegram-avisos.js): si no se
+          // preserva aquí, editar la apuesta por el formulario completo la
+          // "olvidaría" en silencio y el aviso de partido terminado podría
+          // repetirse una vez para ese partido — mismo motivo que ya llevó
+          // a no perder "resultado" al editar.
+          avisoEnviado: seleccion.avisoEnviado ?? null,
         })),
       })
       .eq("id", id)

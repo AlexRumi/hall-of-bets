@@ -1,5 +1,6 @@
 import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
+import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
 
 // Serverless Function de Vercel, webhook del bot de Telegram: permite abrir
 // tus apuestas pendientes desde el móvil sin abrir la app entera. Registrado
@@ -32,9 +33,10 @@ function escapeHtml(texto = "") {
 
 // Resumen de texto de una apuesta (sin botones de pick: solo para ver de un
 // vistazo qué es, antes de abrir el ticket con "Abrir apuesta").
-function renderResumen(apuesta) {
+function renderResumen(apuesta, numero) {
   const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
   const lineas = [
+    `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
     `⏳ <b>Pendiente</b>`,
     `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · ${
       grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
@@ -74,10 +76,12 @@ async function enviarPendientes(supabaseAdmin, chatId) {
     return;
   }
 
+  const numerosPorId = await calcularNumerosPorCategoria(supabaseAdmin);
+
   for (const apuesta of pendientes) {
     await tg("sendMessage", {
       chat_id: chatId,
-      text: renderResumen(apuesta),
+      text: renderResumen(apuesta, numerosPorId.get(apuesta.id) ?? "?"),
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [

@@ -96,6 +96,11 @@ export function agruparSeleccionesPorPartido(selecciones) {
         // ApuestaItem.jsx.
         golesLocalManual: seleccion.golesLocalManual ?? null,
         golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
+        // Si el bot de Telegram ya avisó de que este partido ha terminado
+        // (api/telegram-avisos.js) — para no repetir el mismo aviso. Solo
+        // se lee/escribe desde ahí; expuesto aquí para que
+        // FormularioApuesta.jsx lo preserve al editar la apuesta.
+        avisoEnviado: seleccion.avisoEnviado ?? false,
         selecciones: [{ ...seleccion, indice }],
       });
     }
