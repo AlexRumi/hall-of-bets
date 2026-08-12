@@ -6,16 +6,16 @@ import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
 // que ya llevó a construir SelectorMercado.jsx así: en móvil, un <select>
 // con <optgroup> lo pinta el sistema operativo entero, sin dejar aplicar
 // ningún estilo (las categorías se veían casi igual que las opciones).
-// Reutilizado por CampoCasa.jsx y los selects de País/Competición de
-// BuscadorEvento.jsx.
+// Reutilizado por CampoCasa.jsx y el desplegable de jugador de
+// SelectorMercado.jsx.
 //
 // "grupos" es un array de { etiqueta?, opciones: [{ valor, texto, destacado? }] }.
-// Un grupo sin "etiqueta" no lleva cabecera (lista plana, como Casa o
-// Competición); "destacado" resalta una opción en negrita (p.ej. "Otras
-// ligas"). z-50, por encima de la barra inferior móvil (z-40,
-// BarraInferiorMovil.jsx) para que el panel no quede tapado si se abre
-// cerca del final de la pantalla, y usePosicionDesplegable.js decide si
-// abre hacia abajo o hacia arriba según el hueco libre en cada momento.
+// Un grupo sin "etiqueta" no lleva cabecera (lista plana, como Casa);
+// "destacado" resalta una opción en negrita (p.ej. "Otras ligas"). z-50,
+// por encima de la barra inferior móvil (z-40, BarraInferiorMovil.jsx)
+// para que el panel no quede tapado si se abre cerca del final de la
+// pantalla, y usePosicionDesplegable.js decide si abre hacia abajo o
+// hacia arriba según el hueco libre en cada momento.
 export default function SelectorDesplegable({
   valor,
   placeholder,
@@ -36,6 +36,31 @@ export default function SelectorDesplegable({
     document.addEventListener("mousedown", manejarClickFuera);
     return () => document.removeEventListener("mousedown", manejarClickFuera);
   }, []);
+
+  // El panel va en "position: fixed" (ver usePosicionDesplegable.js) para
+  // no depender de si algún contenedor por encima tiene scroll propio —
+  // pero eso significa que ya no se mueve solo si SE SCROLLEA mientras
+  // está abierto (antes, en "absolute", scrolleaba junto con el campo).
+  // Más simple que perseguir la posición en cada scroll: cerrarlo. Con
+  // "capture: true" se detecta el scroll de CUALQUIER contenedor
+  // (el modal de detalle, no solo la ventana), no solo el de window.
+  // Bug real: el panel, aunque "fixed" visualmente, sigue siendo hijo del
+  // DOM de "contenedorRef" (fixed no lo saca del árbol) — así que hacer
+  // scroll CON EL RATÓN DENTRO de la propia lista de jugadores (su propio
+  // overflow-y-auto) también disparaba este mismo evento y cerraba el
+  // panel de inmediato, sin dejar hacer scroll ahí dentro. Se ignora el
+  // scroll cuando el objetivo del evento está dentro de "contenedorRef"
+  // (el propio botón o panel) — mismo criterio que ya usa
+  // "manejarClickFuera" para reconocer "esto es del propio desplegable".
+  useEffect(() => {
+    if (!abierto) return;
+    function manejarScroll(e) {
+      if (contenedorRef.current && contenedorRef.current.contains(e.target)) return;
+      setAbierto(false);
+    }
+    window.addEventListener("scroll", manejarScroll, true);
+    return () => window.removeEventListener("scroll", manejarScroll, true);
+  }, [abierto]);
 
   const opcionActual = grupos.flatMap((g) => g.opciones).find((o) => o.valor === valor);
 
@@ -67,10 +92,13 @@ export default function SelectorDesplegable({
 
       {abierto && (
         <div
-          className={`absolute z-50 w-full bg-surface border border-line rounded-lg shadow-lg overflow-y-auto ${
-            posicion.arriba ? "bottom-full mb-1" : "top-full mt-1"
-          }`}
-          style={{ maxHeight: posicion.maxAltura }}
+          className="fixed z-50 bg-surface border border-line rounded-lg shadow-lg overflow-y-auto"
+          style={{
+            left: posicion.left,
+            width: posicion.width,
+            maxHeight: posicion.maxAltura,
+            ...(posicion.arriba ? { bottom: posicion.bottom + 4 } : { top: posicion.top + 4 }),
+          }}
         >
           {grupos.map((grupo, i) => (
             <div key={grupo.etiqueta ?? i}>

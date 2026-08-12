@@ -2988,6 +2988,71 @@ separadas, probando cada una antes de pasar a la siguiente.
     equipo y mitades" (plural) a "Por equipo y mitad" (singular), a
     juego con la de Córners, que ya se llamaba así.
 
+- **Filtro de posición (Defensas/Centrocampistas/Delanteros) en el
+  desplegable de jugador** (petición directa, tras confirmar que era
+  posible sin gastar llamadas de más — la posición ya viaja en la misma
+  respuesta de `/players/squads` que se usaba para excluir porteros).
+  `SelectorMercado.jsx` gana un segundo filtro, `posicionFiltro`
+  (independiente del de Equipo, no se resetea al cambiar de equipo ni de
+  subcategoría), con botones Todas/Defensas/Centrocampistas/Delanteros
+  junto al toggle de Local/Visitante — solo visible en las mismas
+  categorías que ya excluían porteros (`SUBCATS_JUGADOR_SIN_PORTEROS`):
+  en "Paradas del portero" no aporta nada (ya son todo porteros) y en
+  "Tarjetas" puede salir cualquiera, sin distinción. `filtrarPorPosicion`
+  gana un tercer parámetro y, para esas categorías, aplica el filtro de
+  posición después de quitar los porteros. **Sin verificar a mano
+  todavía** (mismo aviso que con "Goalkeeper"): se asume que API-Football
+  devuelve `"Defender"`/`"Midfielder"`/`"Attacker"` en inglés — su
+  convención de 4 posiciones documentada, pero no comprobada contra la
+  cuenta real.
+
+- **El desplegable de jugador se cortaba según el scroll (bug real, con
+  captura)**: `SelectorDesplegable.jsx` (el desplegable de jugador dentro
+  de `SelectorMercado.jsx`, y el de `CampoCasa.jsx`) posicionaba su panel
+  en `position: absolute`. `usePosicionDesplegable.js` calculaba bien el
+  hueco libre respecto a la VENTANA, pero el panel en sí seguía viviendo
+  dentro del flujo normal del documento — si el campo estaba dentro de un
+  contenedor con su propio scroll y alto limitado (el modal de detalle de
+  una apuesta, `ListaApuestas.jsx`, que es donde se edita una apuesta ya
+  guardada), ese contenedor recortaba el panel por su propio borde, sin
+  relación con "el hueco de la ventana" — el recorte real dependía de por
+  dónde estuviera scrolleado ESE modal, no la página. `usePosicionDesplegable.js`
+  ahora expone también las coordenadas en píxeles de ventana (`left`/
+  `width`/`top`/`bottom`) y el panel pasa a `position: fixed` con esas
+  coordenadas — eso escapa de cualquier contenedor con scroll propio, ya
+  no depende de dónde esté recortado ningún padre. Contrapartida: en
+  "fixed" el panel ya no se mueve solo si se hace scroll mientras está
+  abierto (antes sí, al ir en "absolute" dentro del flujo) — en vez de
+  perseguir la posición en cada scroll, `SelectorDesplegable.jsx` cierra
+  el panel si detecta cualquier scroll mientras está abierto (listener en
+  `window` con `capture: true`, para pillar también el scroll de
+  contenedores internos como el del modal, no solo el de la ventana).
+
+- **Nivel3/nivel4 y "Posición" pasan a `TabsDesplazables` (deslizantes)**
+  (petición directa: "todo lo que pueda que falte poner deslizantes en
+  mercados"). Las pestañas de nivel3 (mitad, Comete/Recibe...), nivel4
+  (Over/Under) y el nuevo filtro "Posición" eran filas de botones a mano
+  sin `flex-wrap` ni scroll — con etiquetas largas o más opciones se
+  salían del panel en vez de deslizar. Las tres pasan a usar
+  `TabsDesplazables` (`compacto`, `colorActivo="gold"`), igual que ya
+  hacía el nivel2 — con eso ya vienen resueltos el scroll horizontal, las
+  flechas en escritorio y el desvanecido del borde. Efecto secundario
+  aceptado: nivel3 y nivel4 (antes con su propio tamaño decreciente, cada
+  uno un pelín más pequeño que el anterior) ahora se ven del mismo tamaño
+  que el nivel2 y entre sí, al compartir la misma variante `compacto` —
+  se pierde ese matiz de "cuanto más adentro, más pequeño", a cambio de
+  que ninguno se corte ni se salga del panel.
+  De paso, corregido un bug real en `SelectorDesplegable.jsx` (el
+  desplegable de jugador, arreglado en la fase anterior con
+  `position: fixed`): el cierre-al-hacer-scroll cerraba el panel también
+  cuando el scroll era DENTRO de su propia lista (con el ratón encima),
+  impidiendo desplazarla — aunque el panel esté en `position: fixed`,
+  sigue siendo hijo del DOM de `contenedorRef` (fixed no lo saca del
+  árbol), así que ahora se ignora el scroll cuando su objetivo está
+  dentro de `contenedorRef` (el propio botón o panel) — mismo criterio
+  que ya usaba `manejarClickFuera` para reconocer "esto es del propio
+  desplegable", solo que aplicado también al listener de scroll.
+
 - Componentes funcionales con hooks, sin clases
 - Un componente por responsabilidad clara; evita archivos gigantes
 - Comentarios breves en español donde la lógica no sea obvia (freebets, combinadas, cálculo de yield)

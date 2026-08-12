@@ -35,12 +35,29 @@ const SUBCATS_JUGADOR_SIN_PORTEROS = new Set([
   "faltas",
   "entradas",
 ]);
-function filtrarPorPosicion(jugadores, subcategoriaId) {
+
+// Filtro adicional por posición (petición directa, tras excluir porteros
+// de las categorías de arriba): con 20+ jugadores de campo en algunos
+// equipos, acotar a Defensas/Centrocampistas/Delanteros ayuda a encontrar
+// el jugador más rápido. Solo tiene sentido en las mismas categorías que
+// ya excluyen porteros (donde SÍ puede salir cualquier jugador de campo)
+// — en "Paradas del portero" (solo porteros) y "Tarjetas" (sin filtrar,
+// puede ser cualquiera) no aporta nada, así que no se ofrece ahí.
+const POSICIONES_CAMPO = [
+  { valor: "todas", etiqueta: "Todas", posicionApi: null },
+  { valor: "defensa", etiqueta: "Defensas", posicionApi: "Defender" },
+  { valor: "centrocampista", etiqueta: "Centrocampistas", posicionApi: "Midfielder" },
+  { valor: "delantero", etiqueta: "Delanteros", posicionApi: "Attacker" },
+];
+
+function filtrarPorPosicion(jugadores, subcategoriaId, posicionFiltro) {
   if (SUBCATS_JUGADOR_SOLO_PORTEROS.has(subcategoriaId)) {
     return jugadores.filter((j) => j.posicion === PORTERO);
   }
   if (SUBCATS_JUGADOR_SIN_PORTEROS.has(subcategoriaId)) {
-    return jugadores.filter((j) => j.posicion !== PORTERO);
+    const sinPorteros = jugadores.filter((j) => j.posicion !== PORTERO);
+    const posicionApi = POSICIONES_CAMPO.find((p) => p.valor === posicionFiltro)?.posicionApi;
+    return posicionApi ? sinPorteros.filter((j) => j.posicion === posicionApi) : sinPorteros;
   }
   return jugadores;
 }
@@ -160,6 +177,12 @@ export default function SelectorMercado({
   // categoría, el doble de llamadas de las que hacían falta si solo
   // querías un jugador de uno de los dos.
   const [equipoJugadorFiltro, setEquipoJugadorFiltro] = useState("local");
+  // Filtro de posición (petición directa) — independiente del de Equipo,
+  // no se resetea al cambiar de equipo ni de subcategoría de jugador: si
+  // ya buscabas "Delanteros", tiene sentido que se quede así al mirar
+  // otro mercado o el otro equipo. Solo se usa de verdad en las
+  // categorías de SUBCATS_JUGADOR_SIN_PORTEROS (ver filtrarPorPosicion).
+  const [posicionFiltro, setPosicionFiltro] = useState("todas");
   const [busqueda, setBusqueda] = useState("");
 
   // Ruta (categoría → subcategoría → Local/Visitante) de la selección ya
@@ -212,8 +235,12 @@ export default function SelectorMercado({
   const jugadoresVisitante = usePlantilla(
     enTabJugador && equipoJugadorFiltro === "visitante" ? equipoVisitanteId : null
   );
-  const jugadoresLocalFiltrados = filtrarPorPosicion(jugadoresLocal, subActiva);
-  const jugadoresVisitanteFiltrados = filtrarPorPosicion(jugadoresVisitante, subActiva);
+  const jugadoresLocalFiltrados = filtrarPorPosicion(jugadoresLocal, subActiva, posicionFiltro);
+  const jugadoresVisitanteFiltrados = filtrarPorPosicion(jugadoresVisitante, subActiva, posicionFiltro);
+  // Solo se ofrece el filtro de posición donde tiene sentido (mismo
+  // criterio que ya excluye porteros ahí): en "Paradas" ya son todo
+  // porteros, y en "Tarjetas" puede salir cualquiera sin distinción.
+  const mostrarFiltroPosicion = SUBCATS_JUGADOR_SIN_PORTEROS.has(subActiva);
   const gruposJugadores = [
     ...(jugadoresLocalFiltrados.length > 0
       ? [
@@ -428,46 +455,33 @@ export default function SelectorMercado({
             />
           )}
 
+          {/* Petición directa: antes era una fila de botones a mano, sin
+              scroll — con etiquetas largas o más de 2-3 opciones se salía
+              del panel en móvil en vez de deslizar. TabsDesplazables ya
+              trae ese scroll (flechas, desvanecido, deslizado táctil)
+              resuelto, mismo patrón que el nivel2 de arriba. */}
           {tieneNivel3 && (
-            <div className="flex gap-1.5 px-3 py-2 border-b border-line bg-paperDim/40">
-              {subNode.subcategorias.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => elegirNivel3(n.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-colors ${
-                    nivel3Activa === n.id
-                      ? "bg-gold text-feltDark border-gold"
-                      : "border-line text-slate hover:text-ink"
-                  }`}
-                >
-                  {n.etiqueta}
-                </button>
-              ))}
-            </div>
+            <TabsDesplazables
+              opciones={subNode.subcategorias.map((n) => ({ valor: n.id, texto: n.etiqueta }))}
+              valor={nivel3Activa}
+              onElegir={elegirNivel3}
+              colorActivo="gold"
+              compacto
+            />
           )}
 
           {/* 4º nivel (p.ej. Goles/Córners "por equipo y mitad": mitad →
-              Over/Under) — un escalón más nítido que el nivel3 de arriba
-              (fondo más oscuro, texto más pequeño), para que se note que
-              está un nivel más adentro. */}
+              Over/Under) — mismo componente que el nivel3 de arriba, ya
+              deslizante; pierde el matiz de "un pelín más pequeño todavía"
+              que tenía la versión a mano, pero gana el scroll. */}
           {tieneNivel4 && (
-            <div className="flex gap-1.5 px-3 py-1.5 border-b border-line bg-paperDim/70">
-              {nivel3Node.subcategorias.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => setNivel4Activa(n.id)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-colors ${
-                    nivel4Activa === n.id
-                      ? "bg-gold text-feltDark border-gold"
-                      : "border-line text-slate hover:text-ink"
-                  }`}
-                >
-                  {n.etiqueta}
-                </button>
-              ))}
-            </div>
+            <TabsDesplazables
+              opciones={nivel3Node.subcategorias.map((n) => ({ valor: n.id, texto: n.etiqueta }))}
+              valor={nivel4Activa}
+              onElegir={setNivel4Activa}
+              colorActivo="gold"
+              compacto
+            />
           )}
 
           {topNode?.requiereJugador && (
@@ -494,6 +508,18 @@ export default function SelectorMercado({
                   ))}
                 </div>
               </div>
+              {mostrarFiltroPosicion && (
+                <div>
+                  <label className="block text-xs text-slate mb-1">Posición</label>
+                  <TabsDesplazables
+                    opciones={POSICIONES_CAMPO.map(({ valor, etiqueta }) => ({ valor, texto: etiqueta }))}
+                    valor={posicionFiltro}
+                    onElegir={setPosicionFiltro}
+                    colorActivo="gold"
+                    compacto
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-slate mb-1">Jugador</label>
                 {hayPlantilla ? (
