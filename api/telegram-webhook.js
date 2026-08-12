@@ -22,8 +22,12 @@ import { marcarPick, marcarResultadoApuesta } from "./_lib/apuestasResueltas.js"
 // maqueta HTML de referencia): el estado de cada pick se muestra con un
 // emoji + negrita/tachado (parse_mode HTML), y los botones no pueden
 // colocarse pegados a cada línea de texto (el teclado siempre va debajo de
-// todo el mensaje) — por eso cada pick va numerado y su fila de botones
-// lleva el mismo número.
+// todo el mensaje). Una apuesta simple (o un "multi" con varios mercados
+// del mismo partido) cabe entera en un único mensaje; una combinada de
+// varios partidos manda un mensaje por partido (petición directa: con 5
+// partidos y 10-12 mercados, un solo mensaje con todo apilado se hacía
+// interminable) — así cada botón solo reedita el mensaje de SU partido, sin
+// arrastrar el resto.
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
@@ -49,68 +53,90 @@ const ETIQUETAS_ESTADO = {
 
 const CODIGO_A_RESULTADO = { g: "ganada", x: "perdida", n: "nula" };
 
-// Reconstruye el mensaje (texto + teclado) a partir del estado actual de la
-// apuesta — se llama tanto para el mensaje inicial de /pendientes como
-// después de cada botón pulsado, siempre a partir de datos frescos de
-// Supabase (sin guardar nada de estado en el propio bot).
-function renderApuesta(apuesta) {
-  const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
+function estadoTextoDe(apuesta) {
+  return apuesta.resultado === "cashout"
+    ? `💰 Cash Out${apuesta.cashout_importe != null ? " · " + Number(apuesta.cashout_importe).toFixed(2) + "€" : ""}`
+    : ETIQUETAS_ESTADO[apuesta.resultado] ?? apuesta.resultado;
+}
+
+// Filas de texto + botones de los picks de UN partido — bloque reutilizado
+// tanto en la apuesta simple (todo en un mensaje) como en cada mensaje
+// suelto de una combinada.
+function lineasYFilasDeGrupo(apuesta, grupo, { numerar }) {
   const lineas = [];
   const filas = [];
+  const cabecera = [grupo.competicion, grupo.pais].filter(Boolean).join(" · ");
+  lineas.push(`<b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`);
+
   let contador = 0;
+  for (const pick of grupo.selecciones) {
+    contador++;
+    const marca = { ganada: "✅", perdida: "❌", nula: "➖" }[pick.resultado] ?? "⏺️";
+    const texto = escapeHtml(pick.apuesta ?? pick.evento);
+    const textoFormateado =
+      pick.resultado === "ganada" ? `<b>${texto}</b>` : pick.resultado === "perdida" ? `<s>${texto}</s>` : texto;
+    lineas.push(`${numerar ? `${contador}. ` : ""}${marca} ${textoFormateado}`);
 
-  const estadoTexto =
-    apuesta.resultado === "cashout"
-      ? `💰 Cash Out${apuesta.cashout_importe != null ? " · " + Number(apuesta.cashout_importe).toFixed(2) + "€" : ""}`
-      : ETIQUETAS_ESTADO[apuesta.resultado] ?? apuesta.resultado;
+    // Mismos emoji que "marca" arriba, para que los botones se parezcan a
+    // los iconos de colores que ya usa ApuestaItem.jsx — Telegram no admite
+    // iconos SVG propios en un botón, solo texto/emoji. Sin número delante:
+    // cada fila de botones sale en el mismo orden que su pick en el texto
+    // (Telegram no deja pegar botones a cada línea), la posición ya basta.
+    const base = `p|${apuesta.id}|${pick.indice}|`;
+    filas.push([
+      { text: "✅", callback_data: base + "g" },
+      { text: "❌", callback_data: base + "x" },
+      { text: "➖", callback_data: base + "n" },
+    ]);
+  }
+  return { lineas, filas };
+}
 
-  lineas.push(`<b>${estadoTexto}</b>`);
+// Apuesta con un solo partido (simple, o un "multi" con varios mercados del
+// mismo partido): todo cabe en un único mensaje sin que se haga interminable.
+function renderApuestaSimple(apuesta, grupos) {
+  const lineas = [`<b>${estadoTextoDe(apuesta)}</b>`];
   lineas.push(
-    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · ${
-      grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
-    } · ${apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"}`
+    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Simple · ${
+      apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
+    }`
   );
   lineas.push("");
 
-  for (const grupo of grupos) {
-    const cabecera = [grupo.competicion, grupo.pais].filter(Boolean).join(" · ");
-    lineas.push(
-      `<b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`
-    );
-
-    for (const pick of grupo.selecciones) {
-      contador++;
-      const marca = { ganada: "✅", perdida: "❌", nula: "➖" }[pick.resultado] ?? "⏺️";
-      const texto = escapeHtml(pick.apuesta ?? pick.evento);
-      const textoFormateado =
-        pick.resultado === "ganada"
-          ? `<b>${texto}</b>`
-          : pick.resultado === "perdida"
-          ? `<s>${texto}</s>`
-          : texto;
-      lineas.push(`${contador}. ${marca} ${textoFormateado}`);
-
-      // Mismos emoji que "marca" arriba (✅/❌/➖), para que los botones se
-      // parezcan a los iconos de colores que ya usa ApuestaItem.jsx —
-      // Telegram no admite iconos SVG propios en un botón, solo texto/emoji.
-      // Sin número delante: la fila de botones ya sale en el mismo orden que
-      // su pick en el texto (Telegram no deja pegar botones a cada línea),
-      // así que la posición basta para saber a cuál corresponde.
-      const base = `p|${apuesta.id}|${pick.indice}|`;
-      filas.push([
-        { text: "✅", callback_data: base + "g" },
-        { text: "❌", callback_data: base + "x" },
-        { text: "➖", callback_data: base + "n" },
-      ]);
-    }
-    lineas.push("");
-  }
+  const { lineas: lineasGrupo, filas } = lineasYFilasDeGrupo(apuesta, grupos[0], { numerar: true });
+  lineas.push(...lineasGrupo);
 
   if (apuesta.resultado === "pendiente") {
     filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
   }
 
   return { texto: lineas.join("\n").trim(), teclado: { inline_keyboard: filas } };
+}
+
+// Combinada de varios partidos (petición directa: con 5 partidos y 10-12
+// mercados, un solo mensaje con todo apilado se hacía interminable). Se
+// manda una "cabecera" (estado + Cash Out) y LUEGO un mensaje suelto por
+// partido, cada uno con solo sus propios botones — así cada mensaje se
+// puede editar por separado al tocar un botón, sin arrastrar el resto.
+function renderCabeceraCombinada(apuesta, grupos) {
+  const lineas = [`<b>${estadoTextoDe(apuesta)}</b>`];
+  lineas.push(
+    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Combinada (${grupos.length} partidos) · ${
+      apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
+    }`
+  );
+  const filas = [];
+  if (apuesta.resultado === "pendiente") {
+    filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
+  }
+  return { texto: lineas.join("\n"), teclado: { inline_keyboard: filas } };
+}
+
+// El mensaje suelto de UN partido dentro de una combinada — se reconstruye
+// también tras cada botón pulsado, para editar solo este mensaje.
+function renderGrupoMensaje(apuesta, grupo) {
+  const { lineas, filas } = lineasYFilasDeGrupo(apuesta, grupo, { numerar: grupo.selecciones.length > 1 });
+  return { texto: lineas.join("\n"), teclado: { inline_keyboard: filas } };
 }
 
 async function enviarPendientes(supabaseAdmin, chatId) {
@@ -138,13 +164,24 @@ async function enviarPendientes(supabaseAdmin, chatId) {
   }
 
   for (const apuesta of pendientes) {
-    const { texto, teclado } = renderApuesta(apuesta);
+    const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
+    if (grupos.length === 1) {
+      const { texto, teclado } = renderApuestaSimple(apuesta, grupos);
+      await tg("sendMessage", { chat_id: chatId, text: texto, parse_mode: "HTML", reply_markup: teclado });
+      continue;
+    }
+
+    const { texto: textoCabecera, teclado: tecladoCabecera } = renderCabeceraCombinada(apuesta, grupos);
     await tg("sendMessage", {
       chat_id: chatId,
-      text: texto,
+      text: textoCabecera,
       parse_mode: "HTML",
-      reply_markup: teclado,
+      reply_markup: tecladoCabecera,
     });
+    for (const grupo of grupos) {
+      const { texto, teclado } = renderGrupoMensaje(apuesta, grupo);
+      await tg("sendMessage", { chat_id: chatId, text: texto, parse_mode: "HTML", reply_markup: teclado });
+    }
   }
 }
 
@@ -158,6 +195,18 @@ async function manejarCashOutSolicitado(supabaseAdmin, callbackQuery, chatId, ap
 
   if (!apuesta) {
     await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id, text: "No encontrada" });
+    return;
+  }
+
+  // La cabecera de una combinada ya no se reedita al marcar picks (cada
+  // partido tiene su propio mensaje), así que el botón de Cash Out puede
+  // quedar visible aunque la apuesta ya se haya sellado sola — se comprueba
+  // aquí en vez de fiarse de que el botón haya desaparecido.
+  if (apuesta.resultado !== "pendiente") {
+    await tg("answerCallbackQuery", {
+      callback_query_id: callbackQuery.id,
+      text: "Esta apuesta ya está resuelta.",
+    });
     return;
   }
 
@@ -194,21 +243,49 @@ async function manejarPickPulsado(supabaseAdmin, callbackQuery, chatId, apuestaI
   // otra vez deshace el pick (vuelve a pendiente).
   const nuevo = actual === resultadoPulsado ? "pendiente" : resultadoPulsado;
 
+  const gruposAntes = agruparSeleccionesPorPartido(apuesta.selecciones);
   const actualizada = await marcarPick(supabaseAdmin, apuesta, indice, nuevo);
+  const apuestaActualizada = { ...apuesta, selecciones: actualizada.selecciones, resultado: actualizada.resultado };
 
-  const { texto, teclado } = renderApuesta({
-    ...apuesta,
-    selecciones: actualizada.selecciones,
-    resultado: actualizada.resultado,
-  });
+  if (gruposAntes.length === 1) {
+    // Apuesta simple: todo vive en un único mensaje, se reedita entero.
+    const { texto, teclado } = renderApuestaSimple(
+      apuestaActualizada,
+      agruparSeleccionesPorPartido(actualizada.selecciones)
+    );
+    await tg("editMessageText", {
+      chat_id: chatId,
+      message_id: callbackQuery.message.message_id,
+      text: texto,
+      parse_mode: "HTML",
+      reply_markup: teclado,
+    });
+  } else {
+    // Combinada: solo se reedita el mensaje del partido al que pertenece
+    // este pick — la cabecera y el resto de partidos no se tocan.
+    const gruposDespues = agruparSeleccionesPorPartido(actualizada.selecciones);
+    const grupo = gruposDespues.find((g) => g.selecciones.some((s) => s.indice === indice));
+    const { texto, teclado } = renderGrupoMensaje(apuestaActualizada, grupo);
+    await tg("editMessageText", {
+      chat_id: chatId,
+      message_id: callbackQuery.message.message_id,
+      text: texto,
+      parse_mode: "HTML",
+      reply_markup: teclado,
+    });
 
-  await tg("editMessageText", {
-    chat_id: chatId,
-    message_id: callbackQuery.message.message_id,
-    text: texto,
-    parse_mode: "HTML",
-    reply_markup: teclado,
-  });
+    // Si con este pick la apuesta entera queda sellada (o se deshace un
+    // sello anterior), la cabecera no se reedita — se avisa con un mensaje
+    // nuevo en vez de intentar localizar y editar aquel otro mensaje.
+    if (actualizada.resultado !== apuesta.resultado) {
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text: `<b>${estadoTextoDe(apuestaActualizada)}</b> — apuesta actualizada.`,
+        parse_mode: "HTML",
+      });
+    }
+  }
+
   await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id });
 }
 
