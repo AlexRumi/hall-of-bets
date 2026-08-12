@@ -1,35 +1,21 @@
 import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
-import { marcarPick, marcarResultadoApuesta } from "./_lib/apuestasResueltas.js";
 
-// Serverless Function de Vercel, webhook del bot de Telegram: permite
-// resolver apuestas pendientes (Ganada/Perdida/Nula por mercado, o Cash
-// Out) desde el móvil sin abrir la app. Registrado con setWebhook (ver
-// CLAUDE.md) usando un secret_token propio de Telegram, comprobado en cada
-// petición junto con tu ID de usuario — cualquier otra petición se
-// descarta antes de tocar Supabase. Escribe con la service role key
-// (api/_lib/supabaseAdmin.js), no con la clave del navegador: un webhook no
-// tiene sesión de usuario con la que cumplir el RLS.
+// Serverless Function de Vercel, webhook del bot de Telegram: permite abrir
+// tus apuestas pendientes desde el móvil sin abrir la app entera. Registrado
+// con setWebhook (ver CLAUDE.md) usando un secret_token propio de Telegram,
+// comprobado en cada petición junto con tu ID de usuario — cualquier otra
+// petición se descarta antes de tocar Supabase.
 //
-// Cada botón V/X/- escribe al instante (igual que ApuestaItem.jsx: no hay
-// paso de "guardar" aparte) reutilizando exactamente la misma lógica de
-// derivación que la app — api/_lib/apuestasResueltas.js importa
-// agruparSeleccionesPorPartido/derivarResultadoApuesta de
-// src/utils/apuestas.js en vez de reescribirlas, para que resolver desde
-// Telegram tenga siempre el mismo efecto que resolver desde la app.
-//
-// Telegram no permite texto de color personalizado (a diferencia de la
-// maqueta HTML de referencia): el estado de cada pick se muestra con un
-// emoji + negrita/tachado (parse_mode HTML), y los botones no pueden
-// colocarse pegados a cada línea de texto (el teclado siempre va debajo de
-// todo el mensaje). Una apuesta simple (o un "multi" con varios mercados
-// del mismo partido) cabe entera en un único mensaje; una combinada de
-// varios partidos manda un mensaje por partido (petición directa: con 5
-// partidos y 10-12 mercados, un solo mensaje con todo apilado se hacía
-// interminable) — así cada botón solo reedita el mensaje de SU partido, sin
-// arrastrar el resto.
+// /pendientes manda un resumen de texto por apuesta (sin botones de
+// V/X/-/Cash Out: eso se resuelve ahora en la Mini App, ver
+// src/components/TelegramMiniApp.jsx) con un único botón "web_app" que
+// abre esa apuesta con el diseño de ticket. La Mini App lee/escribe con su
+// propio endpoint (api/telegram-apuesta.js), verificando el initData del
+// SDK de Telegram en vez del secret_token/ID de chat que usa este webhook.
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const URL_APP = "https://hall-of-bets.vercel.app";
 
 async function tg(method, payload) {
   const respuesta = await fetch(`${TELEGRAM_API}/${method}`, {
@@ -44,100 +30,27 @@ function escapeHtml(texto = "") {
   return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const ETIQUETAS_ESTADO = {
-  pendiente: "⏳ Pendiente",
-  ganada: "✅ Ganada",
-  perdida: "❌ Perdida",
-  nula: "➖ Nula",
-};
+// Resumen de texto de una apuesta (sin botones de pick: solo para ver de un
+// vistazo qué es, antes de abrir el ticket con "Abrir apuesta").
+function renderResumen(apuesta) {
+  const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
+  const lineas = [
+    `⏳ <b>Pendiente</b>`,
+    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · ${
+      grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
+    } · ${apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"}`,
+    "",
+  ];
 
-const CODIGO_A_RESULTADO = { g: "ganada", x: "perdida", n: "nula" };
-
-function estadoTextoDe(apuesta) {
-  return apuesta.resultado === "cashout"
-    ? `💰 Cash Out${apuesta.cashout_importe != null ? " · " + Number(apuesta.cashout_importe).toFixed(2) + "€" : ""}`
-    : ETIQUETAS_ESTADO[apuesta.resultado] ?? apuesta.resultado;
-}
-
-// Filas de texto + botones de los picks de UN partido — bloque reutilizado
-// tanto en la apuesta simple (todo en un mensaje) como en cada mensaje
-// suelto de una combinada.
-function lineasYFilasDeGrupo(apuesta, grupo, { numerar }) {
-  const lineas = [];
-  const filas = [];
-  const cabecera = [grupo.competicion, grupo.pais].filter(Boolean).join(" · ");
-  lineas.push(`<b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`);
-
-  let contador = 0;
-  for (const pick of grupo.selecciones) {
-    contador++;
-    const marca = { ganada: "✅", perdida: "❌", nula: "➖" }[pick.resultado] ?? "⏺️";
-    const texto = escapeHtml(pick.apuesta ?? pick.evento);
-    const textoFormateado =
-      pick.resultado === "ganada" ? `<b>${texto}</b>` : pick.resultado === "perdida" ? `<s>${texto}</s>` : texto;
-    lineas.push(`${numerar ? `${contador}. ` : ""}${marca} ${textoFormateado}`);
-
-    // Mismos emoji que "marca" arriba, para que los botones se parezcan a
-    // los iconos de colores que ya usa ApuestaItem.jsx — Telegram no admite
-    // iconos SVG propios en un botón, solo texto/emoji. Sin número delante:
-    // cada fila de botones sale en el mismo orden que su pick en el texto
-    // (Telegram no deja pegar botones a cada línea), la posición ya basta.
-    const base = `p|${apuesta.id}|${pick.indice}|`;
-    filas.push([
-      { text: "✅", callback_data: base + "g" },
-      { text: "❌", callback_data: base + "x" },
-      { text: "➖", callback_data: base + "n" },
-    ]);
-  }
-  return { lineas, filas };
-}
-
-// Apuesta con un solo partido (simple, o un "multi" con varios mercados del
-// mismo partido): todo cabe en un único mensaje sin que se haga interminable.
-function renderApuestaSimple(apuesta, grupos) {
-  const lineas = [`<b>${estadoTextoDe(apuesta)}</b>`];
-  lineas.push(
-    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Simple · ${
-      apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
-    }`
-  );
-  lineas.push("");
-
-  const { lineas: lineasGrupo, filas } = lineasYFilasDeGrupo(apuesta, grupos[0], { numerar: true });
-  lineas.push(...lineasGrupo);
-
-  if (apuesta.resultado === "pendiente") {
-    filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
-  }
-
-  return { texto: lineas.join("\n").trim(), teclado: { inline_keyboard: filas } };
-}
-
-// El mensaje suelto de UN partido dentro de una combinada (petición
-// directa: con 5 partidos y 10-12 mercados, un solo mensaje con todo
-// apilado se hacía interminable) — se reconstruye también tras cada botón
-// pulsado, para editar solo este mensaje. El PRIMER partido lleva además el
-// estado/fecha/casa y el botón de Cash Out de toda la apuesta (en vez de un
-// mensaje de "cabecera" aparte, que quedaba raro: un bloque suelto sin
-// ningún partido, solo con ese botón).
-function renderGrupoMensaje(apuesta, grupo, { conCabecera = false, totalPartidos = 1 } = {}) {
-  const { lineas, filas } = lineasYFilasDeGrupo(apuesta, grupo, { numerar: grupo.selecciones.length > 1 });
-
-  const encabezado = [];
-  if (conCabecera) {
-    encabezado.push(`<b>${estadoTextoDe(apuesta)}</b>`);
-    encabezado.push(
-      `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Combinada (${totalPartidos} partidos) · ${
-        apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
-      }`
-    );
-    encabezado.push("");
-    if (apuesta.resultado === "pendiente") {
-      filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
+  for (const grupo of grupos) {
+    const cabecera = [grupo.competicion, grupo.pais].filter(Boolean).join(" · ");
+    lineas.push(`<b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`);
+    for (const pick of grupo.selecciones) {
+      lineas.push(`· ${escapeHtml(pick.apuesta ?? pick.evento)}`);
     }
   }
 
-  return { texto: [...encabezado, ...lineas].join("\n"), teclado: { inline_keyboard: filas } };
+  return lineas.join("\n").trim();
 }
 
 async function enviarPendientes(supabaseAdmin, chatId) {
@@ -162,166 +75,17 @@ async function enviarPendientes(supabaseAdmin, chatId) {
   }
 
   for (const apuesta of pendientes) {
-    const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
-    if (grupos.length === 1) {
-      const { texto, teclado } = renderApuestaSimple(apuesta, grupos);
-      await tg("sendMessage", { chat_id: chatId, text: texto, parse_mode: "HTML", reply_markup: teclado });
-      continue;
-    }
-
-    for (let i = 0; i < grupos.length; i++) {
-      const { texto, teclado } = renderGrupoMensaje(apuesta, grupos[i], {
-        conCabecera: i === 0,
-        totalPartidos: grupos.length,
-      });
-      await tg("sendMessage", { chat_id: chatId, text: texto, parse_mode: "HTML", reply_markup: teclado });
-    }
-  }
-}
-
-async function manejarCashOutSolicitado(supabaseAdmin, callbackQuery, chatId, apuestaId) {
-  const { data: apuesta } = await supabaseAdmin
-    .from("apuestas")
-    .select("*")
-    .eq("id", apuestaId)
-    .eq("user_id", USER_ID)
-    .single();
-
-  if (!apuesta) {
-    await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id, text: "No encontrada" });
-    return;
-  }
-
-  // La cabecera de una combinada ya no se reedita al marcar picks (cada
-  // partido tiene su propio mensaje), así que el botón de Cash Out puede
-  // quedar visible aunque la apuesta ya se haya sellado sola — se comprueba
-  // aquí en vez de fiarse de que el botón haya desaparecido.
-  if (apuesta.resultado !== "pendiente") {
-    await tg("answerCallbackQuery", {
-      callback_query_id: callbackQuery.id,
-      text: "Esta apuesta ya está resuelta.",
-    });
-    return;
-  }
-
-  const primerEvento = apuesta.selecciones[0]?.evento ?? "esta apuesta";
-  // El id de la apuesta viaja en el propio texto del mensaje (no hay ningún
-  // sitio donde guardar estado entre mensajes de Telegram): al llegar la
-  // respuesta, se recupera de ahí con una expresión regular en vez de con
-  // una tabla nueva de "sesiones pendientes".
-  await tg("sendMessage", {
-    chat_id: chatId,
-    text: `💰 ¿Importe cobrado (€) por el Cash Out de «${escapeHtml(primerEvento)}»?\n\nRef: ${apuesta.id}`,
-    reply_markup: { force_reply: true },
-  });
-  await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id });
-}
-
-async function manejarPickPulsado(supabaseAdmin, callbackQuery, chatId, apuestaId, indiceStr, codigo) {
-  const indice = Number(indiceStr);
-  const { data: apuesta } = await supabaseAdmin
-    .from("apuestas")
-    .select("*")
-    .eq("id", apuestaId)
-    .eq("user_id", USER_ID)
-    .single();
-
-  if (!apuesta) {
-    await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id, text: "No encontrada" });
-    return;
-  }
-
-  const resultadoPulsado = CODIGO_A_RESULTADO[codigo];
-  const actual = apuesta.selecciones[indice]?.resultado ?? "pendiente";
-  // Mismo ciclo que marcarPick en ApuestaItem.jsx: tocar el mismo botón
-  // otra vez deshace el pick (vuelve a pendiente).
-  const nuevo = actual === resultadoPulsado ? "pendiente" : resultadoPulsado;
-
-  const gruposAntes = agruparSeleccionesPorPartido(apuesta.selecciones);
-  const actualizada = await marcarPick(supabaseAdmin, apuesta, indice, nuevo);
-  const apuestaActualizada = { ...apuesta, selecciones: actualizada.selecciones, resultado: actualizada.resultado };
-
-  if (gruposAntes.length === 1) {
-    // Apuesta simple: todo vive en un único mensaje, se reedita entero.
-    const { texto, teclado } = renderApuestaSimple(
-      apuestaActualizada,
-      agruparSeleccionesPorPartido(actualizada.selecciones)
-    );
-    await tg("editMessageText", {
+    await tg("sendMessage", {
       chat_id: chatId,
-      message_id: callbackQuery.message.message_id,
-      text: texto,
+      text: renderResumen(apuesta),
       parse_mode: "HTML",
-      reply_markup: teclado,
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📱 Abrir apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${apuesta.id}` } }],
+        ],
+      },
     });
-  } else {
-    // Combinada: solo se reedita el mensaje del partido al que pertenece
-    // este pick — el resto de partidos no se tocan.
-    const gruposDespues = agruparSeleccionesPorPartido(actualizada.selecciones);
-    const posicion = gruposDespues.findIndex((g) => g.selecciones.some((s) => s.indice === indice));
-    const { texto, teclado } = renderGrupoMensaje(apuestaActualizada, gruposDespues[posicion], {
-      conCabecera: posicion === 0,
-      totalPartidos: gruposDespues.length,
-    });
-    await tg("editMessageText", {
-      chat_id: chatId,
-      message_id: callbackQuery.message.message_id,
-      text: texto,
-      parse_mode: "HTML",
-      reply_markup: teclado,
-    });
-
-    // Si con este pick la apuesta entera queda sellada (o se deshace un
-    // sello anterior) y el pick tocado no era del primer partido, ese
-    // primer mensaje (el que lleva el estado) no se reedita — se avisa con
-    // un mensaje nuevo en vez de intentar localizar y editar aquel otro.
-    if (posicion !== 0 && actualizada.resultado !== apuesta.resultado) {
-      await tg("sendMessage", {
-        chat_id: chatId,
-        text: `<b>${estadoTextoDe(apuestaActualizada)}</b> — apuesta actualizada.`,
-        parse_mode: "HTML",
-      });
-    }
   }
-
-  await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id });
-}
-
-async function manejarCallback(supabaseAdmin, callbackQuery, chatId) {
-  const [tipo, ...resto] = (callbackQuery.data ?? "").split("|");
-
-  if (tipo === "c") {
-    await manejarCashOutSolicitado(supabaseAdmin, callbackQuery, chatId, resto[0]);
-    return;
-  }
-  if (tipo === "p") {
-    await manejarPickPulsado(supabaseAdmin, callbackQuery, chatId, resto[0], resto[1], resto[2]);
-    return;
-  }
-  await tg("answerCallbackQuery", { callback_query_id: callbackQuery.id });
-}
-
-async function manejarRespuestaCashOut(supabaseAdmin, message, chatId) {
-  const referencia = message.reply_to_message?.text?.match(/Ref: ([0-9a-f-]{36})/i);
-  if (!referencia) return;
-
-  const importe = Number(String(message.text).trim().replace(",", "."));
-  if (!Number.isFinite(importe) || importe < 0) {
-    await tg("sendMessage", { chat_id: chatId, text: "Escribe solo el número del importe (ej: 12.50)." });
-    return;
-  }
-
-  const apuestaId = referencia[1];
-  const { data: apuesta } = await supabaseAdmin
-    .from("apuestas")
-    .select("*")
-    .eq("id", apuestaId)
-    .eq("user_id", USER_ID)
-    .single();
-  if (!apuesta) return;
-
-  await marcarResultadoApuesta(supabaseAdmin, apuesta, "cashout", importe);
-  await tg("sendMessage", { chat_id: chatId, text: `💰 Cash Out registrado: ${importe.toFixed(2)}€` });
 }
 
 export default async function handler(req, res) {
@@ -340,8 +104,8 @@ export default async function handler(req, res) {
   }
 
   const update = req.body ?? {};
-  const chatId = update.message?.chat?.id ?? update.callback_query?.message?.chat?.id;
-  const fromId = update.message?.from?.id ?? update.callback_query?.from?.id;
+  const chatId = update.message?.chat?.id;
+  const fromId = update.message?.from?.id;
 
   // Bot de un solo usuario: aunque alguien encuentre el bot y adivine tu ID
   // de Telegram (no es un dato realmente secreto), esto descarta cualquier
@@ -354,17 +118,13 @@ export default async function handler(req, res) {
   const supabaseAdmin = crearSupabaseAdmin();
 
   try {
-    if (update.callback_query) {
-      await manejarCallback(supabaseAdmin, update.callback_query, chatId);
-    } else if (update.message?.text?.startsWith("/pendientes")) {
+    if (update.message?.text?.startsWith("/pendientes")) {
       await enviarPendientes(supabaseAdmin, chatId);
     } else if (update.message?.text?.startsWith("/start")) {
       await tg("sendMessage", {
         chat_id: chatId,
         text: "Hall of Bets Bot listo. Usa /pendientes para ver tus apuestas sin resolver.",
       });
-    } else if (update.message?.reply_to_message && update.message?.text) {
-      await manejarRespuestaCashOut(supabaseAdmin, update.message, chatId);
     }
   } catch (error) {
     console.error("telegram-webhook", error);

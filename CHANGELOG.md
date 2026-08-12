@@ -3281,3 +3281,123 @@ separadas, probando cada una antes de pasar a la siguiente.
     `.env.example`. Pendiente de que el usuario cree el bot con
     @BotFather, rellene las variables en Vercel y registre el webhook tras
     desplegar, antes de poder usarlo de verdad.
+
+- **Puesta en marcha real del bot** (con el usuario, paso a paso): token de
+  @BotFather pegado en el chat — guardado en `.env.local` (gitignored, solo
+  referencia local) y avisado explícitamente de que eso NO lo sube a
+  Vercel, hay que pegarlo también a mano en su panel. `TELEGRAM_WEBHOOK_SECRET`
+  generado con `openssl rand -hex 24` para no obligar al usuario a
+  inventar uno. Guiado paso a paso a por `SUPABASE_SERVICE_ROLE_KEY`
+  (detectado que el proyecto ya usa el sistema de claves nuevo de
+  Supabase, `sb_publishable_.../sb_secret_...`, no las clásicas
+  `anon`/`service_role`), `SUPABASE_USER_ID` (Authentication > Users) y
+  `TELEGRAM_OWNER_ID` (con `@userinfobot`, que resultó no responder a
+  `/start` como se esperaba — hacía falta reenviarle un mensaje propio; al
+  fallar eso por privacidad de reenvíos, se cambió a `@RawDataBot`, que sí
+  responde el ID directo con `/start`).
+  - **Bug real**: la primera vez que se pegó `SUPABASE_SERVICE_ROLE_KEY` en
+    Vercel se coló un salto de línea en medio del valor (típico de copiar
+    seleccionando texto a mano en vez de con el botón de copiar) — el
+    cliente de Supabase fallaba con `TypeError: Headers.set: ... is an
+    invalid header value`. Para poder diagnosticarlo se corrigió antes un
+    fallo del propio bot: si la consulta a Supabase fallaba, `/pendientes`
+    enseñaba el mismo mensaje que "no tienes pendientes", sin forma de
+    distinguir un error real de que de verdad no hubiera ninguna — se
+    separaron los dos casos (mensaje de error explícito + log en Vercel),
+    y de paso se mostró temporalmente el `user_id` usado en el mensaje de
+    "sin pendientes", para comparar contra el UID real mientras se
+    depuraba. Ambos ayudaron a encontrar el salto de línea; el aviso de
+    `user_id` se quitó en cuanto se resolvió.
+  - Ajustes visuales tras probarlo de verdad: los botones V/X/- pasaron a
+    los mismos emoji que ya usaba el texto de estado (✅/❌/➖, lo más
+    parecido a los círculos de color de `ApuestaItem.jsx` que admite un
+    botón de Telegram) y se les quitó el número delante. Una combinada de
+    varios partidos con muchos mercados (petición directa: "si son 5
+    partidos con 10-12 selecciones, van a salir muchas filas") se dividió
+    en un mensaje por partido en vez de uno solo con todos los botones
+    apilados; el primer intento mandaba además una "cabecera" suelta (solo
+    estado + Cash Out, sin ningún partido) que quedaba rara en el chat
+    ("se ve raro" — confirmado con `AskUserQuestion` que era justo eso), así
+    que ese estado/Cash Out se fundió dentro del mensaje del primer
+    partido en vez de un mensaje aparte casi vacío.
+
+- **Mini App de Telegram para resolver apuestas con diseño de ticket**
+  (petición directa, con `betslip-demo.html` como maqueta de referencia).
+  Antes de tocar código se dio opinión técnica igual que con el bot,
+  porque dos partes del pedido chocaban con cómo está montada la app:
+  - **El resultado final (marcador) no tenía ningún conflicto real**: es
+    un endpoint público sin sesión (`api/partido.js`), así que el hook
+    `usePartidoInfo.js` se podía llamar tal cual desde la Mini App. Donde
+    SÍ había un problema de verdad era en las ESCRITURAS (marcar un pick,
+    Cash Out): `useApuestas.js` escribe con la clave anónima protegida por
+    RLS, que exige una sesión de Supabase real — y una Mini App abierta
+    dentro de Telegram arranca sin ninguna. Verificar el `initData` que
+    manda el SDK demuestra quién eres ante Telegram, no ante Supabase.
+  - Se plantearon dos decisiones con `AskUserQuestion`, las dos resueltas
+    con la opción recomendada: (1) escrituras vía service role — mismo
+    patrón que ya usa el bot, reutilizando literalmente
+    `api/_lib/apuestasResueltas.js`, en vez de emitir sesiones de Supabase
+    reales (enlace mágico) desde el servidor, mecanismo bastante más
+    delicado para lo que se ganaba; (2) ruta `/telegram/apuesta/:id`
+    resuelta a mano por `window.location.pathname` en `src/main.jsx` (el
+    proyecto no tiene `react-router-dom` ni ningún router hasta ahora), en
+    vez de añadir esa dependencia nueva solo para esta pantalla.
+  - Para que la Mini App pudiera reutilizar el hook `usePartidoInfo.js`
+    exactamente igual que `ApuestaItem.jsx` (petición explícita: "si se
+    detecta que se está escribiendo una llamada a `api/partido.js` o
+    similar específica para esta ruta, es una señal de que se está
+    duplicando lógica — corrígelo"), se exportaron de `ApuestaItem.jsx`
+    las piezas que ya existían para esto (`InfoPartido`, envoltorio
+    "render prop" que llama al hook una vez por partido;
+    `horaInicioPartido`; `ESTADOS_TERMINADOS_API`) en vez de reimplementar
+    ese wrapper. La caché compartida en Supabase (`resultados_partidos`)
+    sigue con su misma política de RLS (`auth.role() = 'authenticated'`),
+    así que dentro de la Mini App (sin sesión) esa lectura/escritura de
+    caché concreta no tiene efecto — se degrada solo a pedir siempre a
+    `api/partido.js` (que tiene su propia caché de borde de Vercel de 5
+    minutos, independiente de Supabase), nunca rompe nada; se aceptó esa
+    pérdida menor de eficiencia en vez de tocar un hook central y ya
+    probado de la app por una ganancia pequeña.
+  - **Refactor sin lógica nueva**: `desdeFila` (fila de Supabase →
+    objeto camelCase) vivía dentro de `useApuestas.js`, que importa el
+    cliente de Supabase del navegador (`import.meta.env.VITE_...`) — al
+    intentar reutilizarla en `api/telegram-apuesta.js` (Node, no
+    navegador) esa importación habría reventado el arranque de la función
+    entera (`import.meta.env` no existe fuera de Vite). Se movió a
+    `src/utils/apuestas.js` (sin dependencias de navegador, ya se
+    reutilizaba en servidor) y `useApuestas.js` pasó a importarla de ahí
+    — mismo comportamiento, cero lógica duplicada, sin el riesgo de
+    reventar el import.
+  - Nuevo `api/_lib/telegramInitData.js`: verifica la firma HMAC del
+    `initData` (algoritmo oficial de Telegram) contra `TELEGRAM_BOT_TOKEN`
+    y comprueba el `auth_date` (caduca a las 24h, para que una URL vieja
+    filtrada en algún sitio no sirva para siempre). Probado con un script
+    suelto (fuera del repo) con 5 casos: firma válida se acepta, dato
+    manipulado tras firmar se rechaza, firmado con otro token se rechaza,
+    caducado se rechaza, sin hash se rechaza — los 5 correctos.
+  - `api/telegram-apuesta.js`: GET trae una apuesta (con `desdeFila`,
+    misma forma que usa toda la app), POST aplica un pick o un Cash Out —
+    ambos casos llaman a `marcarPick`/`marcarResultadoApuesta` de
+    `api/_lib/apuestasResueltas.js`, ya usadas por el bot: nada de lógica
+    de negocio nueva, solo el verificado de `initData` alrededor.
+  - `src/components/TicketApuesta.jsx` (presentacional, muescas + sello
+    rotado + divisor punteado de la maqueta, tipografías cambiadas a
+    Fraunces/IBM Plex Mono para encajar con el resto de la app) +
+    `src/components/TelegramMiniApp.jsx` (orquesta el SDK de Telegram,
+    `initData`, fetch a `api/telegram-apuesta.js`, y el `MainButton` nativo
+    para el flujo de Cash Out: un primer toque abre un campo de importe en
+    la propia página —Telegram no tiene un `prompt` de texto nativo—, el
+    segundo confirma).
+  - Como resolver ahora pasa por la Mini App, `/pendientes` del bot se
+    simplificó bastante: ya no manda botones V/X/-/Cash Out por chat
+    (habría sido una segunda vía de resolución en paralelo, sin lógica
+    duplicada de verdad pero sí interfaz duplicada) — manda un resumen de
+    texto por apuesta y un único botón "📱 Abrir apuesta" que abre el
+    ticket. Decisión tomada por el asistente sin preguntar (el usuario
+    había dejado "en vez de (o además de)" a su criterio), avisada al
+    informar del trabajo por si se prefiere recuperar los botones planos
+    también.
+  - No hacen falta variables de entorno nuevas: reutiliza las cinco que ya
+    tenía el bot. Pendiente de que el usuario pruebe el flujo completo
+    dentro de Telegram (el SDK de Mini Apps no se puede simular fuera de
+    la propia app de Telegram).

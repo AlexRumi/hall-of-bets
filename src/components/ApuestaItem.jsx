@@ -13,7 +13,10 @@ import FormularioApuesta from "./FormularioApuesta";
 // juego solo se sabría con certeza si se ha vuelto a pedir, y no se
 // vuelve a pedir — así que hasta que termine, la hora es lo único fiable
 // que se puede enseñar.
-const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
+// Exportado también para src/components/TicketApuesta.jsx (Mini App del bot
+// de Telegram), que necesita el mismo criterio para saber cuándo pintar el
+// marcador en vez de la hora.
+export const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
 
 // Combina la fecha del partido con su hora (las dos guardadas en la
 // selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
@@ -22,7 +25,7 @@ const ESTADOS_TERMINADOS_API = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD"
 // se interpreta en la zona horaria del navegador; como la hora ya viene en
 // hora de España (api/partidos.js pide con timezone=Europe/Madrid) y el uso
 // real es de un usuario en España, no hace falta ninguna librería de zonas.
-function horaInicioPartido(fecha, hora) {
+export function horaInicioPartido(fecha, hora) {
   if (!fecha || !hora) return null;
   return new Date(`${fecha}T${hora}:00`).getTime();
 }
@@ -33,8 +36,11 @@ function horaInicioPartido(fecha, hora) {
 // hace falta este patrón porque el hook no se puede llamar dos veces
 // sueltas dentro del mismo .map() de partidos sin arriesgarse a que las
 // dos disparen su propia petición a la vez (ninguna sabría que la otra ya
-// está pidiendo lo mismo), duplicando el gasto de cuota.
-function InfoPartido({ partidoId, horaInicioMs, children }) {
+// está pidiendo lo mismo), duplicando el gasto de cuota. Exportado para que
+// TicketApuesta.jsx (Mini App del bot de Telegram) traiga el resultado
+// final con exactamente el mismo hook/caché que la app normal, en vez de
+// reimplementar su propia llamada a api/partido.js.
+export function InfoPartido({ partidoId, horaInicioMs, children }) {
   const info = usePartidoInfo(partidoId, horaInicioMs);
   const terminado = !!(info && ESTADOS_TERMINADOS_API.has(info.estado));
   return children(info, terminado);

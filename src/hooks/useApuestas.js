@@ -1,30 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-
-function desdeFila(fila) {
-  return {
-    id: fila.id,
-    fecha: fila.fecha,
-    casa: fila.casa,
-    stake: Number(fila.stake),
-    selecciones: fila.selecciones,
-    resultado: fila.resultado,
-    categoria: fila.categoria,
-    tipoFondos: fila.tipo_fondos,
-    cashoutImporte:
-      fila.cashout_importe === null ? null : Number(fila.cashout_importe),
-    // Las apuestas de antes de tener este campo no tienen deporte asignado.
-    deporte: fila.deporte ?? "Otro",
-    seguroFreebetImporte:
-      fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
-    aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
-    archivado: fila.archivado ?? false,
-    cuotaTotalManual:
-      fila.cuota_total_manual === null || fila.cuota_total_manual === undefined
-        ? null
-        : Number(fila.cuota_total_manual),
-  };
-}
+import { desdeFila } from "../utils/apuestas";
 
 // Los datos viven en Supabase (tabla "apuestas"), no en localStorage: así
 // PC y móvil ven siempre lo mismo. Al cargar se leen todas las apuestas del

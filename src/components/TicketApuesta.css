@@ -1,0 +1,112 @@
+/* Ticket de la Mini App de Telegram (src/components/TicketApuesta.jsx):
+   siempre oscuro, como la cabecera "felt" del resto de la app — no depende
+   del modo claro/oscuro del dispositivo. Tipografías (Fraunces/IBM Plex
+   Mono) ya se cargan globalmente en src/index.css, no hace falta repetirlo
+   aquí. Colores fijos, tomados de la misma familia que ya usa el resto de
+   Hall of Bets (felt/gold/win/lose/void), no una paleta nueva. */
+
+.hob-mini-app {
+  min-height: 100dvh;
+  background: radial-gradient(circle at 50% 0%, #123024 0%, #071410 60%);
+  padding: 20px 14px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.hob-ticket {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: linear-gradient(180deg, #123024 0%, #0d2119 100%);
+  border-radius: 18px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(216, 179, 120, 0.08);
+  overflow: hidden;
+}
+
+.hob-ticket::before,
+.hob-ticket::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  background: #071410;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+.hob-ticket::before {
+  left: -10px;
+}
+.hob-ticket::after {
+  right: -10px;
+}
+
+.hob-stamp {
+  position: absolute;
+  top: 14px;
+  right: -4px;
+  transform: rotate(8deg);
+  border: 2px solid #d8b378;
+  color: #d8b378;
+  font-family: "Fraunces", serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 3px 10px 2px;
+  border-radius: 3px;
+  opacity: 0.92;
+}
+.hob-stamp.ganada {
+  border-color: #34c77e;
+  color: #34c77e;
+}
+.hob-stamp.perdida {
+  border-color: #e1685a;
+  color: #e1685a;
+}
+.hob-stamp.nula,
+.hob-stamp.cashout {
+  border-color: #9c9284;
+  color: #9c9284;
+}
+
+.hob-divider {
+  height: 1px;
+  margin: 12px -18px;
+  background: repeating-linear-gradient(90deg, #24493a 0 6px, transparent 6px 12px);
+}
+
+.hob-leg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.hob-pick-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  cursor: pointer;
+  color: #f3efe3;
+}
+
+.hob-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #24493a;
+}

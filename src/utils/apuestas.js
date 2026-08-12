@@ -348,3 +348,33 @@ export function calcularRachaActual(apuestas) {
   }
   return racha;
 }
+
+// Fila de Supabase (snake_case) → objeto que usa el resto de la app
+// (camelCase). Vive aquí (no en useApuestas.js) porque este archivo no
+// importa nada del navegador — así api/telegram-apuesta.js (Mini App del
+// bot de Telegram, corre en Node, no en el navegador) puede reutilizarla
+// tal cual en vez de reescribir el mismo mapeo por su cuenta.
+export function desdeFila(fila) {
+  return {
+    id: fila.id,
+    fecha: fila.fecha,
+    casa: fila.casa,
+    stake: Number(fila.stake),
+    selecciones: fila.selecciones,
+    resultado: fila.resultado,
+    categoria: fila.categoria,
+    tipoFondos: fila.tipo_fondos,
+    cashoutImporte:
+      fila.cashout_importe === null ? null : Number(fila.cashout_importe),
+    // Las apuestas de antes de tener este campo no tienen deporte asignado.
+    deporte: fila.deporte ?? "Otro",
+    seguroFreebetImporte:
+      fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
+    aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
+    archivado: fila.archivado ?? false,
+    cuotaTotalManual:
+      fila.cuota_total_manual === null || fila.cuota_total_manual === undefined
+        ? null
+        : Number(fila.cuota_total_manual),
+  };
+}
