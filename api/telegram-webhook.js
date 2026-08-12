@@ -113,30 +113,31 @@ function renderApuestaSimple(apuesta, grupos) {
   return { texto: lineas.join("\n").trim(), teclado: { inline_keyboard: filas } };
 }
 
-// Combinada de varios partidos (petición directa: con 5 partidos y 10-12
-// mercados, un solo mensaje con todo apilado se hacía interminable). Se
-// manda una "cabecera" (estado + Cash Out) y LUEGO un mensaje suelto por
-// partido, cada uno con solo sus propios botones — así cada mensaje se
-// puede editar por separado al tocar un botón, sin arrastrar el resto.
-function renderCabeceraCombinada(apuesta, grupos) {
-  const lineas = [`<b>${estadoTextoDe(apuesta)}</b>`];
-  lineas.push(
-    `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Combinada (${grupos.length} partidos) · ${
-      apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
-    }`
-  );
-  const filas = [];
-  if (apuesta.resultado === "pendiente") {
-    filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
-  }
-  return { texto: lineas.join("\n"), teclado: { inline_keyboard: filas } };
-}
-
-// El mensaje suelto de UN partido dentro de una combinada — se reconstruye
-// también tras cada botón pulsado, para editar solo este mensaje.
-function renderGrupoMensaje(apuesta, grupo) {
+// El mensaje suelto de UN partido dentro de una combinada (petición
+// directa: con 5 partidos y 10-12 mercados, un solo mensaje con todo
+// apilado se hacía interminable) — se reconstruye también tras cada botón
+// pulsado, para editar solo este mensaje. El PRIMER partido lleva además el
+// estado/fecha/casa y el botón de Cash Out de toda la apuesta (en vez de un
+// mensaje de "cabecera" aparte, que quedaba raro: un bloque suelto sin
+// ningún partido, solo con ese botón).
+function renderGrupoMensaje(apuesta, grupo, { conCabecera = false, totalPartidos = 1 } = {}) {
   const { lineas, filas } = lineasYFilasDeGrupo(apuesta, grupo, { numerar: grupo.selecciones.length > 1 });
-  return { texto: lineas.join("\n"), teclado: { inline_keyboard: filas } };
+
+  const encabezado = [];
+  if (conCabecera) {
+    encabezado.push(`<b>${estadoTextoDe(apuesta)}</b>`);
+    encabezado.push(
+      `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · Combinada (${totalPartidos} partidos) · ${
+        apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"
+      }`
+    );
+    encabezado.push("");
+    if (apuesta.resultado === "pendiente") {
+      filas.push([{ text: "💰 Cash Out", callback_data: `c|${apuesta.id}` }]);
+    }
+  }
+
+  return { texto: [...encabezado, ...lineas].join("\n"), teclado: { inline_keyboard: filas } };
 }
 
 async function enviarPendientes(supabaseAdmin, chatId) {
@@ -156,10 +157,7 @@ async function enviarPendientes(supabaseAdmin, chatId) {
     return;
   }
   if (!pendientes?.length) {
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: `No tienes apuestas pendientes 🎉 (consultado con user_id ${USER_ID})`,
-    });
+    await tg("sendMessage", { chat_id: chatId, text: "No tienes apuestas pendientes 🎉" });
     return;
   }
 
@@ -171,15 +169,11 @@ async function enviarPendientes(supabaseAdmin, chatId) {
       continue;
     }
 
-    const { texto: textoCabecera, teclado: tecladoCabecera } = renderCabeceraCombinada(apuesta, grupos);
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: textoCabecera,
-      parse_mode: "HTML",
-      reply_markup: tecladoCabecera,
-    });
-    for (const grupo of grupos) {
-      const { texto, teclado } = renderGrupoMensaje(apuesta, grupo);
+    for (let i = 0; i < grupos.length; i++) {
+      const { texto, teclado } = renderGrupoMensaje(apuesta, grupos[i], {
+        conCabecera: i === 0,
+        totalPartidos: grupos.length,
+      });
       await tg("sendMessage", { chat_id: chatId, text: texto, parse_mode: "HTML", reply_markup: teclado });
     }
   }
@@ -262,10 +256,13 @@ async function manejarPickPulsado(supabaseAdmin, callbackQuery, chatId, apuestaI
     });
   } else {
     // Combinada: solo se reedita el mensaje del partido al que pertenece
-    // este pick — la cabecera y el resto de partidos no se tocan.
+    // este pick — el resto de partidos no se tocan.
     const gruposDespues = agruparSeleccionesPorPartido(actualizada.selecciones);
-    const grupo = gruposDespues.find((g) => g.selecciones.some((s) => s.indice === indice));
-    const { texto, teclado } = renderGrupoMensaje(apuestaActualizada, grupo);
+    const posicion = gruposDespues.findIndex((g) => g.selecciones.some((s) => s.indice === indice));
+    const { texto, teclado } = renderGrupoMensaje(apuestaActualizada, gruposDespues[posicion], {
+      conCabecera: posicion === 0,
+      totalPartidos: gruposDespues.length,
+    });
     await tg("editMessageText", {
       chat_id: chatId,
       message_id: callbackQuery.message.message_id,
@@ -275,9 +272,10 @@ async function manejarPickPulsado(supabaseAdmin, callbackQuery, chatId, apuestaI
     });
 
     // Si con este pick la apuesta entera queda sellada (o se deshace un
-    // sello anterior), la cabecera no se reedita — se avisa con un mensaje
-    // nuevo en vez de intentar localizar y editar aquel otro mensaje.
-    if (actualizada.resultado !== apuesta.resultado) {
+    // sello anterior) y el pick tocado no era del primer partido, ese
+    // primer mensaje (el que lleva el estado) no se reedita — se avisa con
+    // un mensaje nuevo en vez de intentar localizar y editar aquel otro.
+    if (posicion !== 0 && actualizada.resultado !== apuesta.resultado) {
       await tg("sendMessage", {
         chat_id: chatId,
         text: `<b>${estadoTextoDe(apuestaActualizada)}</b> — apuesta actualizada.`,
