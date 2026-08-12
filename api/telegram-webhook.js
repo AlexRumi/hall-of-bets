@@ -115,8 +115,19 @@ async function enviarPendientes(supabaseAdmin, chatId) {
     .eq("resultado", "pendiente")
     .order("fecha", { ascending: true });
 
-  if (error || !pendientes?.length) {
-    await tg("sendMessage", { chat_id: chatId, text: "No tienes apuestas pendientes 🎉" });
+  if (error) {
+    console.error("telegram-webhook /pendientes", error);
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: `⚠️ Error consultando Supabase: ${error.message}`,
+    });
+    return;
+  }
+  if (!pendientes?.length) {
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text: `No tienes apuestas pendientes 🎉 (consultado con user_id ${USER_ID})`,
+    });
     return;
   }
 
