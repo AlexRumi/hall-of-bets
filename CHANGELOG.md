@@ -3193,3 +3193,91 @@ separadas, probando cada una antes de pasar a la siguiente.
     `!grupo.partidoId` — y no está en `soloLectura`) abre dos campos
     numéricos + Guardar/Cancelar, mismo patrón que el aviso de "Ajustar
     cuota" tras anular un pick.
+
+- **Bot de Telegram para resolver apuestas pendientes** (petición directa,
+  con una maqueta HTML de referencia adjunta). Antes de implementar se dio
+  primero una opinión técnica (pedida explícitamente: "Antes de nada, dame
+  una opinión"), tras revisar cómo funciona hoy `marcarResultado`/
+  `marcarResultadoSeleccion` (`useApuestas.js`), el saldo de freebet
+  (`useCasas.js`) y los trofeos (`trofeos.js`) — y se plantearon tres
+  decisiones de diseño antes de tocar código, las tres resueltas con la
+  opción recomendada:
+  - **Autenticación con Supabase**: un webhook no tiene sesión de
+    navegador (RLS), así que no puede usar la clave anónima de siempre.
+    Se descartó guardar la contraseña real de la cuenta como variable de
+    entorno; en su lugar, `api/_lib/supabaseAdmin.js` crea un cliente con
+    la *service role key* de Supabase (salta el RLS, patrón estándar para
+    procesos de confianza), filtrando igualmente cada consulta por
+    `SUPABASE_USER_ID` como defensa extra aunque no sea estrictamente
+    necesario con esa clave.
+  - **Guardado al toque, sin botón "Guardar"**: la maqueta HTML pedía un
+    botón que aplicase todo junto al final, pero `ApuestaItem.jsx` ya no
+    funciona así de verdad — cada pick se escribe al instante al tocarlo
+    (`marcarPick` en el componente). Un botón "Guardar" habría sido en
+    realidad un comportamiento *nuevo*, no "el mismo que la app", y encima
+    habría exigido guardar un estado temporal en el servidor (los
+    webhooks de Telegram no tienen memoria entre mensajes). Se implementó
+    igual que la app: cada V/X/- escribe de inmediato.
+  - **Caso "Nula" en partidos con varios mercados**: en la app, anular un
+    pick de un partido con más de un mercado abre un aviso pidiendo la
+    nueva cuota ajustada por la casa (paso que no estaba en el pedido
+    original). Se dejó fuera de esta primera versión del bot — ese ajuste
+    concreto se sigue haciendo desde la app.
+  - Reutilización real de lógica, no solo "mismo efecto": beneficio,
+    yield, racha y trofeos no se guardan en ningún sitio (se recalculan
+    siempre a partir del array de apuestas), así que no hacía falta
+    replicar nada de eso. Lo único que había que escribir es exactamente
+    lo que ya escriben `marcarResultado`/`marcarResultadoSeleccion` — así
+    que `api/_lib/apuestasResueltas.js` **importa directamente**
+    `agruparSeleccionesPorPartido`/`derivarResultadoApuesta` de
+    `src/utils/apuestas.js` (son funciones puras, sin nada de React, así
+    que una Serverless Function las puede usar igual que un componente) en
+    vez de reescribir esa lógica de cero. Se portó también el efecto
+    colateral de freebet que sí existe en `App.jsx`
+    (`manejarMarcarResultado`): seguro perdido devuelve freebet al perder,
+    nula con fondos freebet devuelve el stake — mismo cálculo que
+    `ajustarSaldoFreebet` en `useCasas.js`, reimplementado ahí porque un
+    hook de React no se puede llamar fuera de un componente.
+  - Antes de darlo por bueno, se probó la lógica portada con un script
+    suelto (fuera del repo) que simula los tres casos exactos de la
+    maqueta — pick simple, multi de un mismo partido con varios mercados,
+    combinada de dos partidos — más un caso de freebet anulada, contra la
+    función real `marcarPick`/`marcarResultadoApuesta` con un Supabase de
+    mentira: los 9 casos (incluido el de deshacer un pick tocando el
+    mismo botón otra vez, y el de "perdida matemática pero con mercados
+    del mismo multi aún sin decidir, que no debe sellarse todavía")
+    salieron todos correctos.
+  - Limitaciones reales de Telegram frente a la maqueta (no es un recorte
+    de alcance, es que la plataforma no lo permite): los mensajes de
+    Telegram no admiten texto de color personalizado, así que el estado
+    de cada pick se muestra con emoji + negrita/tachado (`parse_mode:
+    "HTML"`) en vez de cambiar de color; y el teclado de botones de un
+    mensaje siempre aparece junto debajo de todo el texto, nunca pegado a
+    cada línea — por eso cada pick sale numerado y su fila de botones
+    lleva el mismo número, para que la relación quede clara aun sin estar
+    una al lado de la otra.
+  - Seguridad del webhook: además de comprobar `TELEGRAM_OWNER_ID` (tu ID
+    de Telegram, que en realidad no es un dato secreto — cualquiera podría
+    intentar adivinarlo o verlo en un grupo compartido), se añadió el
+    `secret_token` que permite fijar `setWebhook` de Telegram: sin ese
+    valor exacto en la cabecera `X-Telegram-Bot-Api-Secret-Token`, la
+    petición se descarta antes de leer o tocar nada de Supabase — sin
+    esto, cualquiera que descubriera la URL del webhook podría intentar
+    mandar peticiones falsas suplantando tu ID.
+  - Cash Out: como Telegram no guarda estado entre mensajes, al pulsar
+    "💰 Cash Out" el bot pide el importe con `force_reply` y mete el id de
+    la apuesta como texto legible dentro del propio mensaje de la
+    pregunta ("Ref: &lt;uuid&gt;") — al llegar la respuesta, se recupera
+    de ahí con una expresión regular en vez de con una tabla nueva de
+    "sesiones pendientes".
+  - `/pendientes` manda un mensaje por apuesta pendiente (igual que la
+    maqueta), con un teclado con una fila de tres botones (V/X/-) por
+    cada mercado y, si la apuesta sigue pendiente, una fila final con
+    "💰 Cash Out".
+  - No se puede registrar ni probar el webhook en local (`vercel dev`
+    sirve para no exponer la key de API-Football, pero Telegram necesita
+    una URL pública de verdad para poder mandar los mensajes) — instrucciones
+    de registro y variables de entorno nuevas anotadas en `CLAUDE.md` y
+    `.env.example`. Pendiente de que el usuario cree el bot con
+    @BotFather, rellene las variables en Vercel y registre el webhook tras
+    desplegar, antes de poder usarlo de verdad.

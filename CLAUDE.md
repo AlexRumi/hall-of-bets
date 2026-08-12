@@ -11,7 +11,12 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 - Autenticación: Supabase Auth (email + contraseña), sesión persistida por dispositivo; pantalla de login propia en `src/components/PantallaLogin.jsx`
 - Gráficas: recharts
 - Iconos: lucide-react
-- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`. Vercel necesita las variables de entorno `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` y `API_FOOTBALL_KEY` (Project Settings > Environment Variables) — las dos primeras para conectar con Supabase, la tercera la usa solo `api/partidos.js` (nunca lleva el prefijo `VITE_`, para que no acabe en el bundle del navegador); en local van en `.env.local` (no se sube a git, ver `.env.example`)
+- Despliegue: GitHub (`AlexRumi/hall-of-bets`, rama `main`) + Vercel (`hall-of-bets.vercel.app`), auto-deploy en cada push a `main`. Vercel necesita las variables de entorno `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `API_FOOTBALL_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_USER_ID`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` y `TELEGRAM_OWNER_ID` (Project Settings > Environment Variables) — ver comentarios de cada una en `.env.example`; en local van en `.env.local` (no se sube a git)
+- Bot de Telegram (`api/telegram-webhook.js`): resuelve apuestas pendientes (Ganada/Perdida/Nula por mercado, o Cash Out) desde el móvil sin abrir la app, con `/pendientes`. Otra Serverless Function de Vercel, con su propio backend mínimo: escribe en Supabase con la service role key (`api/_lib/supabaseAdmin.js`, salta el RLS — no hay sesión de navegador en un webhook) y reutiliza la misma lógica de derivación de resultado que la app (`api/_lib/apuestasResueltas.js` importa `agruparSeleccionesPorPartido`/`derivarResultadoApuesta` de `src/utils/apuestas.js`, no la reescribe). Solo responde a tu ID de Telegram (`TELEGRAM_OWNER_ID`); cada petición debe traer el `secret_token` fijado al registrar el webhook (`TELEGRAM_WEBHOOK_SECRET`), si no se descarta antes de tocar la base de datos. Registro del webhook (una vez, tras desplegar y con las variables ya puestas en Vercel):
+  ```
+  curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://hall-of-bets.vercel.app/api/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+  ```
+  No se puede probar en local con `vercel dev` (Telegram necesita una URL pública para mandar los mensajes) — probar contra el despliegue real, con una apuesta de prueba antes de confiarle datos reales.
 
 ## Identidad visual (no cambiar sin pedirlo explícitamente)
 
