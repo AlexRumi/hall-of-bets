@@ -1,6 +1,8 @@
 import { agruparSeleccionesPorPartido, horaInicioPartido, ESTADOS_TERMINADOS_PARTIDO } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
+import { tg, escapeHtml, URL_APP } from "./_lib/telegram.js";
+import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 
 // Serverless Function pensada para un cron EXTERNO (cron-job.org, cada 15
 // min recomendado) — Vercel Hobby solo deja programar sus propios cron
@@ -41,38 +43,14 @@ const MARGEN_AVISO_MS = 125 * 60 * 1000;
 // dentro de cada apuesta (grupo.avisoEnviado), mismo patrón que
 // golesLocalManual: un campo más en el jsonb, sin migración de esquema.
 
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const URL_APP = "https://hall-of-bets.vercel.app";
-
-// Devuelve siempre la respuesta de Telegram, aunque sea un fallo (nunca
-// tira una excepción por un "ok: false" de Telegram) — quien llama decide
-// qué hacer con `datos.ok`. Bug real corregido: antes esta función no
-// comprobaba nada, así que un envío fallido se trataba como si hubiera
-// funcionado (el aviso se marcaba "enviado" sin haberse entregado de
-// verdad, y nunca se reintentaba).
-async function tg(method, payload) {
-  const respuesta = await fetch(`${TELEGRAM_API}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const datos = await respuesta.json();
-  if (!datos.ok) {
-    console.error("telegram-avisos: Telegram respondió con error", method, datos);
-  }
-  return datos;
-}
-
-function escapeHtml(texto = "") {
-  return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 // Texto del aviso de UNA apuesta: título con el partido que acaba de
 // disparar este mensaje en concreto, y debajo la lista de TODOS los
-// partidos de la apuesta — 🏁 los que ya se sabe que han terminado
-// (incluidos los detectados en avisos anteriores, no solo el nuevo), "·"
-// los demás. Así cada mensaje dice a la vez "qué ha cambiado" y "cómo va
-// todo", sin tener que abrir la apuesta para saberlo.
+// partidos de la apuesta — 🏁 + marcador los que ya se sabe que han
+// terminado (incluidos los detectados en avisos anteriores, no solo el
+// nuevo), 🕐 + hora de inicio los demás. Así cada mensaje dice a la vez
+// "qué ha cambiado" y "cómo va todo", sin tener que abrir la apuesta para
+// saberlo. Petición directa: mostrar el marcador real (no solo "terminado")
+// y la hora de los que faltan por jugar, en vez de solo el icono suelto.
 function renderAviso(apuesta, grupos, grupoDisparador, cachePorId, numero) {
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
@@ -80,8 +58,14 @@ function renderAviso(apuesta, grupos, grupoDisparador, cachePorId, numero) {
     "",
   ];
   for (const grupo of grupos) {
-    const terminado = grupo.partidoId && cachePorId.has(grupo.partidoId);
-    lineas.push(`${terminado ? "🏁" : "·"} ${escapeHtml(grupo.evento)}`);
+    const enCache = grupo.partidoId && cachePorId.get(grupo.partidoId);
+    if (enCache) {
+      lineas.push(
+        `🏁 ${escapeHtml(grupo.evento)} — <b>${enCache.goles_local}-${enCache.goles_visitante}</b>`
+      );
+    } else {
+      lineas.push(`🕐 ${escapeHtml(grupo.evento)}${grupo.hora ? ` — ${escapeHtml(grupo.hora)}` : ""}`);
+    }
   }
   return lineas.join("\n");
 }
@@ -138,7 +122,7 @@ export default async function handler(req, res) {
 
   const { data: enCache } = await supabaseAdmin
     .from("resultados_partidos")
-    .select("partido_id, estado")
+    .select("partido_id, estado, goles_local, goles_visitante")
     .in("partido_id", [...idsPartidosTotales]);
   // Solo se guardan aquí partidos ya terminados (ver usePartidoInfo.js), así
   // que estar en esta caché ya implica "terminado" — no hace falta volver a
@@ -160,7 +144,12 @@ export default async function handler(req, res) {
           goles_local: info.golesLocal,
           goles_visitante: info.golesVisitante,
         });
-        cachePorId.set(partidoId, { partido_id: partidoId, estado: info.estado });
+        cachePorId.set(partidoId, {
+          partido_id: partidoId,
+          estado: info.estado,
+          goles_local: info.golesLocal,
+          goles_visitante: info.golesVisitante,
+        });
       }
     } catch (fetchError) {
       console.error("telegram-avisos /api/partido", partidoId, fetchError);
@@ -200,6 +189,8 @@ export default async function handler(req, res) {
       // enviado — de lo contrario nunca se volvería a intentar y el aviso
       // se perdería para siempre.
       if (!enviado.ok) continue;
+
+      await guardarMensajeApuesta(supabaseAdmin, apuesta.id, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id);
 
       selecciones = selecciones.map((s, i) => (i === grupo.indiceLider ? { ...s, avisoEnviado: true } : s));
       cambiada = true;

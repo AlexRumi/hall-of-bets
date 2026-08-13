@@ -3633,3 +3633,59 @@ separadas, probando cada una antes de pasar a la siguiente.
   una sola regla, sin competencia. No se pudo verificar visualmente en un
   navegador de verdad (sin herramienta de captura en este entorno);
   pendiente de que el usuario lo confirme en el móvil tras desplegar.
+  Probado en local con `vercel dev` (arrancado y parado durante la sesión;
+  arrancar con `vite` a secas no sirve porque no sirve las funciones de
+  `/api`, así que el buscador de partidos no encuentra nada — no es un bug,
+  detalle aclarado en la sesión) mientras se comprobaba este mismo arreglo.
+
+- **Marcador real en el aviso de partido terminado + nuevo aviso de
+  "apuesta resuelta" + botones que cambian solos** (petición directa, a
+  partir de un mockup hecho con ChatGPT). Antes de tocar código se aclaró
+  qué parte del mockup era realista en Telegram (negrita/cursiva/tachado/
+  emoji, nada de insignias de colores ni tarjetas — eso ya lo tiene la
+  Mini App) y qué parte implicaba algo que la app nunca ha hecho a
+  propósito: decidir sola si un pick ha acertado (la mayoría de mercados
+  no se pueden derivar del marcador final, por eso siempre lo marcas tú a
+  mano). Se resolvió con `AskUserQuestion`: el aviso "todo acertado" solo
+  puede salir DESPUÉS de que el usuario termine de marcar el último pick a
+  mano, no en cuanto el partido termina.
+  - `api/telegram-avisos.js`: la lista de partidos de cada aviso pasa a
+    enseñar el marcador real de los terminados (🏁 X — 2-1) y la hora de
+    los que faltan por jugar (· Y — 21:00), en vez de solo el icono suelto.
+  - Nuevo `api/telegram-resuelta.js`: segundo Database Webhook de
+    Supabase, evento `UPDATE` en `apuestas` con el mismo
+    `REGISTRO_WEBHOOK_SECRET` que ya usaba el de registro — dispara solo
+    en la transición exacta `pendiente` → cualquier otra cosa (no en
+    cualquier UPDATE: editar una apuesta ya resuelta, o cualquier otro
+    cambio, no manda nada). Manda el marcador de cada partido (de
+    `resultados_partidos`, o el marcador manual en partidos de Otras
+    ligas) y el beneficio (`calcularBeneficio`, reutilizada tal cual, no
+    reimplementada).
+  - Nueva tabla `telegram_mensajes` (migración en `supabase-setup.sql`,
+    pendiente de que el usuario la ejecute): guarda qué mensaje de
+    Telegram (chat + id) lleva el botón "Ver apuesta"/"Abrir apuesta" de
+    cada apuesta — puede haber varios (uno de `/pendientes`, uno por cada
+    partido que va terminando en una combinada). `api/telegram-resuelta.js`
+    usa esa lista para EDITAR esos botones cuando la apuesta se resuelve
+    (✅ Ganada / ❌ Perdida / ➖ Nula / 💰 Cash Out en vez de "Ver
+    apuesta" siempre igual) y borra las filas una vez editados.
+  - **Refactor de paso**: `tg()`/`escapeHtml`/`URL_APP`, duplicados en los
+    tres archivos de Telegram (`api/telegram-webhook.js`,
+    `api/telegram-registro.js`, `api/telegram-avisos.js`, cada uno con su
+    propia copia), se sacaron a `api/_lib/telegram.js` compartido — de
+    paso corrige que `telegram-webhook.js` y `telegram-registro.js`
+    tampoco comprobaban si Telegram aceptaba el mensaje (mismo fallo que
+    ya se había corregido solo en `telegram-avisos.js` el día anterior),
+    ahora la protección es la misma en los cuatro archivos.
+  - Probado con un script suelto (fuera del repo) la condición exacta de
+    disparo del aviso de "resuelta" (pendiente→ganada dispara,
+    ganada→ganada por una edición NO vuelve a disparar, deshacer un
+    resultado NO dispara) y que `calcularBeneficio`/`desdeFila` se
+    reutilizan bien para una apuesta ganada y un cash out — los 10 casos
+    salieron correctos.
+  - Pendiente de que el usuario: ejecute la migración SQL de
+    `telegram_mensajes`, y configure el segundo Database Webhook en
+    Supabase (Integrations > Database Webhooks, evento `UPDATE`, misma
+    URL base con `/api/telegram-resuelta`, misma cabecera
+    `X-Registro-Secret`) — ninguno de los dos pasos se puede hacer desde
+    aquí.

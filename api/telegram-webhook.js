@@ -1,6 +1,8 @@
 import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
+import { tg, escapeHtml, URL_APP } from "./_lib/telegram.js";
+import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 
 // Serverless Function de Vercel, webhook del bot de Telegram: permite abrir
 // tus apuestas pendientes desde el móvil sin abrir la app entera. Registrado
@@ -14,22 +16,9 @@ import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numerac
 // abre esa apuesta con el diseño de ticket. La Mini App lee/escribe con su
 // propio endpoint (api/telegram-apuesta.js), verificando el initData del
 // SDK de Telegram en vez del secret_token/ID de chat que usa este webhook.
-
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-const URL_APP = "https://hall-of-bets.vercel.app";
-
-async function tg(method, payload) {
-  const respuesta = await fetch(`${TELEGRAM_API}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return respuesta.json();
-}
-
-function escapeHtml(texto = "") {
-  return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+// El id de cada mensaje se guarda (api/_lib/telegramMensajes.js) para que
+// api/telegram-resuelta.js pueda editar el botón más tarde, cuando la
+// apuesta quede resuelta.
 
 // Resumen de texto de una apuesta (sin botones de pick: solo para ver de un
 // vistazo qué es, antes de abrir el ticket con "Abrir apuesta").
@@ -79,7 +68,7 @@ async function enviarPendientes(supabaseAdmin, chatId) {
   const numerosPorId = await calcularNumerosPorCategoria(supabaseAdmin);
 
   for (const apuesta of pendientes) {
-    await tg("sendMessage", {
+    const enviado = await tg("sendMessage", {
       chat_id: chatId,
       text: renderResumen(apuesta, numerosPorId.get(apuesta.id) ?? "?"),
       parse_mode: "HTML",
@@ -89,6 +78,9 @@ async function enviarPendientes(supabaseAdmin, chatId) {
         ],
       },
     });
+    if (enviado.ok) {
+      await guardarMensajeApuesta(supabaseAdmin, apuesta.id, chatId, enviado.result.message_id);
+    }
   }
 }
 

@@ -226,3 +226,26 @@ create policy "autenticados_resultados_partidos" on public.resultados_partidos
 -- escrituras del bot.
 alter table public.resultados_partidos add column notificado boolean not null default false;
 
+-- Mensajes de Telegram con botón "Ver apuesta"/"Abrir apuesta" mandados
+-- para una apuesta (puede haber varios: uno de /pendientes, uno por cada
+-- partido que va terminando en una combinada...) — para poder editar ese
+-- botón más tarde (api/telegram-resuelta.js) cuando la apuesta quede
+-- resuelta, sin tener que volver a mandar nada nuevo. Se borran las filas
+-- en cuanto se editan los mensajes correspondientes, no hace falta
+-- guardar histórico.
+create table public.telegram_mensajes (
+  id uuid primary key default gen_random_uuid(),
+  apuesta_id uuid not null references public.apuestas(id) on delete cascade,
+  chat_id bigint not null,
+  message_id bigint not null,
+  creado_en timestamptz not null default now()
+);
+
+-- Solo la usan las Serverless Functions del bot (service role, salta el
+-- RLS) — mismo criterio que resultados_partidos: no es información
+-- personal sensible más allá de lo que ya vive en "apuestas", pero se deja
+-- con RLS igualmente por consistencia con el resto de tablas.
+alter table public.telegram_mensajes enable row level security;
+create policy "autenticados_telegram_mensajes" on public.telegram_mensajes
+  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+

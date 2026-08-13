@@ -1,6 +1,7 @@
 import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
+import { tg, escapeHtml } from "./_lib/telegram.js";
 
 // Serverless Function que recibe un Database Webhook de Supabase (Database >
 // Webhooks, configurado a mano en el panel — no hay forma de crearlo desde
@@ -15,22 +16,9 @@ import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numerac
 // Protegido con REGISTRO_WEBHOOK_SECRET (cabecera HTTP personalizada,
 // configurada al crear el webhook en Supabase) — distinto del secret_token
 // de Telegram y del AVISOS_CRON_SECRET: aquí quien llama es Supabase, no
-// Telegram ni cron-job.org.
-
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-
-async function tg(method, payload) {
-  const respuesta = await fetch(`${TELEGRAM_API}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return respuesta.json();
-}
-
-function escapeHtml(texto = "") {
-  return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+// Telegram ni cron-job.org. El mismo secreto y el mismo mecanismo (Database
+// Webhook) los reutiliza api/telegram-resuelta.js, con evento UPDATE en vez
+// de INSERT.
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
