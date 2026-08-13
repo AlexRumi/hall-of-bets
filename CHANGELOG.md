@@ -3740,3 +3740,25 @@ separadas, probando cada una antes de pasar a la siguiente.
   aparte). `enviarPendientes()` ganó un parámetro `categoria` opcional
   (null = todas) que añade `.eq("categoria", ...)` a la consulta solo
   cuando se filtra.
+
+- **Aviso de "partido terminado" rediseñado a "apuesta lista para
+  confirmar"** (petición directa, tras probar en real una combinada de
+  hoy con 3 partidos a horas distintas): la primera versión mandaba un
+  mensaje por CADA partido que iba terminando dentro de una misma
+  apuesta — con varias apuestas pendientes a la vez llegaron unos 12
+  avisos de golpe, "es mucho aviso". Se cambió a un único mensaje por
+  apuesta, esperando a que TODOS sus partidos hayan terminado (en vez de
+  avisar de "X ha terminado", el título pasa a ser genérico: "📝 Ya puedes
+  confirmarla — todos sus partidos han terminado"), con el marcador real
+  de cada partido debajo. El usuario confirmó que el retraso de 15-20 min
+  tras el pitido final (lo que tarda en pasar el margen + el siguiente
+  tick del cron) no le importa, lo importante es que llegue uno solo.
+  También, en el mismo mensaje: la bandera de cuadros 🏁 se sustituyó por
+  el icono del deporte de la apuesta (mismo `iconoDeporte()` que ya usan
+  `/pendientes` y el aviso de resuelta), y el margen `MARGEN_AVISO_MS` se
+  bajó de 2h05 a 2h (petición directa, sin la holgura extra para la
+  certificación de la API que se había añadido en la ronda anterior).
+  En el código (`api/telegram-avisos.js`), `avisoEnviado` sigue viviendo
+  en la selección líder de cada grupo (mismo campo, sin migración), pero
+  ahora se marca en TODAS las líderes de la apuesta a la vez, en el mismo
+  envío, en vez de una a una según iba terminando cada partido.
