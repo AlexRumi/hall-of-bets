@@ -1,7 +1,7 @@
 import { agruparSeleccionesPorPartido, calcularBeneficio, desdeFila } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
-import { tg, escapeHtml, URL_APP } from "./_lib/telegram.js";
+import { tg, escapeHtml, URL_APP, iconoDeporte } from "./_lib/telegram.js";
 import { actualizarBotonesApuesta } from "./_lib/telegramMensajes.js";
 
 // Serverless Function que recibe un segundo Database Webhook de Supabase
@@ -40,10 +40,12 @@ function renderResuelta(apuestaCamel, grupos, cachePorId, numero) {
     apuestaCamel.resultado === "cashout" && apuestaCamel.cashoutImporte != null
       ? `${ETIQUETAS_RESULTADO.cashout}: ${apuestaCamel.cashoutImporte.toFixed(2)}€`
       : ETIQUETAS_RESULTADO[apuestaCamel.resultado] ?? apuestaCamel.resultado;
+  const icono = iconoDeporte(apuestaCamel.deporte);
 
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuestaCamel.categoria] ?? apuestaCamel.categoria}</b>`,
     `<b>${estadoTexto}</b>`,
+    "",
     `${apuestaCamel.fecha} · ${escapeHtml(apuestaCamel.casa)} · ${
       grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
     } · ${apuestaCamel.tipoFondos === "freebet" ? "Freebet" : "Real"}`,
@@ -58,7 +60,11 @@ function renderResuelta(apuestaCamel, grupos, cachePorId, numero) {
     } else if (hayManual) {
       lineas.push(`🏁 ${escapeHtml(grupo.evento)} — <b>${grupo.golesLocalManual}-${grupo.golesVisitanteManual}</b>`);
     } else {
-      lineas.push(`🕐 ${escapeHtml(grupo.evento)}`);
+      // Sin marcador (raro: solo si nunca se consultó/guardó el resultado
+      // del partido) — no tiene sentido un reloj de "pendiente" aquí, la
+      // apuesta ya está decidida; se enseña el icono del deporte en su
+      // lugar (petición directa, detectado al probarlo de verdad).
+      lineas.push(`${icono} ${escapeHtml(grupo.evento)}`);
     }
   }
 

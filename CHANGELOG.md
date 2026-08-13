@@ -3689,3 +3689,19 @@ separadas, probando cada una antes de pasar a la siguiente.
     URL base con `/api/telegram-resuelta`, misma cabecera
     `X-Registro-Secret`) — ninguno de los dos pasos se puede hacer desde
     aquí.
+  - **Puesto en marcha por el usuario**: SQL ejecutado y segundo webhook
+    configurado sin problema (no recordaba el valor del secreto del
+    primero — se le recordó el que se había generado con `openssl rand`).
+  - **Ajustes de formato tras probarlo de verdad, con mockups exactos del
+    usuario para los tres mensajes**: más aire entre bloques (salto de
+    línea entre el estado y la línea de fecha/casa/tipo, y entre esa línea
+    y cada partido con sus mercados) en `/pendientes`
+    (`api/telegram-webhook.js`) y en el aviso de "apuesta resuelta"
+    (`api/telegram-resuelta.js`); e icono según el deporte de la apuesta
+    (`api/_lib/telegram.js`, nuevo `iconoDeporte()` — ⚽ Fútbol, 🏀
+    Baloncesto, 🎾 Tenis, 🎮 eSports, 🎲 Otro) junto a cada partido, en vez
+    de un ⚽ fijo sin mirar el deporte real. En `api/telegram-resuelta.js`
+    se detectó además que un partido sin marcador guardado (raro: solo si
+    nunca se llegó a consultar/cachear) mostraba el reloj 🕐 de "pendiente"
+    aunque la apuesta ya estuviera resuelta — no tenía sentido ahí, se
+    cambió por el icono del deporte también en ese caso.

@@ -1,7 +1,7 @@
 import { agruparSeleccionesPorPartido, horaInicioPartido, ESTADOS_TERMINADOS_PARTIDO } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
-import { tg, escapeHtml, URL_APP } from "./_lib/telegram.js";
+import { tg, escapeHtml, URL_APP, iconoDeporte } from "./_lib/telegram.js";
 import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 
 // Serverless Function pensada para un cron EXTERNO (cron-job.org, cada 15
@@ -54,7 +54,7 @@ const MARGEN_AVISO_MS = 125 * 60 * 1000;
 function renderAviso(apuesta, grupos, grupoDisparador, cachePorId, numero) {
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
-    `⚽ <b>${escapeHtml(grupoDisparador.evento)} ha terminado</b>`,
+    `${iconoDeporte(apuesta.deporte)} <b>${escapeHtml(grupoDisparador.evento)} ha terminado</b>`,
     "",
   ];
   for (const grupo of grupos) {

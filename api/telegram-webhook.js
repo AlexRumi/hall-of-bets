@@ -1,7 +1,7 @@
 import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
-import { tg, escapeHtml, URL_APP } from "./_lib/telegram.js";
+import { tg, escapeHtml, URL_APP, iconoDeporte } from "./_lib/telegram.js";
 import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 
 // Serverless Function de Vercel, webhook del bot de Telegram: permite abrir
@@ -21,21 +21,29 @@ import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 // apuesta quede resuelta.
 
 // Resumen de texto de una apuesta (sin botones de pick: solo para ver de un
-// vistazo qué es, antes de abrir el ticket con "Abrir apuesta").
+// vistazo qué es, antes de abrir el ticket con "Abrir apuesta"). Petición
+// directa: más aire entre bloques (estado/meta/cada partido con sus
+// mercados) e icono del deporte junto al nombre de cada partido, en vez de
+// todo pegado sin distinguir dónde empieza cada cosa.
 function renderResumen(apuesta, numero) {
   const grupos = agruparSeleccionesPorPartido(apuesta.selecciones);
+  const icono = iconoDeporte(apuesta.deporte);
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
     `⏳ <b>Pendiente</b>`,
+    "",
     `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · ${
       grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
     } · ${apuesta.tipo_fondos === "freebet" ? "Freebet" : "Real"}`,
-    "",
   ];
 
   for (const grupo of grupos) {
     const cabecera = [grupo.competicion, grupo.pais].filter(Boolean).join(" · ");
-    lineas.push(`<b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`);
+    lineas.push(
+      "",
+      `${icono} <b>${escapeHtml(grupo.evento)}</b>${cabecera ? ` <i>(${escapeHtml(cabecera)})</i>` : ""}`,
+      ""
+    );
     for (const pick of grupo.selecciones) {
       lineas.push(`· ${escapeHtml(pick.apuesta ?? pick.evento)}`);
     }

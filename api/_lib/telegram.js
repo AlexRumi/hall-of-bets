@@ -24,3 +24,17 @@ export async function tg(method, payload) {
 export function escapeHtml(texto = "") {
   return String(texto).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+// Icono junto al nombre del partido en los mensajes de Telegram, según el
+// campo "deporte" de la apuesta (lista cerrada, ver CLAUDE.md) — petición
+// directa, antes siempre salía ⚽ sin mirar el deporte real.
+const ICONOS_DEPORTE = {
+  Fútbol: "⚽",
+  Baloncesto: "🏀",
+  Tenis: "🎾",
+  eSports: "🎮",
+  Otro: "🎲",
+};
+export function iconoDeporte(deporte) {
+  return ICONOS_DEPORTE[deporte] ?? ICONOS_DEPORTE.Otro;
+}
