@@ -52,17 +52,19 @@ export default function TabsDesplazables({
           —incluida la posición de las flechas y el desvanecido de abajo,
           que son hermanos de este div— llegue hasta el borde real de la
           tarjeta, igual que el resto de secciones (p.ej. el buscador de
-          arriba, con su propio p-3). El px-3 de aquí recupera ese margen
-          por dentro del scroll, para que la primera/última pestaña
-          arranquen alineadas con el resto del contenido en reposo, aunque
-          el área deslizable en sí llegue hasta el borde. Antes, sin
-          ninguno de los dos, la fila arrancaba pegada al borde sin ese
-          margen, y en móvil (donde no caben todas las pestañas) se veían
-          cortadas a media palabra sin ningún indicio de que se podía
-          deslizar. */}
+          arriba, con su propio p-3). El padding lateral de .mq-tabs-scroll
+          (index.css) recupera ese margen por dentro del scroll, para que
+          la primera/última pestaña arranquen alineadas con el resto del
+          contenido en reposo, aunque el área deslizable en sí llegue hasta
+          el borde — vive en CSS aparte (no como px-3 de Tailwind aquí)
+          porque también tiene que dejar hueco extra para las flechas ‹ ›
+          solo con ratón; con las dos reglas compitiendo por lo mismo,
+          alguna se acaba imponiendo sin querer (bug real, detectado en
+          móvil: la de las flechas ganaba con menos margen del necesario,
+          y la primera/última pestaña se recortaban un poco). */}
       <div
         ref={scrollRef}
-        className={`mq-tabs-scroll scrollbar-oculto flex overflow-x-auto px-3 ${
+        className={`mq-tabs-scroll scrollbar-oculto flex overflow-x-auto ${
           compacto ? "gap-1 py-1.5" : "gap-1.5 py-2"
         }`}
       >

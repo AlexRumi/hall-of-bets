@@ -3615,3 +3615,21 @@ separadas, probando cada una antes de pasar a la siguiente.
     en vez de fallar en silencio. Con esto, si vuelve a pasar algo
     parecido, los logs de Vercel deberían dejar claro el motivo exacto en
     vez de tener que investigarlo a ciegas como esta vez.
+
+- **Bug real: primera/última pestaña recortada en las filas deslizantes
+  de `TabsDesplazables.jsx` en móvil** (detectado por el usuario en el
+  selector de mercado, con capturas). Causa: el `div` del scroll tenía DOS
+  reglas de padding lateral compitiendo por la misma propiedad — la clase
+  `px-3` de Tailwind (pensada para compensar el `-mx-3` del contenedor
+  exterior y que la primera/última pestaña no quedaran recortadas por el
+  `overflow-hidden` de la tarjeta) y la clase propia `.mq-tabs-scroll`
+  (pensada para dejar hueco a las flechas ‹ › solo con ratón). Con la
+  misma especificidad, ganaba `.mq-tabs-scroll` por ir detrás en la hoja
+  de estilos compilada — en escritorio (34px) sobraba de sobra y no se
+  notaba, pero en táctil (8px) faltaban 4px de los 12px que hacían falta
+  para compensar el `-mx-3`, así que la primera y la última pestaña se
+  recortaban justo esos 4px. Corregido subiendo el valor táctil de
+  `.mq-tabs-scroll` a 12px y quitando el `px-3` ya redundante del JSX —
+  una sola regla, sin competencia. No se pudo verificar visualmente en un
+  navegador de verdad (sin herramienta de captura en este entorno);
+  pendiente de que el usuario lo confirme en el móvil tras desplegar.

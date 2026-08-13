@@ -82,12 +82,23 @@ textarea {
   }
 }
 
-/* Hueco lateral para las flechas ‹ › de TabsDesplazables.jsx: solo hace
-   falta con ratón (las flechas solo se pintan ahí, ver .mq-solo-raton
-   arriba); en táctil las pestañas usan todo el ancho. */
+/* Padding lateral de la fila de pestañas de TabsDesplazables.jsx — hace dos
+   trabajos a la vez: recupera el -mx-3 del contenedor exterior (para que la
+   primera/última pestaña no queden recortadas por el overflow-hidden de la
+   tarjeta que las envuelve) y, solo con ratón de verdad, deja hueco extra
+   para las flechas ‹ › (que en táctil no se pintan, ver .mq-solo-raton
+   arriba). Antes esto competía con la clase px-3 de Tailwind en el propio
+   JSX (misma propiedad, empataban en especificidad y esta ganaba por ir
+   detrás en la hoja compilada) — con solo 8px en táctil, 4px menos de los
+   12px que hacían falta para compensar el -mx-3, la primera/última pestaña
+   se recortaban un poco (bug real, detectado en el móvil). Ahora esta es la
+   única regla que toca este padding — se quitó px-3 del JSX. Con 12px (el
+   mínimo justo para compensar el -mx-3) la primera/última pestaña ya no se
+   recortaban, pero quedaban pegadas del todo al borde — 16px deja un
+   pelín de aire de más (petición directa, tras verlo en el móvil). */
 .mq-tabs-scroll {
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 @media (hover: hover) and (pointer: fine) {
   .mq-tabs-scroll {
