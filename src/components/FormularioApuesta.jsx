@@ -275,6 +275,13 @@ export default function FormularioApuesta({
     setConAumento(false);
     setAumentoPct("");
     setImporteManual("");
+    // Bug real: al registrar una apuesta, el resto de campos se reseteaban
+    // para la siguiente, pero el bloque superior se quedaba colapsado (tal
+    // como lo había dejado la apuesta recién guardada) — el formulario
+    // aparecía con la tira resumen medio vacía en vez de volver a abrirse
+    // entero para la próxima apuesta.
+    setConfirmado(false);
+    setBloqueSuperiorAbierto(true);
   }
 
   return (

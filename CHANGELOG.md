@@ -3705,3 +3705,20 @@ separadas, probando cada una antes de pasar a la siguiente.
     nunca se llegó a consultar/cachear) mostraba el reloj 🕐 de "pendiente"
     aunque la apuesta ya estuviera resuelta — no tenía sentido ahí, se
     cambió por el icono del deporte también en ese caso.
+  - Añadido después, a petición directa, un salto de línea más entre el
+    título ("Apuesta nºX · Categoría") y la línea de estado, en los tres
+    mensajes — mismo criterio de "más aire" que el resto de bloques.
+
+- **Bug real: el formulario de "Nueva apuesta" se quedaba colapsado tras
+  registrar una apuesta** (detectado por el usuario, con captura). Al
+  guardar, el resto de campos se reseteaban para la siguiente apuesta
+  (fecha, casa, stake, bloques...), pero el bloque superior (que se
+  colapsa solo al confirmarlo, para no tener que hacer scroll mientras se
+  añaden varios partidos a una combinada) se quedaba tal cual lo había
+  dejado la apuesta recién guardada — colapsado. El formulario aparecía
+  con una tira resumen medio vacía (0,00€, sin casa) en vez de volver a
+  abrirse entero para la siguiente. Corregido añadiendo `setConfirmado(false)`
+  y `setBloqueSuperiorAbierto(true)` al final del reseteo, junto al resto
+  de campos — mismo sitio, mismo motivo. No se pudo probar en un
+  navegador de verdad en este entorno (sin esa herramienta); pendiente de
+  que el usuario lo confirme.
