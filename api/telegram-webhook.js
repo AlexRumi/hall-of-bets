@@ -28,7 +28,10 @@ import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 // vez (independiente del botón "Abrir apuesta" de cada mensaje, que es un
 // teclado en línea aparte, no compite con este).
 const TECLADO_CATEGORIAS = {
-  keyboard: [["📋 Todas", "💼 Apuestas", "🎮 Entretenimiento"]],
+  // "Todas" en su propia fila y las otras dos debajo (petición directa,
+  // tras verlo en el móvil): con las tres en una sola fila, "Entretenimiento"
+  // quedaba muy apretado por ser la palabra más larga.
+  keyboard: [["📋 Todas"], ["💼 Apuestas", "🎮 Entretenimiento"]],
   resize_keyboard: true,
 };
 const CATEGORIA_POR_BOTON = {
