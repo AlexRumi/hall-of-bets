@@ -44,6 +44,7 @@ function renderResuelta(apuestaCamel, grupos, cachePorId, numero) {
 
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuestaCamel.categoria] ?? apuestaCamel.categoria}</b>`,
+    "",
     `<b>${estadoTexto}</b>`,
     "",
     `${apuestaCamel.fecha} · ${escapeHtml(apuestaCamel.casa)} · ${

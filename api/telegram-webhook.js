@@ -30,6 +30,7 @@ function renderResumen(apuesta, numero) {
   const icono = iconoDeporte(apuesta.deporte);
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
+    "",
     `⏳ <b>Pendiente</b>`,
     "",
     `${apuesta.fecha} · ${escapeHtml(apuesta.casa)} · ${

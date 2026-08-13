@@ -54,6 +54,7 @@ const MARGEN_AVISO_MS = 125 * 60 * 1000;
 function renderAviso(apuesta, grupos, grupoDisparador, cachePorId, numero) {
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
+    "",
     `${iconoDeporte(apuesta.deporte)} <b>${escapeHtml(grupoDisparador.evento)} ha terminado</b>`,
     "",
   ];
