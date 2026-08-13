@@ -19,6 +19,23 @@ import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
 // El id de cada mensaje se guarda (api/_lib/telegramMensajes.js) para que
 // api/telegram-resuelta.js pueda editar el botón más tarde, cuando la
 // apuesta quede resuelta.
+//
+// Teclado personalizado (petición directa — "categorías debajo del nombre
+// del canal" no es posible, Telegram no deja a los bots tocar esa zona;
+// esto es lo más parecido: botones fijos justo encima de donde se escribe,
+// siempre a la vista) — se fija una vez al mandar /start y se queda puesto
+// en el chat para las respuestas siguientes, sin tener que reenviarlo cada
+// vez (independiente del botón "Abrir apuesta" de cada mensaje, que es un
+// teclado en línea aparte, no compite con este).
+const TECLADO_CATEGORIAS = {
+  keyboard: [["📋 Todas", "💼 Apuestas", "🎮 Entretenimiento"]],
+  resize_keyboard: true,
+};
+const CATEGORIA_POR_BOTON = {
+  "📋 Todas": null,
+  "💼 Apuestas": "apuestas",
+  "🎮 Entretenimiento": "entretenimiento",
+};
 
 // Resumen de texto de una apuesta (sin botones de pick: solo para ver de un
 // vistazo qué es, antes de abrir el ticket con "Abrir apuesta"). Petición
@@ -53,13 +70,18 @@ function renderResumen(apuesta, numero) {
   return lineas.join("\n").trim();
 }
 
-async function enviarPendientes(supabaseAdmin, chatId) {
-  const { data: pendientes, error } = await supabaseAdmin
+// "categoria" es opcional (null = todas, "apuestas"/"entretenimiento" =
+// solo ese bankroll) — viene de los botones del teclado personalizado.
+async function enviarPendientes(supabaseAdmin, chatId, categoria) {
+  let consulta = supabaseAdmin
     .from("apuestas")
     .select("*")
     .eq("user_id", USER_ID)
     .eq("resultado", "pendiente")
     .order("fecha", { ascending: true });
+  if (categoria) consulta = consulta.eq("categoria", categoria);
+
+  const { data: pendientes, error } = await consulta;
 
   if (error) {
     console.error("telegram-webhook /pendientes", error);
@@ -70,7 +92,8 @@ async function enviarPendientes(supabaseAdmin, chatId) {
     return;
   }
   if (!pendientes?.length) {
-    await tg("sendMessage", { chat_id: chatId, text: "No tienes apuestas pendientes 🎉" });
+    const etiqueta = categoria ? ` en ${ETIQUETAS_CATEGORIA[categoria] ?? categoria}` : "";
+    await tg("sendMessage", { chat_id: chatId, text: `No tienes apuestas pendientes${etiqueta} 🎉` });
     return;
   }
 
@@ -122,13 +145,18 @@ export default async function handler(req, res) {
 
   const supabaseAdmin = crearSupabaseAdmin();
 
+  const texto = update.message?.text;
+
   try {
-    if (update.message?.text?.startsWith("/pendientes")) {
-      await enviarPendientes(supabaseAdmin, chatId);
-    } else if (update.message?.text?.startsWith("/start")) {
+    if (texto?.startsWith("/pendientes")) {
+      await enviarPendientes(supabaseAdmin, chatId, null);
+    } else if (texto in CATEGORIA_POR_BOTON) {
+      await enviarPendientes(supabaseAdmin, chatId, CATEGORIA_POR_BOTON[texto]);
+    } else if (texto?.startsWith("/start")) {
       await tg("sendMessage", {
         chat_id: chatId,
-        text: "Hall of Bets Bot listo. Usa /pendientes para ver tus apuestas sin resolver.",
+        text: "Hall of Bets Bot listo. Usa los botones de abajo (o /pendientes) para ver tus apuestas sin resolver.",
+        reply_markup: TECLADO_CATEGORIAS,
       });
     }
   } catch (error) {

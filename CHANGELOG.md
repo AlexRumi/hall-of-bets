@@ -3722,3 +3722,21 @@ separadas, probando cada una antes de pasar a la siguiente.
   de campos — mismo sitio, mismo motivo. No se pudo probar en un
   navegador de verdad en este entorno (sin esa herramienta); pendiente de
   que el usuario lo confirme.
+
+- **Filtro por categoría en `/pendientes`, con teclado personalizado**
+  (petición directa: "categorías debajo del nombre del canal, tipo Todas/
+  Apuestas/Entretenimiento"). Aclarado antes de tocar código que Telegram
+  no deja a los bots poner nada debajo del nombre del chat — esa zona es
+  fija, de la propia app. Se ofrecieron dos alternativas reales
+  (comandos nuevos `/apuestas`/`/entretenimiento`, o un teclado
+  personalizado con botones fijos siempre visibles junto al cuadro de
+  texto) y se eligió la segunda, "a probar": tres botones ("📋 Todas" /
+  "💼 Apuestas" / "🎮 Entretenimiento" — mismos iconos que ya usa
+  `SidebarNavegacion.jsx` en la app, Wallet→💼 y Gamepad2→🎮) que hacen lo
+  mismo que `/pendientes` pero filtrado a un bankroll. El teclado se activa
+  mandando `/start` (Telegram lo deja fijado en el chat desde ese momento,
+  no hace falta reenviarlo en cada respuesta; convive sin problema con el
+  botón "Abrir apuesta" de cada mensaje, que es un teclado en línea
+  aparte). `enviarPendientes()` ganó un parámetro `categoria` opcional
+  (null = todas) que añade `.eq("categoria", ...)` a la consulta solo
+  cuando se filtra.
