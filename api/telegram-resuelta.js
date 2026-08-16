@@ -2,7 +2,7 @@ import { agruparSeleccionesPorPartido, calcularBeneficio, desdeFila } from "../s
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
 import { tg, escapeHtml, URL_APP, iconoDeporte } from "./_lib/telegram.js";
-import { actualizarBotonesApuesta } from "./_lib/telegramMensajes.js";
+import { actualizarBotonesApuesta, guardarMensajeSuelto } from "./_lib/telegramMensajes.js";
 
 // Serverless Function que recibe un segundo Database Webhook de Supabase
 // (mismo mecanismo que api/telegram-registro.js, mismo REGISTRO_WEBHOOK_SECRET
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
     const numerosPorId = await calcularNumerosPorCategoria(supabaseAdmin);
     const numero = numerosPorId.get(fila.id) ?? "?";
 
-    await tg("sendMessage", {
+    const enviado = await tg("sendMessage", {
       chat_id: process.env.TELEGRAM_OWNER_ID,
       text: renderResuelta(apuestaCamel, grupos, cachePorId, numero),
       parse_mode: "HTML",
@@ -127,6 +127,14 @@ export default async function handler(req, res) {
         inline_keyboard: [[{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${fila.id}` } }]],
       },
     });
+    // tipo "resuelta": la limpieza diaria (api/telegram-limpieza.js) lo
+    // borra siempre — el botón "Ver apuesta" de este mensaje concreto nunca
+    // se edita (no está en la lista que gestiona actualizarBotonesApuesta,
+    // esos son los mensajes ANTERIORES a este, de cuando la apuesta seguía
+    // pendiente), así que no necesita quedarse.
+    if (enviado.ok) {
+      await guardarMensajeSuelto(supabaseAdmin, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id, "resuelta", fila.id);
+    }
 
     await actualizarBotonesApuesta(
       supabaseAdmin,

@@ -2,6 +2,7 @@ import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
 import { tg, escapeHtml } from "./_lib/telegram.js";
+import { guardarMensajeSuelto } from "./_lib/telegramMensajes.js";
 
 // Serverless Function que recibe un Database Webhook de Supabase (Database >
 // Webhooks, configurado a mano en el panel — no hay forma de crearlo desde
@@ -50,11 +51,17 @@ export default async function handler(req, res) {
       "✅ Registrada correctamente.",
     ];
 
-    await tg("sendMessage", {
+    const enviado = await tg("sendMessage", {
       chat_id: process.env.TELEGRAM_OWNER_ID,
       text: lineas.join("\n"),
       parse_mode: "HTML",
     });
+    // tipo "registro": la limpieza diaria (api/telegram-limpieza.js) lo
+    // borra siempre, no tiene un estado "pendiente" que respetar como los
+    // mensajes con botón "Ver apuesta".
+    if (enviado.ok) {
+      await guardarMensajeSuelto(supabaseAdmin, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id, "registro", fila.id);
+    }
   } catch (error) {
     console.error("telegram-registro", error);
   }

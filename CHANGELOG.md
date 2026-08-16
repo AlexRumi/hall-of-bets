@@ -4379,3 +4379,49 @@ separadas, probando cada una antes de pasar a la siguiente.
   personalizado al navegar fuera del chat y volver, y sin él algunos
   clientes lo dan por cerrado del todo en vez de solo minimizado al
   icono pequeño. Con el flag, el cliente lo mantiene siempre visible.
+
+- **Limpieza diaria del chat de Telegram, cada mañana entre las 8 y las
+  9 (hora de España)** (petición directa: "quiero que el chat se
+  elimine"). Aclarado con el usuario en dos pasos (`AskUserQuestion`),
+  tras detectar él mismo que Todas/Apuestas/Entretenimiento solo listan
+  lo PENDIENTE (no "todas las apuestas"):
+  - Las apuestas ya resueltas (aviso de ganada/perdida/nula y el listado
+    antiguo con el marcador puesto) también se borran cada mañana — el
+    chat queda realmente limpio, solo con lo pendiente. No afecta a los
+    datos reales (siguen intactos en la app/Supabase), Telegram es solo
+    el canal de avisos.
+  - Cron nuevo y propio, `api/telegram-limpieza.js` (mismo esqueleto que
+    `api/telegram-avisos.js`, un segundo trabajo en cron-job.org cada 15
+    min, con su propio `LIMPIEZA_CRON_SECRET`) — mismo patrón de "un
+    archivo por función" que ya sigue el resto del bot, en vez de
+    mezclarlo dentro de `telegram-avisos.js`.
+  - Un bot solo puede borrar SUS PROPIOS mensajes (nunca lo que escribe
+    el usuario ni los toques a los botones del teclado) — así que
+    "eliminar el chat" es en la práctica "eliminar todo lo que manda el
+    bot", excepto lo que sigue haciendo falta: la confirmación de
+    `/start` (borrarla colapsaría el teclado personalizado — mismo bug
+    de `is_persistent` corregido antes) y los mensajes con botón "Ver
+    apuesta" de apuestas que SIGUEN pendientes (para que los botones del
+    teclado se refieran a algo real).
+  - Cada mensaje que manda el bot se guarda ahora con un `tipo`
+    (`start`/`listado`/`aviso`/`registro`/`resuelta`) en la tabla ya
+    existente `telegram_mensajes` (columna nueva; antes solo guardaba
+    los mensajes con botón "Ver apuesta", para poder editarlo al
+    resolverse). `actualizarBotonesApuesta` (`api/_lib/telegramMensajes.js`)
+    dejó de BORRAR esas filas al resolver una apuesta — ahora las marca
+    con una columna nueva `resuelta_en`, para que la limpieza sepa que
+    ya puede llevárselas de verdad en vez de perder el rastro de a qué
+    mensaje de Telegram habría que ir a borrar. `api/telegram-registro.js`
+    y `api/telegram-resuelta.js` empiezan a guardar su propio mensaje
+    (antes ninguno de los dos se guardaba, no hacía falta hasta ahora).
+  - La franja horaria se calcula con `Intl.DateTimeFormat` (mismo truco
+    ya usado en el arreglo del desfase horario del aviso de partido
+    terminado) — el cron corre cada 15 min todo el día, pero solo actúa
+    si la hora en Madrid es la 8; no hace falta guardar "ya se limpió
+    hoy", tras la primera pasada no queda nada elegible para las 3
+    pasadas siguientes de esa misma hora.
+  - **Manual, fuera del código** (no se puede hacer desde aquí): añadir
+    la columna `tipo`/`resuelta_en` a `telegram_mensajes` en Supabase
+    (SQL Editor), la variable de entorno `LIMPIEZA_CRON_SECRET` en
+    Vercel, y un segundo trabajo en cron-job.org contra
+    `/api/telegram-limpieza?secret=<LIMPIEZA_CRON_SECRET>`.

@@ -193,7 +193,7 @@ export default async function handler(req, res) {
     // se perdería para siempre.
     if (!enviado.ok) continue;
 
-    await guardarMensajeApuesta(supabaseAdmin, apuesta.id, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id);
+    await guardarMensajeApuesta(supabaseAdmin, apuesta.id, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id, "aviso");
     avisados++;
 
     const indicesLider = new Set(grupos.map((g) => g.indiceLider));

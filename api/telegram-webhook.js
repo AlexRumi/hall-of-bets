@@ -2,7 +2,7 @@ import { agruparSeleccionesPorPartido } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { calcularNumerosPorCategoria, ETIQUETAS_CATEGORIA } from "./_lib/numeracion.js";
 import { tg, escapeHtml, URL_APP, iconoDeporte } from "./_lib/telegram.js";
-import { guardarMensajeApuesta } from "./_lib/telegramMensajes.js";
+import { guardarMensajeApuesta, guardarMensajeSuelto } from "./_lib/telegramMensajes.js";
 
 // Serverless Function de Vercel, webhook del bot de Telegram: permite abrir
 // tus apuestas pendientes desde el móvil sin abrir la app entera. Registrado
@@ -120,7 +120,7 @@ async function enviarPendientes(supabaseAdmin, chatId, categoria) {
       },
     });
     if (enviado.ok) {
-      await guardarMensajeApuesta(supabaseAdmin, apuesta.id, chatId, enviado.result.message_id);
+      await guardarMensajeApuesta(supabaseAdmin, apuesta.id, chatId, enviado.result.message_id, "listado");
     }
   }
 }
@@ -162,11 +162,17 @@ export default async function handler(req, res) {
     } else if (texto in CATEGORIA_POR_BOTON) {
       await enviarPendientes(supabaseAdmin, chatId, CATEGORIA_POR_BOTON[texto]);
     } else if (texto?.startsWith("/start")) {
-      await tg("sendMessage", {
+      const enviado = await tg("sendMessage", {
         chat_id: chatId,
         text: "Hall of Bets Bot listo. Usa los botones de abajo (o /pendientes) para ver tus apuestas sin resolver.",
         reply_markup: TECLADO_CATEGORIAS,
       });
+      // tipo "start": la limpieza diaria (api/telegram-limpieza.js) nunca lo
+      // borra — borrarlo colapsaría el teclado personalizado de arriba
+      // (bug real ya corregido con "is_persistent", ver TECLADO_CATEGORIAS).
+      if (enviado.ok) {
+        await guardarMensajeSuelto(supabaseAdmin, chatId, enviado.result.message_id, "start");
+      }
     }
   } catch (error) {
     console.error("telegram-webhook", error);
