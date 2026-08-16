@@ -190,24 +190,36 @@ export function useApuestas(userId) {
     }
   }
 
-  // Resultado de una selección concreta dentro de una combinada (Ganada/
-  // Perdida/Nula por partido, independiente del resultado final de toda la
-  // apuesta — ver agruparSeleccionesPorPartido en utils/apuestas.js). Solo
-  // se marca en la selección "líder" de ese partido (la que lleva la cuota
-  // real); calcularCuotaTotal ya sabe ignorar las marcadas "nula" al
-  // calcular el total. Al no haber una columna propia por selección
-  // (jsonb), se reescribe el array completo con esa selección actualizada.
-  async function marcarResultadoSeleccion(id, indice, resultado) {
+  // Resultado de UN PARTIDO dentro de una apuesta (Ganada/Perdida/Nula,
+  // "Modificar" en ApuestaItem.jsx/TicketApuesta.jsx) — "indices" son los
+  // de TODOS los picks de ese partido (un multi-mercado se marca entero
+  // de una vez, no mercado a mercado), así que en una sola escritura basta
+  // — "una llamada menos" que si se marcara pick a pick. Al no haber una
+  // columna propia por selección (jsonb), se reescribe el array completo.
+  async function marcarResultadoGrupo(id, indices, resultado) {
     const apuestaActual = apuestas.find((a) => a.id === id);
     if (!apuestaActual) return;
 
     const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
-      i === indice ? { ...seleccion, resultado } : seleccion
+      indices.includes(i) ? { ...seleccion, resultado } : seleccion
     );
+
+    // Si el partido ENTRA o SALE de "Nula", el conjunto de partidos que
+    // cuentan en el producto cambia (ver calcularCuotaTotal) — un
+    // cuotaTotalManual puesto antes se calculó para la combinada
+    // completa, así que deja de tener sentido: se limpia para que la
+    // cuota total vuelva a calcularse sola (petición directa, detectado
+    // al probarlo con una combinada real).
+    const eraNula = indices.some((i) => apuestaActual.selecciones[i]?.resultado === "nula");
+    const limpiarCuotaManual =
+      (eraNula || resultado === "nula") && apuestaActual.cuotaTotalManual != null;
 
     const { data, error } = await supabase
       .from("apuestas")
-      .update({ selecciones: nuevasSelecciones })
+      .update({
+        selecciones: nuevasSelecciones,
+        ...(limpiarCuotaManual ? { cuota_total_manual: null } : {}),
+      })
       .eq("id", id)
       .select()
       .single();
@@ -219,47 +231,20 @@ export function useApuestas(userId) {
     }
   }
 
-  // Cuota de un partido concreto, ajustada a mano tras anular uno de sus
-  // picks (ver ApuestaItem.jsx: el aviso "¿cuál es la nueva cuota de la
-  // casa?"). Se guarda en la selección "líder" de ese partido — la misma
-  // que ya lleva la cuota real del grupo — mismo patrón que
-  // marcarResultadoSeleccion: no hay columna propia por selección (jsonb),
-  // así que se reescribe el array completo.
+  // Cuota de un partido concreto, ajustada a mano cuando la casa recalcula
+  // tras anular UN MERCADO suyo (ej. un jugador que no fue titular) — ver
+  // "Ajustar cuota (mercado anulado)" en ApuestaItem.jsx. Acción siempre
+  // disponible, independiente del estado del partido (Ganada/Perdida/Nula
+  // son otra cosa: el partido entero fuera de la combinada). Se guarda en
+  // la selección "líder" de ese partido — la misma que ya lleva la cuota
+  // real del grupo — no hay columna propia por selección (jsonb), así que
+  // se reescribe el array completo.
   async function actualizarCuotaSeleccion(id, indice, nuevaCuota) {
     const apuestaActual = apuestas.find((a) => a.id === id);
     if (!apuestaActual) return;
 
     const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
       i === indice ? { ...seleccion, cuota: nuevaCuota } : seleccion
-    );
-
-    const { data, error } = await supabase
-      .from("apuestas")
-      .update({ selecciones: nuevasSelecciones })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (!error) {
-      setApuestas((actuales) =>
-        actuales.map((a) => (a.id === id ? desdeFila(data) : a))
-      );
-    }
-  }
-
-  // Marcador final escrito a mano (petición directa, solo para "Otras
-  // ligas": sin partidoId no hay forma de traer el resultado automático de
-  // API-Football — ver ApuestaItem.jsx/usePartidoInfo.js — así que es la
-  // única manera de dejarlo anotado). Mismo patrón que
-  // actualizarCuotaSeleccion: se guarda en la selección líder del partido.
-  async function actualizarMarcadorManual(id, indice, golesLocal, golesVisitante) {
-    const apuestaActual = apuestas.find((a) => a.id === id);
-    if (!apuestaActual) return;
-
-    const nuevasSelecciones = apuestaActual.selecciones.map((seleccion, i) =>
-      i === indice
-        ? { ...seleccion, golesLocalManual: golesLocal, golesVisitanteManual: golesVisitante }
-        : seleccion
     );
 
     const { data, error } = await supabase
@@ -322,9 +307,8 @@ export function useApuestas(userId) {
     agregarApuesta,
     editarApuesta,
     marcarResultado,
-    marcarResultadoSeleccion,
+    marcarResultadoGrupo,
     actualizarCuotaSeleccion,
-    actualizarMarcadorManual,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango,

@@ -4,6 +4,7 @@ import { agruparPorMesYDia } from "../utils/agrupado";
 import { normalizarTexto } from "../utils/texto";
 import TarjetaApuestaResumen from "./TarjetaApuestaResumen";
 import ApuestaItem from "./ApuestaItem";
+import PanelLateral from "./PanelLateral";
 
 // Coincide si el texto de búsqueda aparece en el evento o en el mercado de
 // CUALQUIER selección de la apuesta (no solo la líder) — así buscar
@@ -32,12 +33,12 @@ export default function ListaApuestas({
   movimientos,
   todasApuestas,
   onMarcarResultado,
-  onMarcarResultadoSeleccion,
+  onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
-  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
   agrupada = true,
+  denso = false,
 }) {
   const [apuestaAbiertaId, setApuestaAbiertaId] = useState(null);
   // Qué meses ha tocado el usuario explícitamente (abrir/cerrar). El mes
@@ -66,7 +67,13 @@ export default function ListaApuestas({
   const contenido = !agrupada ? (
     <div className="space-y-2">
       {apuestasVisibles.map((apuesta) => (
-        <TarjetaApuestaResumen key={apuesta.id} apuesta={apuesta} onAbrir={setApuestaAbiertaId} />
+        <TarjetaApuestaResumen
+          key={apuesta.id}
+          apuesta={apuesta}
+          onAbrir={setApuestaAbiertaId}
+          denso={denso}
+          casas={casas}
+        />
       ))}
     </div>
   ) : apuestasVisibles.length === 0 ? (
@@ -131,6 +138,8 @@ export default function ListaApuestas({
                         key={apuesta.id}
                         apuesta={apuesta}
                         onAbrir={setApuestaAbiertaId}
+                        denso={denso}
+                        casas={casas}
                       />
                     ))}
                   </div>
@@ -175,7 +184,9 @@ export default function ListaApuestas({
 
       {apuestaAbierta && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 pb-4 pt-36 md:pt-20 z-50"
+          className={`fixed inset-0 bg-black/50 flex items-center justify-center px-4 pb-4 pt-36 md:pt-20 z-50 ${
+            denso ? "md:hidden" : ""
+          }`}
           onClick={() => setApuestaAbiertaId(null)}
         >
           {/* max-w-xl: el detalle rediseñado ya no tiene un layout de
@@ -195,15 +206,36 @@ export default function ListaApuestas({
               movimientos={movimientos}
               todasApuestas={todasApuestas}
               onMarcarResultado={onMarcarResultado}
-              onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+              onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
-              onActualizarMarcadorManual={onActualizarMarcadorManual}
               onBorrar={onBorrar}
               onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}
             />
           </div>
         </div>
+      )}
+
+      {/* Panel lateral de escritorio (solo cuando denso, ver PantallaInicio.jsx):
+          mismo ApuestaItem que el modal de arriba, solo cambia el
+          contenedor — anclado a la derecha en vez de centrado. */}
+      {denso && (
+        <PanelLateral abierto={!!apuestaAbierta} onCerrar={() => setApuestaAbiertaId(null)}>
+          {apuestaAbierta && (
+            <ApuestaItem
+              apuesta={apuestaAbierta}
+              casas={casas}
+              movimientos={movimientos}
+              todasApuestas={todasApuestas}
+              onMarcarResultado={onMarcarResultado}
+              onMarcarResultadoPartido={onMarcarResultadoPartido}
+              onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
+              onBorrar={onBorrar}
+              onEditar={onEditar}
+              onCerrar={() => setApuestaAbiertaId(null)}
+            />
+          )}
+        </PanelLateral>
       )}
     </div>
   );

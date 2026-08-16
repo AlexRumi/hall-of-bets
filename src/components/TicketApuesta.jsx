@@ -1,4 +1,3 @@
-import { Check, X, Minus } from "lucide-react";
 import { agruparSeleccionesPorPartido, calcularCuotaTotal, calcularBeneficio, horaInicioPartido } from "../utils/apuestas";
 import { equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
 import { InfoPartido } from "./ApuestaItem";
@@ -12,8 +11,11 @@ const ETIQUETAS_ESTADO = {
   cashout: "Cash Out",
 };
 
-const ICONOS_PICK = { ganada: Check, perdida: X, nula: Minus };
-const COLOR_BOTON = { ganada: "#34c77e", perdida: "#e1685a", nula: "#9c9284" };
+// Mismos 4 resultados que el diálogo "Modificar" de la web
+// (ApuestaItem.jsx) — sin Cash Out aquí, que se queda como su propio
+// botón/MainButton aparte, igual que antes.
+const OPCIONES_RESULTADO = ["pendiente", "ganada", "perdida", "nula"];
+const COLOR_BOTON = { pendiente: "#e0c464", ganada: "#34c77e", perdida: "#e1685a", nula: "#9c9284" };
 
 // Diseño "ticket" para la Mini App de Telegram (petición directa, con
 // betslip-demo.html como referencia visual) — muescas, sello rotado y
@@ -22,10 +24,16 @@ const COLOR_BOTON = { ganada: "#34c77e", perdida: "#e1685a", nula: "#9c9284" };
 // Puramente presentacional: toda la lógica (agrupar picks, cuota, marcador,
 // caché de resultado final) viene de las mismas piezas que ya usa
 // ApuestaItem.jsx, nada se recalcula aquí de otra forma.
+//
+// El resultado se pone en bloque para TODA la apuesta (4 pastillas debajo
+// del sello), igual que "Modificar" en la web — ya no se marca pick a
+// pick (ver CHANGELOG.md, "de marcado por pick a un resultado por
+// apuesta"). Los picks de la lista de selecciones pasan a ser de solo
+// lectura: texto del mercado + cuota, nada que tocar.
 export default function TicketApuesta({
   apuesta,
   soloLectura,
-  onMarcarPick,
+  onMarcarResultado,
   cashOutAbierto,
   importeCashOut,
   onCambiarImporteCashOut,
@@ -59,6 +67,29 @@ export default function TicketApuesta({
         </span>
       </div>
 
+      {!soloLectura && (
+        <div className="flex items-center gap-1.5 mt-2.5">
+          {OPCIONES_RESULTADO.map((valor) => {
+            const activo = apuesta.resultado === valor;
+            return (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => onMarcarResultado(valor)}
+                className="flex-1 font-mono text-[11px] font-bold rounded-lg py-1.5"
+                style={{
+                  color: activo ? "#0d1f18" : "#f3efe3",
+                  background: activo ? COLOR_BOTON[valor] : "transparent",
+                  border: `1.5px solid ${COLOR_BOTON[valor]}`,
+                }}
+              >
+                {ETIQUETAS_ESTADO[valor]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {grupos.map((grupo, indiceGrupo) => (
         <div key={grupo.indiceLider}>
           <div className="hob-divider" />
@@ -83,51 +114,16 @@ export default function TicketApuesta({
                   </p>
 
                   <div className="flex flex-col gap-2">
-                    {grupo.selecciones.map((pick) => {
-                      const estadoPick = pick.resultado ?? "pendiente";
-                      const puedeCiclar = !soloLectura && estadoPick === "pendiente";
-                      return (
-                        <div key={pick.indice} className="hob-leg">
-                          {["ganada", "perdida", "nula"].map((resultado) => {
-                            const Icono = ICONOS_PICK[resultado];
-                            const activo = estadoPick === resultado;
-                            if (!puedeCiclar && !activo) return null;
-                            return (
-                              <button
-                                key={resultado}
-                                type="button"
-                                disabled={soloLectura}
-                                onClick={() => onMarcarPick(pick.indice, resultado)}
-                                className="hob-pick-btn"
-                                style={{
-                                  background: activo ? COLOR_BOTON[resultado] : "transparent",
-                                  border: `1.5px solid ${activo ? COLOR_BOTON[resultado] : "#8fa99a"}`,
-                                }}
-                                aria-label={ETIQUETAS_ESTADO[resultado]}
-                              >
-                                <Icono size={11} strokeWidth={3} />
-                              </button>
-                            );
-                          })}
-                          <span
-                            className="flex-1 text-[13.5px] font-medium"
-                            style={{
-                              color: "#f3efe3",
-                              textDecoration: estadoPick === "perdida" ? "line-through" : "none",
-                              opacity: estadoPick === "perdida" || estadoPick === "nula" ? 0.6 : 1,
-                            }}
-                          >
-                            {pick.apuesta}
-                          </span>
-                          <span
-                            className="font-mono text-[13px]"
-                            style={{ color: estadoPick === "ganada" ? "#34c77e" : "#8fa99a" }}
-                          >
-                            {Number(pick.cuota).toFixed(2)}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {grupo.selecciones.map((pick) => (
+                      <div key={pick.indice} className="hob-leg">
+                        <span className="flex-1 text-[13.5px] font-medium" style={{ color: "#f3efe3" }}>
+                          {pick.apuesta}
+                        </span>
+                        <span className="font-mono text-[13px]" style={{ color: "#8fa99a" }}>
+                          {Number(pick.cuota).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {conEquipos && (

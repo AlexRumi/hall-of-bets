@@ -187,12 +187,15 @@ export default function InformeProfesional({ apuestas }) {
             Ver también archivado
           </label>
         </div>
+        {/* Antes era solo texto suelto (petición directa: "se ve poquito
+            ahí") — con borde propio se lee como una acción real, al mismo
+            nivel visual que las pastillas de bankroll de al lado. */}
         <button
           type="button"
           onClick={() => window.print()}
-          className="flex items-center gap-1.5 text-xs font-medium text-slate hover:text-gold transition-colors"
+          className="flex items-center gap-1.5 bg-surface border border-line rounded-lg px-3 py-1.5 text-sm font-medium text-ink hover:border-gold hover:bg-gold/5 hover:text-gold transition-colors"
         >
-          <Download size={14} />
+          <Download size={15} />
           Exportar a PDF
         </button>
       </div>
@@ -248,33 +251,41 @@ export default function InformeProfesional({ apuestas }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {tiles.map(({ etiqueta, actual, anterior, texto, color, conceptoId }) => (
-            <div key={etiqueta}>
-              <p className="text-xs text-slate flex items-center gap-1">
-                {etiqueta}
-                <BotonInfoConcepto conceptoId={conceptoId} etiqueta={etiqueta} />
-              </p>
-              <p className={`font-mono text-lg font-medium ${color ?? "text-ink"}`}>
-                {texto}
-              </p>
-              <Delta actual={actual} anterior={anterior} />
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-4 border-t border-line">
-          <p className="flex items-center gap-2 text-xs font-medium text-slate mb-2">
-            <Sparkles size={14} className="text-gold" />
-            Conclusiones
-          </p>
-          <ul className="space-y-1.5">
-            {conclusiones.map((frase, i) => (
-              <li key={i} className="text-sm text-ink">
-                {frase}
-              </li>
+        {/* Lado a lado desde "lg:" (rediseño de escritorio ancho): sueltos,
+            uno debajo del otro a todo el ancho de la página, los tiles se
+            habrían visto muy separados entre sí y las Conclusiones se
+            habrían leído en líneas de texto larguísimas — mismo patrón de
+            emparejar piezas que ya usan Estadísticas/Casas de apuestas. En
+            móvil, apilados como siempre. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4">
+            {tiles.map(({ etiqueta, actual, anterior, texto, color, conceptoId }) => (
+              <div key={etiqueta}>
+                <p className="text-xs text-slate flex items-center gap-1">
+                  {etiqueta}
+                  <BotonInfoConcepto conceptoId={conceptoId} etiqueta={etiqueta} />
+                </p>
+                <p className={`font-mono text-lg font-medium ${color ?? "text-ink"}`}>
+                  {texto}
+                </p>
+                <Delta actual={actual} anterior={anterior} />
+              </div>
             ))}
-          </ul>
+          </div>
+
+          <div className="pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-line lg:pl-6">
+            <p className="flex items-center gap-2 text-xs font-medium text-slate mb-2">
+              <Sparkles size={14} className="text-gold" />
+              Conclusiones
+            </p>
+            <ul className="space-y-1.5">
+              {conclusiones.map((frase, i) => (
+                <li key={i} className="text-sm text-ink">
+                  {frase}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>

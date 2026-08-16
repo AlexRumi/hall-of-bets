@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ApuestaItem from "./ApuestaItem";
+import TarjetaBankroll from "./TarjetaBankroll";
 import KpisEstadisticas from "./KpisEstadisticas";
 import GraficoEvolucion from "./GraficoEvolucion";
 import GraficoDistribucionResultados from "./GraficoDistribucionResultados";
@@ -33,9 +34,8 @@ export default function EstadisticasDashboard({
   casas,
   oscuro,
   onMarcarResultado,
-  onMarcarResultadoSeleccion,
+  onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
-  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
 }) {
@@ -79,6 +79,25 @@ export default function EstadisticasDashboard({
   // seleccionado. Ahora sí se filtra igual que las apuestas.
   const movimientosDelBankroll =
     filtroBankroll === "todas" ? movimientos : movimientos.filter((m) => m.categoria === filtroBankroll);
+
+  // Tarjeta de Bankroll (petición directa): a propósito sobre
+  // apuestasDelBankroll/movimientosDelBankroll (solo filtrados por
+  // bankroll), NO sobre apuestasFiltradas/movimientosFiltrados — el
+  // dinero real de cada casa no debe cambiar solo porque se esté mirando
+  // una casa/rango/archivado concreto en el resto del dashboard, mismo
+  // criterio que ya usa "Casas de apuestas". Con "Todas" se suman los dos
+  // saldos de freebet (Apuestas + Entretenimiento) de cada casa.
+  const dineroRealBankroll = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll).reduce(
+    (suma, b) => suma + b.bankroll,
+    0
+  );
+  const freebetsBankroll = casas.reduce((suma, c) => {
+    if (filtroBankroll === "todas") {
+      return suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento;
+    }
+    const campo = filtroBankroll === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
+    return suma + c[campo];
+  }, 0);
 
   // Todo el dashboard se recalcula sobre las apuestas y movimientos de la
   // casa elegida, en vez de sobre todas.
@@ -229,49 +248,80 @@ export default function EstadisticasDashboard({
         </label>
       )}
 
-      <KpisEstadisticas apuestas={apuestasFiltradas} movimientos={movimientosFiltrados} />
+      {/* Bankroll + KPIs lado a lado en escritorio (a partir de "lg",
+          1024px): la tarjeta de Bankroll es compacta (3 números), así que
+          se queda en una columna y deja el resto (2 de 3) al grid de
+          KPIs, bastante más ancho — mejor aprovechado que uno debajo del
+          otro a todo el ancho de la pantalla. En móvil, apiladas como
+          siempre (grid-cols-1). */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <TarjetaBankroll
+          etiqueta={`Bankroll ${BANKROLLS.find((b) => b.valor === filtroBankroll).etiqueta}`}
+          dineroReal={dineroRealBankroll}
+          freebets={freebetsBankroll}
+        />
+        <div className="lg:col-span-2">
+          <KpisEstadisticas apuestas={apuestasFiltradas} movimientos={movimientosFiltrados} />
+        </div>
+      </div>
+
       <GraficoEvolucion apuestas={apuestasFiltradas} oscuro={oscuro} />
       <GraficoDistribucionResultados apuestas={apuestasFiltradas} oscuro={oscuro} />
       <GraficoBeneficioMensual apuestas={apuestasFiltradas} oscuro={oscuro} />
       <RachasYExtremos apuestas={apuestasFiltradas} onAbrir={setApuestaAbiertaId} />
-      <GraficoBarraDivergente
-        titulo="ROI por deporte"
-        datos={roiPorDeporte}
-        oscuro={oscuro}
-        formatoValor={FORMATO_PCT}
-        mensajeVacio="Todavía no hay suficientes apuestas por deporte."
-      />
-      {!hayFiltro && (
+      {/* Los 4 gráficos de barras, de dos en dos en escritorio — misma
+          idea que Bankroll+KPIs: son bastante más estrechos que un
+          gráfico de líneas/área, se veían perdidos a todo el ancho. El
+          número de columnas visibles varía según los filtros (ROI por
+          casa y ROI por mercado se ocultan en algunos casos, ver los
+          comentarios de cada uno) — un grid no necesita un número fijo
+          de hijos, simplemente se reacomodan. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <GraficoBarraDivergente
-          titulo="ROI por casa"
-          datos={roiPorCasa}
+          titulo="ROI por deporte"
+          datos={roiPorDeporte}
           oscuro={oscuro}
           formatoValor={FORMATO_PCT}
-          mensajeVacio="Todavía no hay ingresos registrados en ninguna casa."
+          mensajeVacio="Todavía no hay suficientes apuestas por deporte."
         />
-      )}
-      <GraficoBarraDivergente
-        titulo="Beneficio por rango de cuota"
-        datos={beneficioPorCuota}
-        oscuro={oscuro}
-        mensajeVacio="Todavía no hay apuestas resueltas suficientes."
-      />
-      {/* Las apuestas de Entretenimiento suelen ser bet builders con varios
-          mercados a la vez: el dinero atribuido a "la categoría líder" (ver
-          calcularEstadisticasPorMercado) sale engañoso ahí, así que estas
-          dos vistas de dinero por mercado se ocultan en Entretenimiento —
-          "Mercados más usados" (sin dinero, cuenta todos los mercados por
-          igual) sigue viéndose siempre, esa sí tiene sentido en cualquier
-          bankroll. */}
-      {filtroBankroll !== "entretenimiento" && (
+        {!hayFiltro && (
+          <GraficoBarraDivergente
+            titulo="ROI por casa"
+            datos={roiPorCasa}
+            oscuro={oscuro}
+            formatoValor={FORMATO_PCT}
+            mensajeVacio="Todavía no hay ingresos registrados en ninguna casa."
+          />
+        )}
         <GraficoBarraDivergente
-          titulo="ROI por tipo de mercado"
-          datos={roiPorMercado}
+          titulo="Beneficio por rango de cuota"
+          datos={beneficioPorCuota}
           oscuro={oscuro}
-          formatoValor={FORMATO_PCT}
-          mensajeVacio="Todavía no hay suficientes apuestas por tipo de mercado."
+          mensajeVacio="Todavía no hay apuestas resueltas suficientes."
         />
-      )}
+        {/* Las apuestas de Entretenimiento suelen ser bet builders con
+            varios mercados a la vez: el dinero atribuido a "la categoría
+            líder" (ver calcularEstadisticasPorMercado) sale engañoso ahí,
+            así que estas dos vistas de dinero por mercado se ocultan en
+            Entretenimiento — "Mercados más usados" (sin dinero, cuenta
+            todos los mercados por igual) sigue viéndose siempre, esa sí
+            tiene sentido en cualquier bankroll. */}
+        {filtroBankroll !== "entretenimiento" && (
+          <GraficoBarraDivergente
+            titulo="ROI por tipo de mercado"
+            datos={roiPorMercado}
+            oscuro={oscuro}
+            formatoValor={FORMATO_PCT}
+            mensajeVacio="Todavía no hay suficientes apuestas por tipo de mercado."
+          />
+        )}
+        {/* Petición directa: el calendario usa celdas cuadradas que
+            crecen con el ancho disponible (aspect-square) — a todo el
+            ancho de Estadísticas se veía enorme. Metido en esta misma
+            rejilla de 2 columnas, sus celdas se reducen a la mitad solas,
+            sin tocar nada del propio componente. */}
+        <CalendarioActividad apuestas={apuestasFiltradas} />
+      </div>
       {filtroBankroll !== "entretenimiento" && (
         <div className="bg-surface border border-line rounded-xl p-5 sm:p-6">
           <h2 className="font-display text-lg font-semibold text-ink mb-4">
@@ -290,7 +340,6 @@ export default function EstadisticasDashboard({
         </p>
         <TablaFrecuenciaMercados datos={frecuenciaMercados} />
       </div>
-      <CalendarioActividad apuestas={apuestasFiltradas} />
       <InsightsAutomaticos apuestas={apuestasFiltradas} />
 
       {apuestaAbierta && (
@@ -308,9 +357,8 @@ export default function EstadisticasDashboard({
               movimientos={movimientos}
               todasApuestas={apuestas}
               onMarcarResultado={onMarcarResultado}
-              onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+              onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
-              onActualizarMarcadorManual={onActualizarMarcadorManual}
               onBorrar={onBorrar}
               onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}

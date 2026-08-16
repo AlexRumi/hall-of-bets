@@ -1,13 +1,13 @@
 import { desdeFila } from "../src/utils/apuestas.js";
 import { crearSupabaseAdmin, USER_ID } from "./_lib/supabaseAdmin.js";
 import { verificarInitData } from "./_lib/telegramInitData.js";
-import { marcarPick, marcarResultadoApuesta } from "./_lib/apuestasResueltas.js";
+import { marcarResultadoApuesta } from "./_lib/apuestasResueltas.js";
 
 // Serverless Function que sirve a la Mini App de Telegram
 // (src/components/TelegramMiniApp.jsx, ruta /telegram/apuesta/:id): trae
-// una apuesta concreta y aplica los mismos cambios que ya aplica el bot de
-// botones planos (api/telegram-webhook.js) — de hecho, exactamente los
-// mismos: marcarPick/marcarResultadoApuesta vienen de
+// una apuesta concreta y aplica cambios sobre ella — poner su resultado
+// (accion "resultado", mismo "Modificar" que ApuestaItem.jsx en la web) o
+// Cash Out (accion "cashout") — con marcarResultadoApuesta de
 // api/_lib/apuestasResueltas.js, no se reescribe nada aquí. La única
 // lógica propia de este archivo es verificar el initData que manda el SDK
 // de Telegram Web App (api/_lib/telegramInitData.js) en vez del
@@ -77,17 +77,16 @@ async function manejarPost(req, res, supabaseAdmin) {
     return;
   }
 
-  if (accion === "pick") {
-    const { indice, resultado } = req.body;
-    if (typeof indice !== "number" || !["ganada", "perdida", "nula"].includes(resultado)) {
-      res.status(400).json({ error: "indice/resultado inválidos" });
+  if (accion === "resultado") {
+    // Pone el resultado de TODA la apuesta de una vez (mismo "Modificar"
+    // que ApuestaItem.jsx en la web) — ya no hay marcado por pick, ver
+    // CHANGELOG.md "de marcado por pick a un resultado por apuesta".
+    const { resultado } = req.body;
+    if (!["pendiente", "ganada", "perdida", "nula"].includes(resultado)) {
+      res.status(400).json({ error: "resultado inválido" });
       return;
     }
-    // Mismo ciclo que marcarPick en ApuestaItem.jsx y en el bot de botones:
-    // tocar el mismo resultado otra vez deshace el pick (vuelve a pendiente).
-    const actual = apuesta.selecciones[indice]?.resultado ?? "pendiente";
-    const nuevo = actual === resultado ? "pendiente" : resultado;
-    await marcarPick(supabaseAdmin, apuesta, indice, nuevo);
+    await marcarResultadoApuesta(supabaseAdmin, apuesta, resultado);
   } else if (accion === "cashout") {
     if (apuesta.resultado !== "pendiente") {
       res.status(409).json({ error: "Esta apuesta ya está resuelta" });

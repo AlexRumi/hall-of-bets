@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Ticket, Trash2, LogOut, ChevronLeft } from "lucide-react";
+import { Ticket, Trash2, ChevronLeft, Plus, PieChart } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
@@ -16,8 +16,10 @@ import {
 import { calcularBankrollPorCasa } from "./utils/movimientos";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
+import Historial from "./components/Historial";
 import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
+import PanelLateral from "./components/PanelLateral";
 import FiltrosApuestas from "./components/FiltrosApuestas";
 import SelectorPeriodo from "./components/SelectorPeriodo";
 import RachaActual from "./components/RachaActual";
@@ -29,6 +31,7 @@ import SalaTrofeos from "./components/SalaTrofeos";
 import ListadoCasas from "./components/ListadoCasas";
 import InformeProfesional from "./components/InformeProfesional";
 import EstadisticasDashboard from "./components/EstadisticasDashboard";
+import PanelEstadisticas from "./components/PanelEstadisticas";
 import Ajustes from "./components/Ajustes";
 import Academia from "./components/Academia";
 import ConfirmDialog from "./components/ConfirmDialog";
@@ -36,7 +39,6 @@ import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
 import SidebarNavegacion from "./components/SidebarNavegacion";
 import BarraInferiorMovil from "./components/BarraInferiorMovil";
-import SelectorModoOscuro from "./components/SelectorModoOscuro";
 import { useModoOscuro } from "./hooks/useModoOscuro";
 
 const ETIQUETAS_SECCION = {
@@ -83,9 +85,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     agregarApuesta,
     editarApuesta,
     marcarResultado,
-    marcarResultadoSeleccion,
+    marcarResultadoGrupo,
     actualizarCuotaSeleccion,
-    actualizarMarcadorManual,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango: archivarApuestasPorRango,
@@ -114,6 +115,17 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   // escritorio el formulario está siempre visible y "More" no existe.
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
+  // "+ Añadir apuesta" del panel lateral (solo escritorio, ver
+  // SidebarNavegacion.jsx): primero se elige el bankroll en un diálogo
+  // pequeño, luego se abre el formulario ya con esa categoría fijada —
+  // independiente de mostrandoFormulario, que sigue siendo solo para el
+  // "+" de la barra inferior en móvil.
+  const [eligiendoCategoriaNueva, setEligiendoCategoriaNueva] = useState(false);
+  const [categoriaNuevaApuesta, setCategoriaNuevaApuesta] = useState(null);
+  // Panel "Estadísticas" (experimento estilo Bet Analytix, ver
+  // PanelEstadisticas.jsx): botón propio en la cabecera, independiente de la
+  // sección activa — no sustituye la página de Estadísticas del menú.
+  const [verEstadisticasPanel, setVerEstadisticasPanel] = useState(false);
   // Se comparte con MenuSecundario.jsx para que su "click fuera" no
   // confunda un click en este mismo botón con un click fuera del panel.
   const masBotonRef = useRef(null);
@@ -174,10 +186,10 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   // Al crear una apuesta con fondos Freebet, se descuenta el stake del
   // saldo de esa casa al momento — gane, pierda o quede pendiente (ver
   // Fase A: el freebet se da por gastado en cuanto se juega).
-  function manejarAgregar(datos) {
-    agregarApuesta({ ...datos, categoria: seccionActiva });
+  function manejarAgregar(datos, categoria = seccionActiva) {
+    agregarApuesta({ ...datos, categoria });
     if (datos.tipoFondos === "freebet") {
-      ajustarSaldoFreebet(datos.casa, -Number(datos.stake), seccionActiva);
+      ajustarSaldoFreebet(datos.casa, -Number(datos.stake), categoria);
     }
     setMostrandoFormulario(false);
   }
@@ -203,40 +215,25 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     }
   }
 
-  // Cada pick (ver ApuestaItem.jsx) marca su propio resultado con un icono
-  // circular que cicla Pendiente/Ganada/Perdida/Nula; ya no hay botones
-  // grandes Ganada/Perdida/Nula aparte. El resultado real de la apuesta (el
-  // que mueve beneficio, freebet, racha y trofeos) se deriva solo de los
-  // picks — en cuanto cambia de verdad, reutiliza manejarMarcarResultado de
-  // arriba para aplicarlo, con los mismos efectos de freebet que ya tenía
-  // (seguro perdido, nula que devuelve el freebet). Si la apuesta ya se
-  // cerró con Cash Out, los picks se pueden seguir marcando para llevar el
-  // registro, pero ya no pisan ese resultado — Cash Out es una acción
-  // manual aparte, independiente de en qué estado estén los picks.
-  function manejarMarcarResultadoPick(id, indiceSeleccion, resultado) {
+  // "Modificar" en ApuestaItem.jsx/TicketApuesta.jsx marca UN PARTIDO
+  // entero (todos sus picks a la vez, ver marcarResultadoGrupo) — el
+  // resultado real de la apuesta (el que mueve beneficio, freebet, racha
+  // y trofeos) se deriva solo de los partidos, no se pone a mano en
+  // ningún sitio. En cuanto cambia de verdad, reutiliza
+  // manejarMarcarResultado de arriba, con los mismos efectos de freebet
+  // de siempre. Si la apuesta ya se cerró con Cash Out, los partidos se
+  // pueden seguir marcando para llevar el registro, pero ya no pisan ese
+  // resultado.
+  function manejarMarcarResultadoPartido(id, indices, resultado) {
     const apuesta = apuestas.find((a) => a.id === id);
     if (!apuesta) return;
-    marcarResultadoSeleccion(id, indiceSeleccion, resultado);
+    marcarResultadoGrupo(id, indices, resultado);
     if (apuesta.resultado === "cashout") return;
 
     const nuevasSelecciones = apuesta.selecciones.map((s, i) =>
-      i === indiceSeleccion ? { ...s, resultado } : s
+      indices.includes(i) ? { ...s, resultado } : s
     );
     const nuevoResultado = derivarResultadoApuesta(agruparSeleccionesPorPartido(nuevasSelecciones));
-    // Petición directa: en un "multi", un solo mercado perdido ya deja
-    // matemáticamente perdida toda la apuesta (derivarResultadoApuesta lo
-    // calcula así, con razón), pero el usuario prefiere no sellar la
-    // derrota real (con sus efectos: beneficio, freebet, racha, trofeos)
-    // hasta haber marcado también el resto de mercados pendientes de esa
-    // combinada/multi — el sello de cada partido (colorResultado, en
-    // ApuestaItem.jsx) sigue reaccionando al instante, esto solo retrasa
-    // el resultado real guardado. "Ganada"/"Nula" no necesitan este freno:
-    // por cómo se derivan, solo se alcanzan cuando ya está todo decidido.
-    // Bug real: deshacer un pick (ver marcarPick en ApuestaItem.jsx) lo
-    // guarda como el texto literal "pendiente", no como null/undefined —
-    // "!= null" por sí solo lo contaba como "ya decidido" por error.
-    const todosDecididos = nuevasSelecciones.every((s) => (s.resultado ?? "pendiente") !== "pendiente");
-    if (nuevoResultado === "perdida" && !todosDecididos) return;
     if (nuevoResultado !== apuesta.resultado) {
       manejarMarcarResultado(id, nuevoResultado);
     }
@@ -308,36 +305,75 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
             </span>
           </button>
 
-          <div className="flex items-center gap-1">
-            <div className="hidden md:block">
-              <SelectorModoOscuro oscuro={oscuro} onAlternar={onAlternarModoOscuro} />
-            </div>
+          <div className="hidden md:flex items-center gap-2">
+            {/* Botón "Estadísticas" (experimento, ver PanelEstadisticas.jsx):
+                estilo secundario (contorno) para no competir con el dorado
+                de "+ Añadir apuesta", que sigue siendo la acción principal. */}
             <button
               type="button"
-              onClick={onCerrarSesion}
-              aria-label="Cerrar sesión"
-              className="hidden md:flex p-2 rounded-full text-paper hover:bg-white/10 transition-colors"
+              onClick={() => setVerEstadisticasPanel(true)}
+              className="flex items-center gap-1.5 border-2 border-gold/40 text-paper px-3.5 py-1.5 rounded-lg text-sm font-bold hover:border-gold transition-colors"
             >
-              <LogOut size={18} />
+              <PieChart size={16} />
+              Estadísticas
+            </button>
+
+            {/* "+ Añadir apuesta": mismo hueco donde antes vivían modo
+                oscuro/cerrar sesión (ahora en el panel lateral, ver
+                SidebarNavegacion.jsx) — petición directa, más a mano aquí,
+                alineado con "Hall of Bets", que abajo del todo del panel.
+                Dorado fijo (el mismo rgb que --color-gold en modo oscuro,
+                ver index.css) en vez de "bg-gold": ese token cambia de tono
+                según el tema, y aquí se quiere siempre el mismo dorado más
+                claro, también en modo claro (petición directa). */}
+            <button
+              type="button"
+              onClick={() => setEligiendoCategoriaNueva(true)}
+              className="flex items-center gap-1.5 bg-[rgb(216,179,120)] text-feltDark px-3.5 py-1.5 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity"
+            >
+              <Plus size={16} />
+              Añadir apuesta
             </button>
           </div>
         </div>
       </div>
 
       <div className="md:flex md:flex-1">
-        <SidebarNavegacion activa={seccionActiva} onCambiar={setSeccionActiva} />
+        <SidebarNavegacion
+          activa={seccionActiva}
+          onCambiar={setSeccionActiva}
+          oscuro={oscuro}
+          onAlternarModoOscuro={onAlternarModoOscuro}
+          onCerrarSesion={onCerrarSesion}
+        />
 
         <div className="flex-1 md:min-w-0">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-24 md:pb-10 space-y-6">
+          {/* Inicio, Historial y Estadísticas usan un contenedor más ancho
+              que el resto de secciones (max-w-6xl en vez de max-w-3xl) —
+              rediseño de escritorio, pantalla a pantalla; el resto se
+              queda igual hasta que se aborde en una fase futura. */}
+          <div
+            className={`mx-auto px-4 sm:px-6 py-10 pb-24 md:pb-10 space-y-6 ${
+              seccionActiva === "inicio" ||
+              seccionActiva === "historial" ||
+              seccionActiva === "estadisticas" ||
+              seccionActiva === "casas" ||
+              seccionActiva === "informe" ||
+              seccionActiva === "trofeos" ||
+              seccionActiva === "academia" ||
+              seccionActiva === "ajustes"
+                ? "max-w-6xl"
+                : "max-w-3xl"
+            }`}
+          >
             {seccionActiva === "inicio" ? (
               <PantallaInicio
                 apuestas={apuestas}
                 casas={casas}
                 movimientos={movimientos}
                 onMarcarResultado={manejarMarcarResultado}
-                onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
-                onActualizarMarcadorManual={actualizarMarcadorManual}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
                 onIrASeccion={setSeccionActiva}
@@ -440,9 +476,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     movimientos={movimientos}
                     todasApuestas={apuestas}
                     onMarcarResultado={manejarMarcarResultado}
-                    onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                    onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                     onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
-                    onActualizarMarcadorManual={actualizarMarcadorManual}
                     onBorrar={manejarBorrarApuesta}
                     onEditar={editarApuesta}
                   />
@@ -456,6 +491,17 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                   onCancelar={() => setConfirmandoBorrarTodo(false)}
                 />
               </>
+            ) : seccionActiva === "historial" ? (
+              <Historial
+                apuestas={apuestas}
+                casas={casas}
+                movimientos={movimientos}
+                onMarcarResultado={manejarMarcarResultado}
+                onMarcarResultadoPartido={manejarMarcarResultadoPartido}
+                onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
+                onBorrar={manejarBorrarApuesta}
+                onEditar={editarApuesta}
+              />
             ) : seccionActiva === "trofeos" ? (
               <SalaTrofeos trofeos={trofeos} />
             ) : seccionActiva === "casas" ? (
@@ -492,9 +538,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 casas={casas}
                 oscuro={oscuro}
                 onMarcarResultado={manejarMarcarResultado}
-                onMarcarResultadoSeleccion={manejarMarcarResultadoPick}
+                onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
-                onActualizarMarcadorManual={actualizarMarcadorManual}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
               />
@@ -528,6 +573,74 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
         masAbierto={masAbierto}
         masBotonRef={masBotonRef}
       />
+
+      {/* "+ Añadir apuesta" del panel lateral (solo escritorio): primero
+          elegir el bankroll, mismo patrón de overlay que ConfirmDialog.jsx
+          con dos botones en vez de confirmar/cancelar. */}
+      {eligiendoCategoriaNueva && (
+        <div
+          className="hidden md:flex fixed inset-0 bg-black/50 items-center justify-center px-4 z-50"
+          onClick={() => setEligiendoCategoriaNueva(false)}
+        >
+          <div
+            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-display text-lg font-semibold text-ink">Añadir apuesta</h3>
+            <p className="text-sm text-slate">¿En qué bankroll la registramos?</p>
+            <div className="space-y-2">
+              {Object.entries(ETIQUETAS_SECCION).map(([id, etiqueta]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setCategoriaNuevaApuesta(id);
+                    setEligiendoCategoriaNueva(false);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg border-2 border-line text-left text-sm font-semibold text-ink hover:border-gold hover:bg-gold/5 transition-colors"
+                >
+                  {etiqueta}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setEligiendoCategoriaNueva(false)}
+              className="w-full px-4 py-2 rounded-lg text-sm font-medium text-slate hover:text-ink transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <PanelLateral abierto={!!categoriaNuevaApuesta} onCerrar={() => setCategoriaNuevaApuesta(null)}>
+        {categoriaNuevaApuesta && (
+          <div className="p-4 sm:p-5">
+            <FormularioApuesta
+              casas={casas}
+              movimientos={movimientos}
+              apuestas={apuestas}
+              categoria={categoriaNuevaApuesta}
+              onGuardar={(datos) => {
+                manejarAgregar(datos, categoriaNuevaApuesta);
+                setCategoriaNuevaApuesta(null);
+              }}
+              onCancelar={() => setCategoriaNuevaApuesta(null)}
+            />
+          </div>
+        )}
+      </PanelLateral>
+
+      <PanelLateral abierto={verEstadisticasPanel} onCerrar={() => setVerEstadisticasPanel(false)}>
+        <PanelEstadisticas
+          apuestas={apuestas}
+          movimientos={movimientos}
+          casas={casas}
+          oscuro={oscuro}
+          onCerrar={() => setVerEstadisticasPanel(false)}
+        />
+      </PanelLateral>
     </div>
   );
 }

@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { Landmark, Trash2, ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Landmark, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import FormularioCasa from "./FormularioCasa";
-import FormularioMovimiento from "./FormularioMovimiento";
-import FormularioBono from "./FormularioBono";
-import ListaMovimientos from "./ListaMovimientos";
+import DetalleCasa from "./DetalleCasa";
 import ConfirmDialog from "./ConfirmDialog";
 import TarjetaBankroll from "./TarjetaBankroll";
+import PanelLateral from "./PanelLateral";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import { calcularDesglosePorCasa } from "../utils/apuestas";
 
@@ -15,69 +14,6 @@ const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, 
 // últimas en el orden "Mejor rendimiento" (0 no es ni bueno ni malo, pero
 // no hay datos reales detrás).
 const SIN_ESTADISTICAS = { numApuestas: 0, yieldPct: 0 };
-
-// Ingresos/Retiradas/Beneficio/Yield/ROI/Freebet de un bankroll concreto en
-// una casa — se repite una vez por cada bankroll (Apuestas/Entretenimiento)
-// en vez de una sola fila combinada, así que se saca a su propio componente
-// para no triplicar el mismo bloque de JSX.
-function FilaBankroll({ etiqueta, bankroll, desglose, freebet }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-gold uppercase tracking-wide mb-1.5">{etiqueta}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-        <div>
-          <p className="text-xs text-slate">Ingresos</p>
-          <p className="font-mono text-sm font-medium text-ink">{bankroll.ingresos.toFixed(2)}€</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate">Retiradas</p>
-          <p className="font-mono text-sm font-medium text-ink">{bankroll.retiradas.toFixed(2)}€</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate">Beneficio</p>
-          <p
-            className={`font-mono text-sm font-bold ${
-              bankroll.beneficio > 0
-                ? "text-win"
-                : bankroll.beneficio < 0
-                ? "text-lose"
-                : "text-ink"
-            }`}
-          >
-            {bankroll.beneficio > 0 ? "+" : ""}
-            {bankroll.beneficio.toFixed(2)}€
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-slate">Yield</p>
-          <p
-            className={`font-mono text-sm font-medium ${
-              desglose.yieldPct > 0 ? "text-win" : desglose.yieldPct < 0 ? "text-lose" : "text-ink"
-            }`}
-          >
-            {desglose.yieldPct > 0 ? "+" : ""}
-            {desglose.yieldPct.toFixed(2)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-slate">ROI</p>
-          <p
-            className={`font-mono text-sm font-medium ${
-              bankroll.roiPct > 0 ? "text-win" : bankroll.roiPct < 0 ? "text-lose" : "text-ink"
-            }`}
-          >
-            {bankroll.roiPct > 0 ? "+" : ""}
-            {bankroll.roiPct.toFixed(2)}%
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-slate">Freebet</p>
-          <p className="font-mono text-sm font-bold text-gold">{freebet.toFixed(2)}€</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ListadoCasas({
   casas,
@@ -92,7 +28,6 @@ export default function ListadoCasas({
 }) {
   const [casaABorrar, setCasaABorrar] = useState(null);
   const [casaExpandida, setCasaExpandida] = useState(null);
-  const [mostrandoBono, setMostrandoBono] = useState(false);
   const [confirmandoBorrarMovimientos, setConfirmandoBorrarMovimientos] = useState(false);
   // "yield" (por defecto) ordena de mejor a peor rendimiento; "alfabetico"
   // vuelve al orden de toda la vida, tal como llegan desde Supabase.
@@ -128,6 +63,32 @@ export default function ListadoCasas({
     0
   );
 
+  // Reunidos aquí (en vez de calculados solo dentro del .map()) porque hace
+  // falta lo mismo dos veces: para la fila de cada casa Y para el panel
+  // lateral de escritorio de la casa abierta (que vive fuera del .map()).
+  function datosCasa(casa) {
+    return {
+      bankrollApuestas: bankrollsApuestas.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS,
+      bankrollEntretenimiento:
+        bankrollsEntretenimiento.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS,
+      desglose: desglosePorCasa.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS,
+      desgloseApuestas: desglosePorCasaApuestas.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS,
+      desgloseEntretenimiento:
+        desglosePorCasaEntretenimiento.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS,
+      movimientosCasa: movimientos.filter((m) => m.casa === casa.nombre),
+    };
+  }
+
+  const casaAbierta = casas.find((c) => c.nombre === casaExpandida) ?? null;
+
+  // Si se borra la casa que está abierta en el panel de escritorio (vive
+  // fuera del .map() de filas, así que no desaparece solo como en móvil,
+  // donde toda la fila se quita del array), se cierra el panel en vez de
+  // dejarlo mostrando una casa que ya no existe.
+  useEffect(() => {
+    if (casaExpandida && !casaAbierta) setCasaExpandida(null);
+  }, [casaExpandida, casaAbierta]);
+
   function manejarBorrarTodosMovimientos() {
     onBorrarTodosMovimientos();
     setConfirmandoBorrarMovimientos(false);
@@ -139,17 +100,26 @@ export default function ListadoCasas({
           no vive aquí — se movió arriba de cada sección (App.jsx), que es
           donde de verdad importa mientras se está apostando; aquí se
           quedaba redundante. "Bankroll total" (combinado) sí se queda, es
-          el único sitio que lo enseña. */}
+          el único sitio que lo enseña. Lado a lado con "Nueva casa" desde
+          "lg:" (rediseño de escritorio ancho): sueltos a todo el ancho,
+          el formulario (solo 2 campos) se vería estirado sin sentido y el
+          total quedaría descompensado, solo — mismo patrón que Bankroll +
+          KPIs en Estadísticas. En móvil, apilados como siempre. */}
       {casas.length > 0 && (
-        <TarjetaBankroll
-          etiqueta="Bankroll total"
-          dineroReal={bankrollTotal}
-          freebets={freebetsTotal}
-          grande
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <TarjetaBankroll
+            etiqueta="Bankroll total"
+            dineroReal={bankrollTotal}
+            freebets={freebetsTotal}
+            grande
+          />
+          <div className="lg:col-span-2">
+            <FormularioCasa onAgregar={onAgregarCasa} />
+          </div>
+        </div>
       )}
 
-      <FormularioCasa onAgregar={onAgregarCasa} />
+      {casas.length === 0 && <FormularioCasa onAgregar={onAgregarCasa} />}
 
       {casas.length === 0 ? (
         <p className="text-center text-sm text-slate py-10">
@@ -188,21 +158,15 @@ export default function ListadoCasas({
               abrirla. */}
           <div className="space-y-3">
             {casasOrdenadas.map((casa) => {
-              const bankrollApuestas =
-                bankrollsApuestas.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
-              const bankrollEntretenimiento =
-                bankrollsEntretenimiento.find((b) => b.casa === casa.nombre) ?? SIN_MOVIMIENTOS;
-              const desglose =
-                desglosePorCasa.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS;
-              const desgloseApuestas =
-                desglosePorCasaApuestas.find((d) => d.casa === casa.nombre) ?? SIN_ESTADISTICAS;
-              const desgloseEntretenimiento =
-                desglosePorCasaEntretenimiento.find((d) => d.casa === casa.nombre) ??
-                SIN_ESTADISTICAS;
+              const {
+                bankrollApuestas,
+                bankrollEntretenimiento,
+                desglose,
+                desgloseApuestas,
+                desgloseEntretenimiento,
+                movimientosCasa,
+              } = datosCasa(casa);
               const expandida = casaExpandida === casa.nombre;
-              const movimientosCasa = movimientos.filter(
-                (m) => m.casa === casa.nombre
-              );
 
               return (
                 <div
@@ -211,10 +175,7 @@ export default function ListadoCasas({
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setCasaExpandida(expandida ? null : casa.nombre);
-                      setMostrandoBono(false);
-                    }}
+                    onClick={() => setCasaExpandida(expandida ? null : casa.nombre)}
                     className="w-full flex items-center gap-3 p-3 sm:p-4 text-left hover:bg-paperDim transition-colors"
                   >
                     {casa.logo ? (
@@ -264,86 +225,24 @@ export default function ListadoCasas({
                     )}
                   </button>
 
+                  {/* Solo móvil (md:hidden): en escritorio el detalle se abre
+                      en el panel lateral de más abajo, en vez de empujar el
+                      resto de filas hacia abajo. */}
                   {expandida && (
-                    <div className="px-3 sm:px-4 pb-4 space-y-4 border-t border-line pt-4">
-                      {/* Ingresos/Retiradas/Beneficio/Yield/ROI/Freebet, una
-                          fila por bankroll — antes era una sola fila
-                          combinada; ahora que movimientos y el freebet
-                          también tienen categoría, se puede ver de verdad
-                          cuánto tiene cada bankroll en esta casa, por
-                          separado. */}
-                      <div className="space-y-3">
-                        <FilaBankroll
-                          etiqueta="Apuestas"
-                          bankroll={bankrollApuestas}
-                          desglose={desgloseApuestas}
-                          freebet={casa.freebetSaldoApuestas}
-                        />
-                        <FilaBankroll
-                          etiqueta="Entretenimiento"
-                          bankroll={bankrollEntretenimiento}
-                          desglose={desgloseEntretenimiento}
-                          freebet={casa.freebetSaldoEntretenimiento}
-                        />
-                      </div>
-
-                      <FormularioMovimiento
-                        onAgregar={onAgregarMovimiento}
+                    <div className="md:hidden">
+                      <DetalleCasa
+                        casa={casa}
+                        bankrollApuestas={bankrollApuestas}
+                        bankrollEntretenimiento={bankrollEntretenimiento}
+                        desgloseApuestas={desgloseApuestas}
+                        desgloseEntretenimiento={desgloseEntretenimiento}
+                        movimientosCasa={movimientosCasa}
                         casas={casas}
-                        casaFija={casa.nombre}
+                        onAgregarMovimiento={onAgregarMovimiento}
                         onAjustarSaldoFreebet={onAjustarSaldoFreebet}
+                        onBorrarMovimiento={onBorrarMovimiento}
+                        onPedirBorrar={() => setCasaABorrar(casa.nombre)}
                       />
-
-                      {/* "Otro bono": suma directo al saldo de freebet de esta
-                          casa (mismo `onAjustarSaldoFreebet` que ya usa el
-                          campo "Bono recibido con este depósito" de abajo) —
-                          justo debajo del formulario de movimiento, para
-                          seguir el orden: primero el caso automático,
-                          después el residual. */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setMostrandoBono((actual) => !actual)}
-                          className="flex items-center gap-1.5 text-xs font-medium text-gold hover:underline"
-                        >
-                          <PlusCircle size={14} />
-                          Otro bono
-                          {mostrandoBono ? (
-                            <ChevronUp size={14} />
-                          ) : (
-                            <ChevronDown size={14} />
-                          )}
-                        </button>
-                        {mostrandoBono && (
-                          <div className="mt-2">
-                            <FormularioBono
-                              onAjustarSaldoFreebet={onAjustarSaldoFreebet}
-                              casas={casas}
-                              casaFija={casa.nombre}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-medium text-slate mb-2">
-                          Movimientos ({movimientosCasa.length})
-                        </p>
-                        <ListaMovimientos
-                          movimientos={movimientosCasa}
-                          casas={casas}
-                          onBorrar={onBorrarMovimiento}
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setCasaABorrar(casa.nombre)}
-                        className="flex items-center gap-1.5 text-xs font-medium text-lose hover:underline"
-                      >
-                        <Trash2 size={14} />
-                        Borrar esta casa
-                      </button>
                     </div>
                   )}
                 </div>
@@ -352,6 +251,25 @@ export default function ListadoCasas({
           </div>
         </>
       )}
+
+      {/* Panel lateral de escritorio (PanelLateral ya es "hidden md:flex" de
+          fábrica, así que en móvil no aparece nada aquí): mismo DetalleCasa
+          que el bloque inline de arriba, recalculado para la casa abierta
+          con el mismo datosCasa() que usa cada fila. */}
+      <PanelLateral abierto={!!casaExpandida} onCerrar={() => setCasaExpandida(null)}>
+        {casaAbierta && (
+          <DetalleCasa
+            casa={casaAbierta}
+            {...datosCasa(casaAbierta)}
+            casas={casas}
+            onAgregarMovimiento={onAgregarMovimiento}
+            onAjustarSaldoFreebet={onAjustarSaldoFreebet}
+            onBorrarMovimiento={onBorrarMovimiento}
+            onPedirBorrar={() => setCasaABorrar(casaAbierta.nombre)}
+            onCerrar={() => setCasaExpandida(null)}
+          />
+        )}
+      </PanelLateral>
 
       {movimientos.length > 0 && (
         <div className="flex justify-end">

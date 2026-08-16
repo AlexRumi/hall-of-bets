@@ -78,11 +78,11 @@ export default function TelegramMiniApp({ apuestaId }) {
     };
   }, [apuestaId]);
 
-  async function marcarPick(indice, resultado) {
+  async function marcarResultado(resultado) {
     try {
       const actualizada = await llamarApi(
         "POST",
-        { accion: "pick", indice, resultado },
+        { accion: "resultado", resultado },
         apuestaId,
         initDataRef.current
       );
@@ -166,7 +166,7 @@ export default function TelegramMiniApp({ apuestaId }) {
     <div className="hob-mini-app">
       <TicketApuesta
         apuesta={apuesta}
-        onMarcarPick={marcarPick}
+        onMarcarResultado={marcarResultado}
         cashOutAbierto={cashOutAbierto}
         importeCashOut={importeCashOut}
         onCambiarImporteCashOut={setImporteCashOut}

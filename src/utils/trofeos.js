@@ -41,22 +41,20 @@ function hayRemontada(apuestasCronologicas) {
   return false;
 }
 
-// Petición directa del usuario: una combinada de 7 partidos con cuota >12,
-// cerrada con Cash Out una vez los 7 picks ya estaban marcados Ganada, no
-// contaba para "Cazador de cuotas" ni "Combinada ganadora" — el "resultado"
-// guardado se queda en "cashout" a propósito (ver manejarMarcarResultadoPick
-// en App.jsx), así que un "a.resultado === 'ganada'" literal se lo perdía.
-// Se considera "ganada de verdad" si el resultado guardado ya es "ganada",
-// o si es un cash out cuyos picks, derivados uno por uno, dan "ganada" en
-// conjunto (derivarResultadoApuesta) — es decir, cobraste antes de tiempo
-// pero los 7 partidos acabaron acertados de todas formas. Un cash out a
-// medio partido (con picks todavía pendientes) sigue sin contar.
+// Petición directa del usuario: una combinada cerrada con Cash Out una vez
+// todos sus partidos ya estaban marcados Ganada no contaba para "Cazador
+// de cuotas" ni "Combinada ganadora" — el "resultado" guardado se queda en
+// "cashout" a propósito (ver manejarMarcarResultadoPartido en App.jsx), así
+// que un "a.resultado === 'ganada'" literal se lo perdía. Se considera
+// "ganada de verdad" si el resultado guardado ya es "ganada", o si es un
+// cash out cuyos partidos, derivados uno por uno (Modificar, por partido —
+// ver ApuestaItem.jsx), dan "ganada" en conjunto — es decir, cobraste
+// antes de tiempo pero todos los partidos acabaron acertados de todas
+// formas. Un cash out con algún partido aún sin marcar sigue sin contar.
 function esGanadaDeVerdad(apuesta) {
   if (apuesta.resultado === "ganada") return true;
   if (apuesta.resultado !== "cashout") return false;
-  return (
-    derivarResultadoApuesta(agruparSeleccionesPorPartido(apuesta.selecciones)) === "ganada"
-  );
+  return derivarResultadoApuesta(agruparSeleccionesPorPartido(apuesta.selecciones)) === "ganada";
 }
 
 function numeroPartidos(apuesta) {

@@ -1,4 +1,3 @@
-import { agruparSeleccionesPorPartido, derivarResultadoApuesta } from "../../src/utils/apuestas.js";
 import { USER_ID } from "./supabaseAdmin.js";
 
 // Mismo cálculo que ajustarSaldoFreebet en src/hooks/useCasas.js: lee el
@@ -51,38 +50,4 @@ export async function marcarResultadoApuesta(supabaseAdmin, apuesta, resultado, 
   if (resultado === "nula" && apuesta.tipo_fondos === "freebet") {
     await ajustarSaldoFreebet(supabaseAdmin, apuesta.casa, Number(apuesta.stake), apuesta.categoria);
   }
-}
-
-// Mismo efecto que manejarMarcarResultadoPick en src/App.jsx: guarda el
-// resultado de un pick concreto (uno de los mercados de un partido dentro
-// de la apuesta) y, si con ese cambio la apuesta entera queda decidida de
-// verdad, sella también el resultado real con marcarResultadoApuesta. Si da
-// "perdida" mátemáticamente pero aún quedan mercados de ESE MISMO multi sin
-// marcar, se espera a que estén todos decididos antes de sellarlo (mismo
-// criterio que la app: no adelantar la derrota real hasta confirmar el
-// resto de mercados de ese partido).
-export async function marcarPick(supabaseAdmin, apuesta, indice, resultado) {
-  const nuevasSelecciones = apuesta.selecciones.map((seleccion, i) =>
-    i === indice ? { ...seleccion, resultado } : seleccion
-  );
-
-  await supabaseAdmin
-    .from("apuestas")
-    .update({ selecciones: nuevasSelecciones })
-    .eq("id", apuesta.id);
-
-  if (apuesta.resultado === "cashout") {
-    return { selecciones: nuevasSelecciones, resultado: apuesta.resultado };
-  }
-
-  const nuevoResultado = derivarResultadoApuesta(agruparSeleccionesPorPartido(nuevasSelecciones));
-  const todosDecididos = nuevasSelecciones.every((s) => (s.resultado ?? "pendiente") !== "pendiente");
-  if (nuevoResultado === "perdida" && !todosDecididos) {
-    return { selecciones: nuevasSelecciones, resultado: apuesta.resultado };
-  }
-  if (nuevoResultado !== apuesta.resultado) {
-    await marcarResultadoApuesta(supabaseAdmin, { ...apuesta, selecciones: nuevasSelecciones }, nuevoResultado);
-    return { selecciones: nuevasSelecciones, resultado: nuevoResultado };
-  }
-  return { selecciones: nuevasSelecciones, resultado: apuesta.resultado };
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
 
@@ -11,11 +12,14 @@ import { usePosicionDesplegable } from "../hooks/usePosicionDesplegable";
 //
 // "grupos" es un array de { etiqueta?, opciones: [{ valor, texto, destacado? }] }.
 // Un grupo sin "etiqueta" no lleva cabecera (lista plana, como Casa);
-// "destacado" resalta una opción en negrita (p.ej. "Otras ligas"). z-50,
-// por encima de la barra inferior móvil (z-40, BarraInferiorMovil.jsx)
-// para que el panel no quede tapado si se abre cerca del final de la
-// pantalla, y usePosicionDesplegable.js decide si abre hacia abajo o
-// hacia arriba según el hueco libre en cada momento.
+// "destacado" resalta una opción en negrita (p.ej. "Otras ligas").
+// z-[80]: por encima de todo lo demás que use z-index en la app — la
+// barra inferior móvil (z-40), los modales/diálogos normales (z-50), la
+// cabecera (z-[60]) y PanelLateral.jsx (z-[70], que puede contener este
+// mismo desplegable dentro, p.ej. la Casa del formulario "Añadir
+// apuesta") — para que el panel no quede tapado se abra donde se abra.
+// usePosicionDesplegable.js decide si abre hacia abajo o hacia arriba
+// según el hueco libre en cada momento.
 export default function SelectorDesplegable({
   valor,
   placeholder,
@@ -25,11 +29,21 @@ export default function SelectorDesplegable({
 }) {
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
+  // Ref del panel de opciones EN SÍ (ver el porqué del portal más abajo):
+  // al vivir en un nodo del DOM aparte, "contenedorRef.current.contains"
+  // ya no lo detecta como "parte del propio desplegable" — hace falta
+  // comprobar los dos refs para que un click/scroll DENTRO del panel no
+  // se trate como "fuera".
+  const panelRef = useRef(null);
   const posicion = usePosicionDesplegable(abierto, contenedorRef);
 
   useEffect(() => {
     function manejarClickFuera(e) {
-      if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
+      if (
+        contenedorRef.current &&
+        !contenedorRef.current.contains(e.target) &&
+        !(panelRef.current && panelRef.current.contains(e.target))
+      ) {
         setAbierto(false);
       }
     }
@@ -56,6 +70,7 @@ export default function SelectorDesplegable({
     if (!abierto) return;
     function manejarScroll(e) {
       if (contenedorRef.current && contenedorRef.current.contains(e.target)) return;
+      if (panelRef.current && panelRef.current.contains(e.target)) return;
       setAbierto(false);
     }
     window.addEventListener("scroll", manejarScroll, true);
@@ -90,43 +105,54 @@ export default function SelectorDesplegable({
         />
       </button>
 
-      {abierto && (
-        <div
-          className="fixed z-50 bg-surface border border-line rounded-lg shadow-lg overflow-y-auto"
-          style={{
-            left: posicion.left,
-            width: posicion.width,
-            maxHeight: posicion.maxAltura,
-            ...(posicion.arriba ? { bottom: posicion.bottom + 4 } : { top: posicion.top + 4 }),
-          }}
-        >
-          {grupos.map((grupo, i) => (
-            <div key={grupo.etiqueta ?? i}>
-              {grupo.etiqueta && (
-                <p className="sticky top-0 z-10 bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold">
-                  {grupo.etiqueta}
-                </p>
-              )}
-              {grupo.opciones.map((opcion) => (
-                <button
-                  key={opcion.valor}
-                  type="button"
-                  onClick={() => elegir(opcion)}
-                  className={`w-full text-left px-4 py-2 text-sm border-b border-line/60 last:border-b-0 transition-colors ${
-                    opcion.valor === valor
-                      ? "bg-gold/10 text-gold font-medium"
-                      : opcion.destacado
-                      ? "font-bold text-ink hover:bg-paperDim"
-                      : "text-ink hover:bg-paperDim"
-                  }`}
-                >
-                  {opcion.texto}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Portal a document.body (bug real: un panel lateral que anima con
+          "transform" — Inicio ancho, "+ Añadir apuesta" — convierte a
+          cualquier antecesor en el "contenedor" de sus descendientes
+          "position: fixed", así que este panel dejaba de posicionarse
+          respecto a la VENTANA como se pretendía y se veía en cualquier
+          sitio menos el correcto. Sacándolo del DOM del propio desplegable
+          con un portal, ya no depende de qué transform tenga ningún
+          antecesor, sea cual sea. */}
+      {abierto &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className="fixed z-[80] bg-surface border border-line rounded-lg shadow-lg overflow-y-auto"
+            style={{
+              left: posicion.left,
+              width: posicion.width,
+              maxHeight: posicion.maxAltura,
+              ...(posicion.arriba ? { bottom: posicion.bottom + 4 } : { top: posicion.top + 4 }),
+            }}
+          >
+            {grupos.map((grupo, i) => (
+              <div key={grupo.etiqueta ?? i}>
+                {grupo.etiqueta && (
+                  <p className="sticky top-0 z-10 bg-felt px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-gold">
+                    {grupo.etiqueta}
+                  </p>
+                )}
+                {grupo.opciones.map((opcion) => (
+                  <button
+                    key={opcion.valor}
+                    type="button"
+                    onClick={() => elegir(opcion)}
+                    className={`w-full text-left px-4 py-2 text-sm border-b border-line/60 last:border-b-0 transition-colors ${
+                      opcion.valor === valor
+                        ? "bg-gold/10 text-gold font-medium"
+                        : opcion.destacado
+                        ? "font-bold text-ink hover:bg-paperDim"
+                        : "text-ink hover:bg-paperDim"
+                    }`}
+                  >
+                    {opcion.texto}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

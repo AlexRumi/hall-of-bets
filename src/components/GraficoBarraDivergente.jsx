@@ -90,7 +90,14 @@ export default function GraficoBarraDivergente({
               cursor={false}
               position={{ y: compacto ? 90 : 75 }}
             />
-            <Bar dataKey="valor" radius={[4, 4, 4, 4]}>
+            {/* maxBarSize: sin esto, con pocas categorías (a veces solo una
+                — un único deporte, una única casa...) la barra se estira
+                para llenar todo el ancho disponible, viéndose como un
+                bloque gigante en el contenedor más ancho de Estadísticas
+                (petición directa, detectado al probarlo con pocos datos
+                de prueba) — con muchas categorías no cambia nada, cada
+                barra ya era más estrecha que este máximo. */}
+            <Bar dataKey="valor" radius={[4, 4, 4, 4]} maxBarSize={56}>
               {datos.map((d, i) => (
                 <Cell key={i} fill={d.valor >= 0 ? colores.win : colores.lose} />
               ))}

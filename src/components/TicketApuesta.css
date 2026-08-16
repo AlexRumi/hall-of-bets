@@ -89,19 +89,6 @@
   padding: 8px 10px;
 }
 
-.hob-pick-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: none;
-  cursor: pointer;
-  color: #f3efe3;
-}
-
 .hob-footer {
   display: flex;
   align-items: center;

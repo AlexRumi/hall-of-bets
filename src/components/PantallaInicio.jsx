@@ -12,9 +12,8 @@ export default function PantallaInicio({
   casas,
   movimientos,
   onMarcarResultado,
-  onMarcarResultadoSeleccion,
+  onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
-  onActualizarMarcadorManual,
   onBorrar,
   onEditar,
   onIrASeccion,
@@ -86,12 +85,12 @@ export default function PantallaInicio({
           movimientos={movimientos}
           todasApuestas={apuestas}
           onMarcarResultado={onMarcarResultado}
-          onMarcarResultadoSeleccion={onMarcarResultadoSeleccion}
+          onMarcarResultadoPartido={onMarcarResultadoPartido}
           onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
-          onActualizarMarcadorManual={onActualizarMarcadorManual}
           onBorrar={onBorrar}
           onEditar={onEditar}
           agrupada={false}
+          denso
         />
       </div>
     </div>

@@ -1,11 +1,13 @@
-// Resultado de un partido/grupo, derivado del estado de sus picks (ver
-// ApuestaItem.jsx: cada pick cicla Pendiente/Ganada/Perdida/Nula por su
-// cuenta, ya no hay un botón manual a nivel de partido). Ganada si todos
-// los picks no anulados están Ganada; Perdida en cuanto alguno esté
-// Perdida (aunque otros sigan pendientes); Nula si TODOS los picks están
-// anulados; Pendiente en cualquier otro caso. Las selecciones de apuestas
-// creadas antes de este sistema no tienen "resultado" — cuentan como
-// "pendiente", igual que antes.
+// Resultado de un partido/grupo, derivado del "resultado" de sus picks.
+// Segunda vuelta del rediseño del marcado (ver CHANGELOG.md, "de un
+// resultado por apuesta a marcar por partido"): "Modificar" en
+// ApuestaItem.jsx/TicketApuesta.jsx marca TODOS los picks de un mismo
+// partido a la vez con el mismo resultado (no hay marcado mercado a
+// mercado), así que en la práctica esta función siempre encuentra o bien
+// todos los picks del grupo iguales, o bien ninguno decidido. Ganada si
+// todos los picks no anulados están Ganada; Perdida en cuanto alguno esté
+// Perdida; Nula si TODOS los picks están anulados; Pendiente en
+// cualquier otro caso.
 export function derivarResultadoGrupo(selecciones) {
   const noAnuladas = selecciones.filter((s) => s.resultado !== "nula");
   if (noAnuladas.length === 0) return "nula";
@@ -16,9 +18,10 @@ export function derivarResultadoGrupo(selecciones) {
 
 // Mismo criterio que derivarResultadoGrupo, un nivel más arriba: el
 // resultado de toda la apuesta a partir del resultado (ya derivado) de
-// cada uno de sus partidos. Usado tanto para la franja de estado en
-// ApuestaItem.jsx como para decidir si hay que guardar un nuevo resultado
-// real (ver manejarMarcarResultadoPick en App.jsx).
+// cada uno de sus partidos — ya no se pone a mano ("Modificar" solo
+// existe por partido), este es el único sitio donde se decide el
+// resultado real de la apuesta (ver manejarMarcarResultadoPartido en
+// App.jsx).
 export function derivarResultadoApuesta(gruposPartido) {
   const resultados = gruposPartido.map((g) => g.resultado);
   const noAnulados = resultados.filter((r) => r !== "nula");
@@ -57,11 +60,13 @@ export function calcularCuotaTotal({ selecciones, cuotaTotalManual }) {
 // consecutivas del mismo evento con cuota exactamente 1 son mercados extra
 // de un "multi" de ese partido). Cada grupo lleva el índice de la selección
 // que tiene la cuota real, la propia cuota, y su "resultado" ya derivado de
-// TODOS sus picks (derivarResultadoGrupo) — pensado para reconstruir tanto
+// TODOS sus picks (derivarResultadoGrupo, usado por calcularCuotaTotal para
+// excluir un partido anulado del producto) — pensado para reconstruir tanto
 // la edición del formulario como el detalle de ApuestaItem.jsx sin repetir
 // la misma lógica dos veces. Cada pick dentro de "selecciones" lleva su
-// "indice" absoluto dentro del array original, para poder marcarlo
-// individualmente (ver ApuestaItem.jsx / marcarResultadoSeleccion).
+// "indice" absoluto dentro del array original — "Modificar" (por
+// partido, ver ApuestaItem.jsx) marca TODOS los índices de un mismo
+// grupo a la vez con el mismo resultado.
 export function agruparSeleccionesPorPartido(selecciones) {
   const grupos = [];
   selecciones.forEach((seleccion, indice) => {

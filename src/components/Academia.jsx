@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { GraduationCap, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { CONCEPTOS, CATEGORIAS_ACADEMIA } from "../utils/academia";
+import DetalleConcepto from "./DetalleConcepto";
+import PanelLateral from "./PanelLateral";
 
 // Sección educativa: acordeón con los conceptos agrupados por categoría
 // (de fundamentos a avanzado, ver CATEGORIAS_ACADEMIA en utils/academia.js
@@ -15,6 +17,7 @@ export default function Academia() {
   const conceptosFiltrados = CONCEPTOS.filter((c) =>
     c.nombre.toLowerCase().includes(busqueda.trim().toLowerCase())
   );
+  const conceptoAbierto = CONCEPTOS.find((c) => c.id === expandido) ?? null;
 
   return (
     <div className="space-y-4">
@@ -54,68 +57,58 @@ export default function Academia() {
                 <h3 className="text-xs font-bold uppercase tracking-wide text-gold px-1">
                   {categoriaEtiqueta}
                 </h3>
-                {conceptosCategoria.map((concepto) => {
-                  const abierto = expandido === concepto.id;
-                  return (
-                    <div
-                      key={concepto.id}
-                      className="bg-surface border border-line rounded-xl overflow-hidden"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setExpandido(abierto ? null : concepto.id)}
-                        className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-paperDim transition-colors"
+                {/* Dos columnas desde "lg:" (rediseño de escritorio ancho,
+                    mismo criterio que Trofeos): cada fila es solo un título,
+                    así que sueltas a todo el ancho dejaban mucho hueco vacío
+                    junto al chevron. En móvil, una columna como siempre. */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {conceptosCategoria.map((concepto) => {
+                    const abierto = expandido === concepto.id;
+                    return (
+                      <div
+                        key={concepto.id}
+                        className="bg-surface border border-line rounded-xl overflow-hidden"
                       >
-                        <span className="font-display text-base font-semibold text-ink">
-                          {concepto.nombre}
-                        </span>
-                        {abierto ? (
-                          <ChevronUp size={18} className="text-slate shrink-0" />
-                        ) : (
-                          <ChevronDown size={18} className="text-slate shrink-0" />
+                        <button
+                          type="button"
+                          onClick={() => setExpandido(abierto ? null : concepto.id)}
+                          className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-paperDim transition-colors"
+                        >
+                          <span className="font-display text-base font-semibold text-ink">
+                            {concepto.nombre}
+                          </span>
+                          {abierto ? (
+                            <ChevronUp size={18} className="text-slate shrink-0" />
+                          ) : (
+                            <ChevronDown size={18} className="text-slate shrink-0" />
+                          )}
+                        </button>
+
+                        {/* Solo móvil: en escritorio el desarrollo se abre en
+                            el panel lateral de más abajo. */}
+                        {abierto && (
+                          <div className="md:hidden">
+                            <DetalleConcepto concepto={concepto} />
+                          </div>
                         )}
-                      </button>
-
-                      {abierto && (
-                        <div className="px-4 pb-4 space-y-3 border-t border-line pt-4">
-                          <p className="text-sm text-ink">{concepto.definicion}</p>
-
-                          <div>
-                            <p className="text-xs font-medium text-slate mb-1">En cristiano</p>
-                            <p className="text-sm text-ink">{concepto.explicacion}</p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-medium text-slate mb-1">Fórmula</p>
-                            <p className="font-mono text-sm text-goldDark bg-paperDim rounded-lg px-3 py-2">
-                              {concepto.formula}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-medium text-slate mb-1">Ejemplo</p>
-                            <p className="text-sm text-ink">{concepto.ejemplo}</p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-medium text-slate mb-1">Cómo interpretarlo</p>
-                            <p className="text-sm text-ink">{concepto.interpretacion}</p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs font-medium text-lose mb-1">Errores frecuentes</p>
-                            <p className="text-sm text-ink">{concepto.erroresFrecuentes}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Panel lateral de escritorio (PanelLateral ya es "hidden md:flex" de
+          fábrica, así que en móvil no aparece nada aquí): mismo
+          DetalleConcepto que el bloque inline de arriba. */}
+      <PanelLateral abierto={!!conceptoAbierto} onCerrar={() => setExpandido(null)}>
+        {conceptoAbierto && (
+          <DetalleConcepto concepto={conceptoAbierto} onCerrar={() => setExpandido(null)} />
+        )}
+      </PanelLateral>
     </div>
   );
 }

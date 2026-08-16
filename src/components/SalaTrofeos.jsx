@@ -162,7 +162,13 @@ export default function SalaTrofeos({ trofeos }) {
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate px-1">
               {etiqueta}
             </h3>
-            <div className="space-y-2">
+            {/* Dos columnas desde "lg:" (rediseño de escritorio ancho): cada
+                fila ya se compone bien a cualquier ancho (icono + texto +
+                pastilla), así que no hace falta rediseñarlas — sueltas, una
+                debajo de otra a todo el ancho de la página, se veían
+                clavadas con mucho hueco vacío a la derecha. En móvil, una
+                columna como siempre. */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {trofeosCategoria.map((trofeo) => (
                 <FilaTrofeo key={trofeo.id} trofeo={trofeo} />
               ))}

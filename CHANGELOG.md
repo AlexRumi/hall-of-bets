@@ -3762,3 +3762,586 @@ separadas, probando cada una antes de pasar a la siguiente.
   en la selección líder de cada grupo (mismo campo, sin migración), pero
   ahora se marca en TODAS las líderes de la apuesta a la vez, en el mismo
   envío, en vez de una a una según iba terminando cada partido.
+
+- **Rediseño de escritorio ancho, primera fase: Inicio** (petición
+  directa, tras comparar con otra app de referencia — "Bet Analytix" —
+  que aprovecha todo el ancho con un sidebar fijo, filas de apuesta
+  densas tipo tabla, y un panel lateral en vez de un modal centrado para
+  el detalle). Decidido con el usuario antes de tocar código: ir pantalla
+  a pantalla en vez de todo de golpe, empezando por **Inicio** (no por
+  Apuestas/Entretenimiento), y solo escritorio por ahora — en móvil
+  ninguna pantalla cambia todavía, el usuario compartirá capturas de
+  referencia para esa parte más adelante, como fase aparte.
+  - `App.jsx`: el contenedor que envuelve el contenido (antes
+    `max-w-3xl mx-auto` para TODAS las secciones) pasa a `max-w-6xl` solo
+    cuando `seccionActiva === "inicio"`; el resto de secciones se quedan
+    exactamente igual que antes.
+  - `TarjetaApuestaResumen.jsx`/`ListaApuestas.jsx`: nueva prop opcional
+    `denso` (por defecto `false`, sin cambiar nada de lo que ya existía)
+    en vez de un componente nuevo separado, para poder activarla en
+    Apuestas/Entretenimiento (u otra pantalla) en una fase futura sin
+    duplicar código. Con `denso`, aparece desde `md:` una fila tipo tabla
+    (deporte, Simple/Combinada, fecha, casa con su color de firma —
+    mismo `useColorCasa` que `ApuestaItem.jsx` —, evento, cuota total,
+    importe, beneficio y una pastilla de estado horizontal) en vez de la
+    tarjeta con la franja vertical girada; y al hacer clic se abre un
+    panel anclado a la derecha (con transición de entrada) en vez del
+    modal centrado — mismo `ApuestaItem.jsx` por dentro en los dos casos,
+    sin tocarlo. Por ahora solo `PantallaInicio.jsx` activa `denso`; el
+    resto de usos de estos dos componentes (Apuestas, Entretenimiento) se
+    comportan exactamente igual que antes, sin ninguna bifurcación
+    visible.
+  - No se pudo probar en un navegador de verdad en este entorno (sin esa
+    herramienta); pendiente de que el usuario lo pruebe en local o en el
+    propio despliegue y confirme antes de plantear la siguiente pantalla.
+  - **Ajustes tras probarlo en local** (`vite --host`, arrancado por falta
+    de servidor): la fila densa pasó de una sola línea con columnas de
+    ancho fijo (se veía "en zigzag" con flex+gap, la pastilla Simple/
+    Combinada empujaba el resto según su longitud) a dos líneas —
+    fecha+logo+tipo arriba, deporte+evento abajo — con Cuota/Importe/
+    Ganancia/Beneficio como bloque aparte, centrado verticalmente
+    respecto a TODA la tarjeta (no solo la línea del evento). El nombre
+    de la casa en texto se quitó (el logo ya identifica la casa), el logo
+    pasó de 32×32 a un rectángulo más ancho (56×32) para que se lea el
+    texto de logos tipo "bet365", con una `title` con el nombre para no
+    perder esa información del todo; sin logo sale un círculo con la
+    inicial en el color de firma de la casa. "Ganancia" se definió como
+    `beneficio + stake` (el retorno total, ya que al lado se ve el
+    Beneficio neto) — con una excepción real: en freebet NO se suma el
+    stake (nunca fue dinero real que "recuperar"), si no una freebet
+    perdida saldría con Ganancia > 0 sin haber ganado nada. Etiquetas
+    Cuota/Importe/Ganancia/Beneficio con mayúscula inicial (se probó todo
+    en minúscula, no convenció). El panel lateral de detalle pasó de
+    `max-w-md` a `max-w-xl` (mismo ancho que el modal centrado que
+    sustituye) porque con menos ancho las tarjetas de resultado por
+    partido de `ApuestaItem.jsx` se veían desproporcionadamente grandes
+    — decisión tomada tras usar `AskUserQuestion` para confirmar que el
+    problema era solo de ese panel nuevo (no tocar `ApuestaItem.jsx`,
+    compartido con el resto de la app).
+
+- **Rediseño del marcado de resultado: de "por pick" a "un resultado por
+  apuesta"** (petición directa, tras ver el panel de detalle nuevo y
+  compararlo con Bet Analytix). Cambio de fondo, no solo visual —
+  revierte un rediseño anterior deliberado (ver la entrada "Marcado de
+  resultado por pick, universal" más arriba: aquel cambio también fue una
+  petición directa, confirmada entonces igual que esta con
+  `AskUserQuestion`). Confirmado en dos rondas: primero "un solo
+  resultado por apuesta" en vez de solo repintar el marcado por pick;
+  después, que el mismo cambio se aplicara TAMBIÉN a la Mini App de
+  Telegram (`TicketApuesta.jsx`), que tenía su propio marcado por pick
+  independiente — si solo cambiaba la web, una misma apuesta se resolvía
+  de dos formas distintas según por dónde se tocara, y los picks se
+  quedaban sin marcar para siempre si se resolvía desde la web.
+  - **`ApuestaItem.jsx`**: fuera el "sello" de color con blur por
+    partido, el ojo (revelar), el lápiz de re-editar un partido resuelto,
+    los 3 botones ✓/✕/– por pick, y el aviso "Ajustar cuota" tras anular
+    un pick (ya no hay forma de anular un pick suelto — si hace falta
+    corregir la cuota total a mano, ya existe "Editar" →
+    `cuotaTotalManual`). La pastilla de estado (antes solo decorativa)
+    pasa a ser un botón que abre "Modificar": un diálogo con las 4
+    opciones (Pendiente/Ganada/Perdida/Nula, mismo icono/color que ya
+    usaba cada pick) que llama directo a `onMarcarResultado` — la MISMA
+    prop que ya usaba Cash Out, sin derivar nada de picks. Los picks de
+    la lista de selecciones pasan a texto+cuota de solo lectura. Se
+    mantiene sin cambios: marcador manual de "Otras ligas", Cash Out,
+    cabecera (Editar/Eliminar/Cerrar).
+  - **`TicketApuesta.jsx`/`TelegramMiniApp.jsx`**: mismo cambio — fuera
+    los 3 botones por pick (`hob-pick-btn`, ya sin uso, borrado de
+    `TicketApuesta.css`), dentro 4 pastillas grandes (Pendiente/Ganada/
+    Perdida/Nula) cerca del sello. `marcarPick(indice, resultado)` pasa a
+    `marcarResultado(resultado)`, con una llamada nueva `{ accion:
+    "resultado", resultado }` en vez de `{ accion: "pick", indice,
+    resultado }`.
+  - **`api/telegram-apuesta.js`**: nueva rama `accion === "resultado"`
+    que llama directo a `marcarResultadoApuesta` (ya existía, ya se
+    usaba para `"cashout"`); se quita la rama `accion === "pick"`.
+  - **`api/_lib/apuestasResueltas.js`**: se borra `marcarPick` (sin
+    llamadores tras el cambio de arriba) — solo queda
+    `marcarResultadoApuesta`.
+  - **`App.jsx`/`useApuestas.js`/`ListaApuestas.jsx`/`EstadisticasDashboard.jsx`/`PantallaInicio.jsx`**:
+    limpieza en cadena de todo lo que quedó sin usar —
+    `manejarMarcarResultadoPick` (App.jsx), `marcarResultadoSeleccion`/
+    `actualizarCuotaSeleccion` (useApuestas.js) y el hilo de props
+    `onMarcarResultadoSeleccion`/`onActualizarCuotaSeleccion` en cada
+    componente que lo reenviaba.
+  - **`utils/apuestas.js`**: se borra `derivarResultadoApuesta` (sin
+    llamadores). `derivarResultadoGrupo`/`agruparSeleccionesPorPartido`
+    se quedan (`calcularCuotaTotal` sigue leyendo `grupo.resultado` para
+    excluir un partido "nula" del producto) — en la práctica siempre
+    darán "pendiente" para apuestas nuevas, ya que nada vuelve a marcar
+    un pick, salvo en datos antiguos de antes de este cambio.
+  - **Efecto secundario real, no pedido pero necesario**:
+    `utils/trofeos.js` tenía `esGanadaDeVerdad()`, que para un Cash Out
+    miraba si los picks derivados "habrían ganado igual" para dar por
+    buenos dos trofeos (Cazador de cuotas, Combinada ganadora) aunque se
+    cobrara antes de tiempo. Sin marcado por pick ya no hay con qué
+    calcular eso — se simplificó a `apuesta.resultado === "ganada"`: un
+    Cash Out ya NO cuenta para esos dos trofeos, aunque hubiera acabado
+    ganando. Pérdida real pero menor (solo afecta a cash outs que además
+    habrían ganado), documentada en el propio código.
+  - No se pudo probar en un navegador de verdad en este entorno; pendiente
+    de que el usuario lo pruebe en local (los 4 casos: Pendiente/Ganada/
+    Perdida/Nula, con y sin freebet/seguro) y en el propio despliegue de
+    Telegram, antes de subirlo.
+
+- **Segunda vuelta: de "un resultado por apuesta" a "un resultado por
+  partido"** (petición directa, tras ver el diseño anterior en real —
+  todavía sin subir — y comparar otra vez con Bet Analytix, con más
+  detalle esta vez). Solo en `ApuestaItem.jsx` (web) por ahora — la Mini
+  App de Telegram (`TicketApuesta.jsx`) se queda sin tocar en esta
+  ronda, así que de momento vuelve a estar desincronizada con la web
+  (ella sigue con "un resultado por apuesta" de la vuelta anterior);
+  pendiente de alinearla en cuanto el diseño de la web se asiente — el
+  usuario avisó explícitamente de que "queda mucho" por diseñar todavía
+  y no hay prisa por subir nada.
+  - **Cabecera**: la pastilla de estado se mueve de una franja centrada
+    aparte a la esquina superior derecha de la fila de Simple/Combinada
+    (junto a Freebet/Asegurada/etc.) — y deja de ser un botón: el
+    resultado general ya no se pone a mano en ningún sitio, se DERIVA
+    solo de los partidos (vuelve `derivarResultadoApuesta`, borrada en la
+    vuelta anterior de este mismo rediseño).
+  - **Cada partido, en una línea**: icono del deporte + evento + cuota +
+    una pastilla de estado que abre "Modificar" PARA ESE PARTIDO (las
+    mismas 4 opciones de antes, ahora por partido en vez de por apuesta
+    entera). Se quita la cabecera "Multi Apuesta"/"Pick simple" +
+    competición/país + la lista de picks con su mercado — juicio propio,
+    no pedido explícitamente: con un resultado por partido ya no hace
+    falta desglosar mercado a mercado en esta vista (en un bet builder
+    de varios mercados del mismo partido, se pierde ver CUÁL mercado se
+    jugó; el marcador del partido si sigue disponible).
+  - **Marcar un partido marca TODOS sus picks a la vez** (no mercado a
+    mercado): `marcarResultadoGrupo` (nuevo en `useApuestas.js`) escribe
+    el mismo resultado en todos los índices de ese grupo en una sola
+    llamada — de ahí "una llamada menos" que pedía el usuario, ya no
+    hace falta una acción aparte para sellar el resultado real de la
+    apuesta, se deriva sola con `manejarMarcarResultadoPartido` (nuevo en
+    `App.jsx`, mismo patrón que el `manejarMarcarResultadoPick` que se
+    había borrado, pero a nivel de partido).
+  - **`utils/trofeos.js`**: `esGanadaDeVerdad()` recupera su lógica
+    original (mirar si un Cash Out habría ganado igual, vía
+    `derivarResultadoApuesta`) — vuelve a ser calculable ahora que los
+    partidos sí se marcan, así que el "efecto secundario" de la vuelta
+    anterior (Cash Out ya no contaba para "Cazador de cuotas"/"Combinada
+    ganadora") queda resuelto sin que hiciera falta pedirlo.
+  - Se mantiene sin cambios: Stake/Cuota/Beneficio, la nota de cuota
+    manual, marcador manual de "Otras ligas", Cash Out, cabecera
+    (Editar/Eliminar/Cerrar).
+  - Tampoco se pudo probar en navegador en este entorno; el usuario ya
+    avisó de que de momento sigue usando la versión anterior en su
+    propio entorno local y avisará cuando el diseño esté listo para
+    subir.
+
+- **Tercera vuelta: tarjetas por partido, ciclo de estado en un toque, y
+  "Ajustar cuota" de vuelta** (petición directa, con una maqueta HTML
+  funcional de referencia — ya con los colores de Hall of Bets, felt/
+  gold/paper — más una explicación punto por punto). Solo
+  `ApuestaItem.jsx` (web); la Mini App de Telegram sigue sin tocar,
+  ahora una vuelta más desincronizada — el usuario mantiene que no hay
+  prisa por alinearla.
+  - **Cabecera**: título ("Combinada N partidos"/"Apuesta simple") + X;
+    debajo, fila con píldora de fecha (icono calendario), tipo, Freebet/
+    Asegurada/aumento/Archivada si aplican, y el estado general a la
+    derecha (`ml-auto`) — informativo, ya no clicable en absoluto.
+  - **4 columnas fijas**: Cuota · Importe · Ganancia · Beneficio, las
+    dos últimas siempre visibles a la vez (antes "Ganancia" y
+    "Beneficio" se turnaban en el mismo hueco según pendiente/resuelta).
+  - **"Selecciones"**: encabezado propio + logo de la casa (o su nombre
+    en su color de firma si no tiene logo) alineado a la derecha —
+    donde antes vivía el logo, en la cabecera general.
+  - **Cada partido, tarjeta propia** (borde + fondo, no fila suelta):
+    icono del deporte, evento, cuota en su recuadro, y una pastilla de
+    estado que ahora CICLA al tocarla (Pendiente → Ganada → Perdida →
+    Nula → Pendiente) — sin diálogo, un toque por paso (vuelve
+    `onMarcarResultadoPartido`/`marcarResultadoGrupo` de la vuelta
+    anterior, solo cambia el disparador). Con Cash Out ya hecho, el
+    ciclo se bloquea (`disabled`, mismo criterio que la maqueta).
+  - **"Ajustar cuota (mercado anulado)" vuelve** — pero ya no depende de
+    marcar un pick suelto (eso no existe): es un enlace SIEMPRE visible
+    en cada tarjeta, para cuando la casa recalcula la cuota de un
+    partido tras anular uno de sus mercados (ej. un jugador no
+    titular). Mecanismo totalmente independiente del ciclo de
+    estado — un partido puede estar Ganada y tener la cuota ajustada a
+    la vez. Restaurado `actualizarCuotaSeleccion` en `useApuestas.js`
+    (se había borrado en la primera vuelta) y su hilo de props
+    (`onActualizarCuotaSeleccion`).
+  - **Se quita el marcador del partido** (petición directa) — ni el
+    automático (API-Football) ni el escrito a mano para "Otras ligas".
+    Como no queda ningún sitio que escriba
+    `golesLocalManual`/`golesVisitanteManual`, se borra también
+    `actualizarMarcadorManual` de `useApuestas.js` (sin llamadores) — la
+    Mini App de Telegram sigue LEYENDO ese campo para partidos con
+    datos antiguos, solo se quitó la forma de escribirlo. `InfoPartido`
+    se queda exportado (lo sigue usando `TicketApuesta.jsx`), pero
+    `ApuestaItem.jsx` ya no lo usa por dentro.
+  - **Dos botones nuevos en el pie** (Cash Out · Modificar · Compartir ·
+    Copiar · Eliminar — Modificar/Eliminar son el lápiz/papelera que
+    antes vivían sueltos en la cabecera, ahora aquí):
+    - **Copiar**: duplica la apuesta como una nueva Pendiente con la
+      fecha de hoy (mismos datos, sin arrastrar resultado/marcador/aviso
+      ya enviado) — `copiarApuesta`, nuevo en `useApuestas.js`,
+      reutiliza `agregarApuesta` tal cual.
+    - **Compartir**: copia al portapapeles (`navigator.clipboard`) un
+      resumen en texto plano (partidos, cuota total, importe,
+      resultado/beneficio) — sin diálogo, el propio botón cambia a
+      "¡Copiado!" un momento y vuelve solo.
+  - No se pudo probar en navegador en este entorno; sigue pendiente de
+    que el usuario lo pruebe en su local, como en las vueltas
+    anteriores.
+  - **Bug real, detectado por el usuario con una combinada de prueba**:
+    en una apuesta con la cuota total ajustada a mano
+    (`cuotaTotalManual`), anular un partido no la recalculaba — se
+    quedaba en el valor manual antiguo, calculado para la combinada
+    completa, en vez de reflejar que un partido ya no cuenta. Corregido
+    en `marcarResultadoGrupo` (`useApuestas.js`): si el partido ENTRA o
+    SALE de "Nula", se limpia `cuotaTotalManual` en la misma escritura
+    — la cuota total vuelve a calcularse sola con el producto de los
+    partidos activos (`calcularCuotaTotal`), como si nunca se hubiera
+    ajustado a mano.
+
+- **Panel lateral: "+ Añadir apuesta", modo oscuro/cerrar sesión, e
+  Historial** (petición directa, quinta fase del rediseño de escritorio
+  de esta sesión). Decidido con el usuario (`AskUserQuestion`): esta
+  vuelta SOLO AÑADE — "Apuestas"/"Entretenimiento" se quedan igual en el
+  menú, no se quita nada todavía (depende de que Estadísticas gane antes
+  3 recuadros que le faltan: En juego, Media apostada, Total apostado —
+  fase aparte, sin hacer).
+  - **Modo oscuro/cerrar sesión** se mueven de la cabecera al panel
+    lateral (`SidebarNavegacion.jsx`), al final del todo (`mt-auto`),
+    solo icono sin etiqueta (mismo lenguaje visual que ya tenían en la
+    cabecera) — reutilizando `SelectorModoOscuro.jsx` tal cual. El móvil
+    no cambia (ya los tenía aparte en `MenuSecundario.jsx`).
+  - **Botón dorado "+ Añadir apuesta"** debajo de la lista de secciones
+    del panel — abre un diálogo pequeño (mismo patrón que
+    `ConfirmDialog.jsx`) para elegir Apuestas/Entretenimiento, y al
+    elegir abre el formulario en un panel lateral nuevo (deslizado desde
+    la derecha). Solo escritorio — el móvil sigue con su "+" de siempre
+    en `BarraInferiorMovil.jsx`, sin tocar. `manejarAgregar` (`App.jsx`)
+    gana un segundo parámetro opcional `categoria` (por defecto
+    `seccionActiva`, como antes) para poder guardar con el bankroll
+    elegido en el diálogo en vez de con la sección que se esté viendo.
+  - **`PanelLateral.jsx`** (nuevo): el mecanismo de panel lateral
+    (backdrop + `translate-x` animado) que ya existía a mano dentro de
+    `ListaApuestas.jsx` para el detalle de una apuesta se extrae a un
+    componente reutilizable — ahora lo usan tanto el detalle como el
+    panel nuevo de "Añadir apuesta", sin duplicar la animación una
+    segunda vez.
+  - **`Historial.jsx`** (nuevo, sección nueva en el panel lateral):
+    pastillas Todas/Apuestas/Entretenimiento (misma etiqueta "Todas" que
+    ya usa el teclado del bot de Telegram, para el mismo criterio en
+    toda la app) + el listado agrupado por mes/día de siempre
+    (`ListaApuestas` con `agrupada` y `denso`, igual que Inicio) — sin
+    ningún cálculo nuevo, solo filtra el array por categoría antes de
+    pasarlo. Contenedor ancho (`max-w-6xl`) igual que Inicio.
+  - No se pudo probar en navegador en este entorno; pendiente de que el
+    usuario lo pruebe en local y confirme antes de subir.
+  - **Ajustes tras probarlo en local**:
+    - El botón "+ Añadir apuesta" se movió del panel lateral a la
+      cabecera (petición directa) — el hueco donde antes vivían modo
+      oscuro/cerrar sesión, alineado con "Hall of Bets", en vez de
+      debajo de la lista de secciones del panel.
+    - **Bug real, detectado por el usuario**: dentro del panel de
+      "Añadir apuesta", el desplegable de "Casa de apuestas"
+      (`SelectorDesplegable.jsx`, reutilizado también por el desplegable
+      de jugador de `SelectorMercado.jsx`) no se abría, y el formulario
+      se veía cortado por arriba al abrir el panel. Causa: el panel
+      lateral nuevo anima con `transform` (`translate-x`), y CUALQUIER
+      antecesor con `transform` convierte a sus descendientes
+      `position: fixed` en relativos A ESE ANTECESOR en vez de a la
+      ventana — el desplegable (que sí es `fixed`, a propósito, ver su
+      propio historial en `usePosicionDesplegable.js`) se posicionaba
+      con coordenadas de ventana pero dentro del sistema de coordenadas
+      del panel, así que aparecía en cualquier sitio menos el
+      correcto. Corregido sacando el panel de opciones a un portal
+      (`createPortal` a `document.body`) en `SelectorDesplegable.jsx` —
+      arregla este desplegable en CUALQUIER panel con `transform`
+      (incluido "Editar" dentro del panel de detalle de una apuesta,
+      mismo riesgo aunque no se hubiera notado todavía). Al sacarlo del
+      DOM del propio componente con el portal, el "click fuera"/"scroll
+      dentro cierra" tenían que aprender a reconocer también el panel
+      portado (antes solo miraban el contenedor del botón) — se añadió
+      un segundo ref para eso. De paso, `PanelLateral.jsx` fuerza
+      `scrollTop = 0` al abrirse, por si el corte de arriba también
+      tenía algo de scroll inicial de por medio.
+  - **Dos bugs reales más, detectados por el usuario tras probar la
+    corrección anterior**:
+    - **Modo oscuro/cerrar sesión invisibles sin hacer scroll**: el
+      `<aside>` se estira tanto como la columna de contenido de al lado
+      (a propósito, para que el verde cubra toda la altura) — con
+      "Últimas apuestas" larga, el `mt-auto` que empuja estos dos
+      iconos "al final" los dejaba al final de una columna mucho más
+      alta que la pantalla, invisibles sin bajar del todo. Añadido
+      `md:sticky md:bottom-4` (mismo patrón que ya usa el `<nav>` de
+      arriba con `md:sticky md:top-20`) para que se queden a la vista
+      del viewport de verdad, con fondo propio (`bg-felt`) porque el
+      menú puede seguir desplazándose por debajo. De paso, la letra del
+      menú baja de `text-base` a `text-sm` (petición directa).
+    - **El desplegable se abría, pero la cabecera tapaba la parte de
+      arriba del formulario**: la cabecera (`z-[60]`) va por encima de
+      los diálogos normales (`z-50`) a propósito, para poder seguir
+      usando modo oscuro/cerrar sesión con un modal CENTRADO abierto
+      detrás — pero un panel a pantalla completa como
+      `PanelLateral.jsx` necesita justo lo contrario: taparla entera
+      mientras está abierto. Solución del propio usuario: subir el
+      z-index del panel por encima de la cabecera (`z-[70]`). Efecto
+      secundario que había que corregir a la vez: el desplegable de
+      "Casa de apuestas" vive DENTRO de ese panel y usa un portal
+      (`document.body`) con `z-50` — con el panel ya en `z-[70]`, el
+      propio panel le tapaba el desplegable a él. Subido también a
+      `z-[80]`, por encima de cualquier otra cosa con z-index en la
+      app.
+  - **Últimos retoques, con "Inicio" ya dado por terminado en
+    escritorio**: el botón "+ Añadir apuesta" de la cabecera pasa de
+    `bg-gold` (cambia de tono según el tema) a un dorado fijo — el mismo
+    rgb que usa `--color-gold` en modo oscuro (`index.css`), también en
+    modo claro (petición directa). Las dos pastillas Apuestas/
+    Entretenimiento del diálogo de elegir bankroll ganan un hover más
+    visible (`hover:border-gold/40` casi no se notaba — pasa a
+    `border-2` + `hover:border-gold` + `hover:bg-gold/5`).
+  - Fila densa de `TarjetaApuestaResumen.jsx`: el nombre del evento baja
+    de `text-base` (16px) a `text-sm` (14px) — petición directa, se veía
+    grande comparado con el resto de columnas.
+
+- **Se oculta "Apuestas"/"Entretenimiento" del menú de escritorio**
+  (petición directa: con "+ Añadir apuesta" cubriendo el alta e
+  "Historial" el listado de los dos bankrolls, ya no aportaban como
+  destino de navegación aparte). Antes de esto, `KpisEstadisticas.jsx`
+  (los KPI combinados de Estadísticas) ganó los 3 recuadros que le
+  faltaban respecto al panel que tenía cada bankroll por separado —
+  Media apostada, Total apostado, En juego — reutilizando
+  `stats.stakeMedio`/`stats.stakeTotalReal`/`stats.stakePendienteReal`,
+  que `calcularEstadisticas()` ya calculaba (no hizo falta ningún
+  cálculo nuevo), más la misma nota de stake en freebets que ya tenía
+  `EstadisticasApuestas.jsx`. Solo se quitaron los dos items de
+  `SidebarNavegacion.jsx` (`ITEMS`) — ni el código de esas pantallas ni
+  la navegación del móvil (que sigue siendo la suya propia, aparte) se
+  han tocado, así que es reversible con una sola línea si hiciera
+  falta.
+
+- **Tarjeta de Bankroll propia en Estadísticas, y reorganización del
+  panel de KPIs** (petición directa, comparando con el mismo recuadro
+  que ya existía arriba de Apuestas/Entretenimiento en móvil). El
+  recuadro "Bankroll" sale del grid de KPIs (`KpisEstadisticas.jsx`) y
+  pasa a su propia tarjeta (reutiliza `TarjetaBankroll.jsx`, la misma
+  que ya usaban Apuestas/Entretenimiento y Casas de apuestas — nada
+  nuevo que construir), justo debajo del selector Apuestas/
+  Entretenimiento/Todas: con "Todas" suma el bankroll de los dos
+  bankrolls (dinero real + los dos saldos de freebet de cada casa); con
+  uno concreto, solo el suyo. A propósito calculada sobre
+  `apuestasDelBankroll`/`movimientosDelBankroll` (solo filtrados por
+  bankroll), no sobre las versiones ya filtradas por casa/rango/
+  archivado que usa el resto del dashboard — mismo criterio que "Casas
+  de apuestas": el dinero real no cambia solo por estar mirando una
+  casa o un periodo concreto.
+  - El grid de KPIs que queda (`KpisEstadisticas.jsx`) se reorganiza en
+    tres filas: ROI/Yield/% Acierto/Cuota media; Nº apuestas/Media
+    apostada/Total apostado/En juego; y Beneficio/Beneficio (mes) en su
+    propia fila centrada aparte, para que destaquen del resto en vez de
+    ser una pastilla más de la cuadrícula.
+  - **Reorden del panel lateral**: Inicio, Estadísticas, Informe,
+    Historial, Casas de apuestas, Trofeos, Academia, Ajustes.
+
+- **Estadísticas a todo el ancho en escritorio** (petición directa: "como
+  seguimos el orden visual haciendo que ocupe todo el ancho"). Se añade
+  a la lista de secciones con `max-w-6xl` (`App.jsx`, junto a Inicio y
+  Historial). Como esta pantalla tiene muchas más piezas apiladas que
+  esas dos (una tarjeta, un grid de KPIs, media docena de gráficos, dos
+  tablas), ensanchar el contenedor solo no bastaba — se emparejan en
+  columnas las piezas que tenían sentido lado a lado, dejando los
+  gráficos de línea/área grandes (Evolución, Distribución, Beneficio
+  mensual) a ancho completo, que son los que de verdad se benefician de
+  todo el ancho ellos solos:
+  - Bankroll + el grid de KPIs, lado a lado desde `lg:` (1 columna para
+    Bankroll, más compacto, y 2 de 3 para KPIs).
+  - Los 4 `GraficoBarraDivergente` (ROI por deporte/casa/mercado,
+    Beneficio por rango de cuota), de dos en dos en el mismo grid — como
+    alguno se oculta según el filtro activo, el grid simplemente se
+    reacomoda con los que haya, sin lógica nueva.
+  - De paso, los filtros de casa/rango de fechas/"ver también archivado"
+    se movieron antes de la tarjeta de Bankroll+KPIs (antes iban
+    después) — así lo que los afecta se ve siempre encima de sus
+    controles, no debajo.
+  - **Bug real, detectado por el usuario al probarlo con pocos datos de
+    prueba**: los gráficos de barras (`GraficoBarraDivergente.jsx`, ROI
+    por deporte/casa/mercado y Beneficio mensual/por rango de cuota) no
+    tenían un ancho máximo por barra — con una sola categoría (un único
+    deporte, una única casa, como en los datos de prueba) la barra se
+    estiraba para llenar todo el ancho disponible, mucho mayor ahora con
+    el contenedor ensanchado, viéndose como un bloque gigante en vez de
+    una barra normal. Corregido con `maxBarSize={56}` en el `<Bar>` — con
+    muchas categorías no cambia nada (ya eran más estrechas que ese
+    máximo), solo evita que una única barra se infle sin límite.
+  - **Calendario de actividad, dentro de la rejilla de gráficos de
+    barras** (petición directa, mismo motivo): sus celdas son cuadradas
+    y crecen con el ancho disponible (`aspect-square`) — sueltas a todo
+    el ancho de Estadísticas se veían enormes. Movido dentro del mismo
+    grid de 2 columnas que ya tenían los `GraficoBarraDivergente`
+    (llenando el hueco que dejaba un número impar de ellos), sin tocar
+    nada de `CalendarioActividad.jsx` — sus celdas se reducen solas a la
+    mitad del ancho.
+
+- **Panel "Estadísticas" en la cabecera, estilo Bet Analytix (experimento
+  añadido, no sustituye nada)**: tras ver capturas de esa app de
+  referencia, se prueba un segundo punto de entrada a las estadísticas,
+  más rápido que ir a la sección del menú — un botón "Estadísticas"
+  nuevo en la cabecera de escritorio, a la izquierda de "+ Añadir
+  apuesta" (estilo contorno, `border-gold/40`, para no competir con el
+  dorado relleno de ese botón), que abre `PanelEstadisticas.jsx` dentro
+  de un `PanelLateral` (mismo mecanismo deslizante que ya usa "+ Añadir
+  apuesta"). Decidido con el usuario (`AskUserQuestion`): el selector de
+  casa dentro del panel es un desplegable (`SelectorDesplegable.jsx`, el
+  mismo que ya usa el formulario de apuesta), no pastillas ni flechas —
+  más compacto para un panel estrecho. Contenido, especificado por el
+  usuario: 3 pastillas Todas/Apuestas/Entretenimiento ("Todas" primero y
+  por defecto, al revés que en `EstadisticasDashboard.jsx`), el
+  desplegable de casa, y una sola tarjeta densa con el Bankroll grande
+  centrado arriba y 6 filas de cifras en 2 columnas debajo (Dinero
+  real/Freebets, ROI/Yield, Nº apuestas/Cuota media, Media apostada/%
+  Acierto, En juego/Total apostado, Beneficio (mes)/Beneficio), y un
+  botón "Más estadísticas" que despliega los gráficos (Evolución,
+  Distribución de resultados, Beneficio mensual, Rachas + Mejor/Peor
+  apuesta, ROI por deporte, ROI por casa, Beneficio por rango de cuota,
+  Calendario de actividad, Mercados más usados, Insights) — todos
+  reutilizados sin cambios de `EstadisticasDashboard.jsx`, mismas
+  funciones de cálculo (`calcularEstadisticas`, `calcularBankrollPorCasa`,
+  `calcularDesglosePorDeporte`, `calcularBeneficioPorRangoCuota`,
+  `calcularFrecuenciaMercados`), nada nuevo. Sin "Rango de fechas" ni
+  "Ver también archivado" en este panel (el usuario no los pidió) — las
+  archivadas se excluyen siempre por defecto, igual que el resto de la
+  app. Dentro del panel los gráficos van siempre en una sola columna,
+  sin la rejilla `lg:grid-cols-2` de la página ancha — esa clase se
+  activa por el ancho de la VENTANA, no del panel (que tiene un ancho
+  fijo, `max-w-xl`), así que en escritorio habría apretado 2 columnas en
+  un hueco estrecho.
+  - **Bug evitado antes de que apareciera**: "Mejor apuesta"/"Peor
+    apuesta" (dentro de `RachasYExtremos`) abren el detalle de la
+    apuesta en un modal `position: fixed` — y el panel donde vive
+    (`PanelLateral.jsx`) anima con `transform`, que convierte a ese
+    antecesor en el "contenedor" de cualquier descendiente fijo (mismo
+    problema ya resuelto una vez en `SelectorDesplegable.jsx` para el
+    panel de "+ Añadir apuesta"). Se aplicó la misma solución de
+    entrada: el modal se renderiza con `createPortal` a
+    `document.body`. Se detectó que `BotonInfoConcepto.jsx` (los iconos
+    ℹ️ junto a ROI/Yield/etc., reutilizados aquí) tenía exactamente el
+    mismo problema en potencia — se le aplicó el mismo arreglo, así que
+    de paso queda corregido en cualquier otro sitio donde se use dentro
+    de un panel lateral en el futuro.
+  - Todas las filas de cifras del panel (2 y 3 en adelante, no solo la
+    del Bankroll) pasan a centradas (petición directa, "quedará mejor")
+    — `Fila` (dentro de `PanelEstadisticas.jsx`) gana `text-center`.
+  - **"Estadísticas" se oculta del menú de escritorio** (petición
+    directa, mismo criterio que Apuestas/Entretenimiento: "no elimino
+    por si en el futuro sirve esa sección para algo") — ahora que este
+    panel cubre el acceso rápido, ya no hace falta el ítem del menú.
+    Solo se quita de `ITEMS` en `SidebarNavegacion.jsx`; la ruta sigue
+    intacta en `App.jsx` (`seccionActiva === "estadisticas"` sigue
+    renderizando `EstadisticasDashboard.jsx` si se llegara a activar
+    por algún otro medio), nada de su código se ha tocado ni borrado.
+
+- **Casas de apuestas: rediseño de escritorio ancho (fila + panel
+  lateral)**. Siguiente pantalla del rediseño (después de Inicio/
+  Historial/Estadísticas — backlog en `CLAUDE.md`, punto 6), tras
+  preguntar "cómo se pueden implementar Informe/Casas/Trofeos/Academia/
+  Ajustes para que toda la página tenga la misma sintonía" — Casas de
+  apuestas se eligió primero por ser ya una lista (encaja directo en el
+  patrón "fila + panel lateral" de Historial/Inicio). `ListadoCasas.jsx`
+  era un acordeón: tocar una casa desplegaba su detalle DEBAJO de su
+  propia fila, empujando el resto hacia abajo. La cabecera de cada fila
+  (logo, nombre, yield, bankroll Apuestas/Entretenimiento, chevron) ya
+  era bastante densa — no se ha tocado; solo cambia adónde va el
+  detalle en escritorio.
+  - Detalle extraído a `DetalleCasa.jsx` (nuevo, mismo criterio que
+    `ApuestaItem.jsx`): las dos `FilaBankroll`, `FormularioMovimiento`,
+    "Otro bono" + `FormularioBono`, `ListaMovimientos` y "Borrar esta
+    casa", reutilizados tanto en el acordeón de móvil (sin cambios,
+    `md:hidden`) como en un `PanelLateral` nuevo de escritorio. Cuando
+    recibe `onCerrar` (solo desde el panel) pinta su propia cabecera con
+    logo/nombre + X, porque el panel tapa la fila que se tocó; en móvil
+    no hace falta, la fila de arriba ya cumple ese papel.
+  - Guard de seguridad: si se borra la casa abierta en el panel (vive
+    fuera del `.map()` de filas, no desaparece solo como en móvil, donde
+    toda la fila se quita del array), un `useEffect` cierra el panel en
+    vez de dejarlo mostrando una casa fantasma — mismo patrón defensivo
+    que ya usa `ListaApuestas.jsx` para el detalle de apuesta.
+  - `App.jsx`: `"casas"` se añade a las secciones con `max-w-6xl`.
+  - "Bankroll total" + "Nueva casa de apuestas" (`FormularioCasa`) pasan
+    a un `grid lg:grid-cols-3` (Bankroll 1 columna, formulario 2) en vez
+    de apilados a todo el ancho — sueltos, el formulario (solo 2 campos)
+    se habría visto estirado sin sentido y el total quedaría solo,
+    descompensado. Mismo patrón que Bankroll+KPIs en Estadísticas.
+
+- **Informe: rediseño de escritorio ancho**. Siguiente pantalla elegida
+  tras preguntar al usuario cuál seguía ("Informe (Recomendado)"). A
+  diferencia de Casas de apuestas, `InformeProfesional.jsx` es un
+  documento de una sola pieza (no una lista), así que no lleva panel
+  lateral — solo se ensancha el contenedor (`App.jsx`, `"informe"` se
+  añade a `max-w-6xl`) y se reorganiza el contenido DENTRO de su única
+  tarjeta: los 4 tiles (Nº apuestas/Beneficio/Yield/% Acierto) y el
+  bloque de Conclusiones, antes uno debajo del otro a todo el ancho,
+  pasan a un `grid lg:grid-cols-2` (tiles a la izquierda en 2×2,
+  Conclusiones a la derecha con un borde separador vertical) — sueltos a
+  todo el ancho, los tiles se habrían visto muy separados entre sí y las
+  frases de Conclusiones se habrían leído en líneas de texto larguísimas.
+  En móvil y al exportar a PDF (`window.print()`, ancho de página menor
+  que el punto de corte `lg:`) se quedan apiladas como siempre.
+  - **"Exportar a PDF" con recuadro propio** (petición directa, "se ve
+    poquito ahí"): antes era solo texto suelto con un icono, junto a las
+    pastillas de bankroll — ahora lleva borde, fondo (`bg-surface`, con
+    un toque dorado al pasar el ratón) y algo más de padding, al mismo
+    nivel visual que el resto de controles de esa fila.
+
+- **Trofeos: rediseño de escritorio ancho**. `App.jsx` añade `"trofeos"`
+  a `max-w-6xl`. Cada trofeo ya se compone bien en fila a cualquier
+  ancho (icono + nombre/descripción/progreso + pastilla de nivel), así
+  que no hizo falta rediseñar `FilaTrofeo` — el cambio fue solo agrupar
+  las filas de cada categoría en `grid lg:grid-cols-2` en vez de una
+  columna suelta: sin esto, cada fila se estiraba a todo el ancho de la
+  página con mucho hueco vacío entre el texto y la pastilla de la
+  derecha. En móvil, sigue en una sola columna.
+
+- **Academia: rediseño de escritorio ancho (fila + panel lateral)**.
+  Tras preguntar "¿qué harías en Academia?", se detectó que en realidad
+  encaja en el mismo patrón "fila + panel lateral" ya usado en Historial/
+  Casas de apuestas — es una lista de conceptos que al tocarlos
+  despliega su desarrollo completo (definición, "en cristiano", fórmula,
+  ejemplo, interpretación, errores frecuentes), antes empujando el resto
+  del acordeón hacia abajo, igual que hacía `ListadoCasas.jsx` antes de
+  su rediseño.
+  - Desarrollo extraído a `DetalleConcepto.jsx` (nuevo, mismo criterio
+    que `DetalleCasa.jsx`): reutilizado tanto en el acordeón de móvil
+    (sin cambios, `md:hidden`) como en un `PanelLateral` nuevo de
+    escritorio. Con `onCerrar` (solo desde el panel) pinta su propia
+    cabecera con el nombre del concepto + X; sin él (móvil) no hace
+    falta, la fila de arriba ya cumple ese papel.
+  - `Academia.jsx`: las filas de cada categoría pasan a `grid
+    lg:grid-cols-2` (mismo motivo que Trofeos — cada fila es solo un
+    título, sueltas dejaban mucho hueco vacío). `App.jsx` añade
+    `"academia"` a `max-w-6xl`.
+  - Sin guard de borrado (a diferencia de Casas de apuestas): los
+    conceptos son datos fijos de `utils/academia.js`, no algo que el
+    usuario pueda borrar, así que no hace falta cerrar el panel solo por
+    eso. El buscador y las categorías de arriba no se han tocado.
+
+- **Ajustes: rediseño de escritorio ancho**. Última pantalla del
+  backlog (punto 6 de `CLAUDE.md` completo con esta). `Ajustes.jsx` son
+  dos tarjetas independientes ("Copia de seguridad" y "Archivar datos"),
+  cada una con su párrafo explicativo — se ponen lado a lado en
+  `grid lg:grid-cols-2` en vez de apiladas a todo el ancho de la página
+  (mismo motivo que Informe/tiles+Conclusiones: esos párrafos se habrían
+  leído en líneas de texto larguísimas). `App.jsx` añade `"ajustes"` a
+  `max-w-6xl`. En móvil, apiladas como siempre. Ninguna de las dos
+  tarjetas se ha tocado por dentro.
+
+- **Ticket de apuesta: se quitan "Compartir" y "Copiar"** (petición
+  directa: "Compartir ahora mismo no funciona, solo se copia... y copiar
+  ¿para qué sirve?"). "Compartir" solo copiaba un resumen de texto al
+  portapapeles (`navigator.clipboard.writeText`) — no compartía de
+  verdad nada; queda como idea para el futuro generar una imagen real de
+  la apuesta y compartir esa, pero no se implementa ahora. El pie de
+  `ApuestaItem.jsx` se queda con Cash Out (si pendiente)/Modificar/
+  Eliminar. Al quitar el botón "Copiar" (duplicar una apuesta ya
+  existente como una nueva Pendiente), `onCopiar`/`copiarApuesta` se
+  quedaban sin ningún otro punto de llamada — en vez de dejar la
+  fontanería suelta y sin usar, se ha quitado por completo: la función
+  `copiarApuesta` de `useApuestas.js` y el prop `onCopiar`, hasta ahora
+  encadenado por `App.jsx` → `PantallaInicio.jsx`/`Historial.jsx`/
+  `EstadisticasDashboard.jsx`/`ListaApuestas.jsx` → `ApuestaItem.jsx`.
