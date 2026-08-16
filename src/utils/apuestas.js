@@ -389,20 +389,54 @@ export function desdeFila(fila) {
   };
 }
 
+// Desfase (en minutos) entre UTC y Europe/Madrid en un instante concreto:
+// CET = UTC+1 en invierno, CEST = UTC+2 en verano. Se calcula formateando
+// ese instante en la zona de Madrid con Intl (siempre disponible, sin
+// librería nueva) y comparando contra la misma hora leída como si fuera
+// UTC — la diferencia es el desfase real en ese momento del año.
+function desfaseMadridMinutos(timestampUTC) {
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Madrid",
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+      .formatToParts(timestampUTC)
+      .map((p) => [p.type, p.value])
+  );
+  // El formateador puede devolver "24" para medianoche en vez de "00".
+  const hora = partes.hour === "24" ? 0 : Number(partes.hour);
+  const comoUTC = Date.UTC(partes.year, partes.month - 1, partes.day, hora, partes.minute);
+  return Math.round((comoUTC - timestampUTC) / 60000);
+}
+
 // Combina la fecha del partido con su hora (las dos guardadas en la
 // selección desde el buscador, ver ConstructorPartido.jsx) para saber desde
-// cuándo tendría sentido pedir el resultado final. "new Date('YYYY-MM-DDTHH:mm:00')"
-// se interpreta en la zona horaria de donde corra el código; como la hora
-// ya viene en hora de España (api/partidos.js pide con timezone=Europe/Madrid)
-// y el uso real es de un usuario en España (navegador) o de Vercel
-// (servidor, que corre en UTC — aquí SÍ importaría la zona si España
-// cambiara de UTC+1/+2 a mitad de una consulta, pero el margen de 2,5h de
-// sobra absorbe ese caso raro), no hace falta ninguna librería de zonas.
-// Vive aquí (no en ApuestaItem.jsx, de donde viene) para poder reutilizarla
-// también en api/telegram-avisos.js (Node, no puede importar un .jsx).
+// cuándo tendría sentido pedir el resultado final. Esa hora viene siempre en
+// hora de España (api/partidos.js pide con timezone=Europe/Madrid) — pero
+// "new Date('YYYY-MM-DDTHH:mm:00')" (sin zona) se interpreta en la zona
+// horaria de donde corra el código, y Vercel (donde corre
+// api/telegram-avisos.js) va en UTC, no en hora de España.
+//
+// Bug real: esto hacía que el margen de espera del aviso de Telegram
+// (api/telegram-avisos.js) se retrasara de más el desfase real entre
+// Madrid y UTC (1h en invierno, 2h en verano) — el comentario anterior de
+// esta función lo daba por "caso raro de cambio de hora a mitad de
+// consulta", pero en realidad es el desfase de TODOS los días del año, no
+// solo el momento del cambio de hora: con el margen de 2h del aviso, en
+// verano hacían falta 4h reales desde el inicio del partido para que se
+// disparara, no 2h. Detectado porque el aviso no llegaba ni esperando 2h30.
+// Se corrige calculando el desfase real de Madrid en ese instante
+// (desfaseMadridMinutos, con Intl — sin librería nueva) y restándolo, así
+// da el mismo resultado corra donde corra el código.
 export function horaInicioPartido(fecha, hora) {
   if (!fecha || !hora) return null;
-  return new Date(`${fecha}T${hora}:00`).getTime();
+  const comoUTC = new Date(`${fecha}T${hora}:00Z`).getTime();
+  return comoUTC - desfaseMadridMinutos(comoUTC) * 60 * 1000;
 }
 
 // Margen tras la hora de inicio para asumir que un partido ya debería

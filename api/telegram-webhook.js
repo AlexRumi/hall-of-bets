@@ -33,6 +33,12 @@ const TECLADO_CATEGORIAS = {
   // quedaba muy apretado por ser la palabra más larga.
   keyboard: [["📋 Todas"], ["💼 Apuestas", "🎮 Entretenimiento"]],
   resize_keyboard: true,
+  // Bug real: sin esto, volver de la Mini App (o cambiar de pantalla y
+  // regresar) podía colapsar el teclado del todo, obligando a mandar
+  // /start otra vez para que volviera a salir. "is_persistent" (Bot API
+  // 6.7+) le pide al cliente de Telegram que no lo oculte nunca, aunque
+  // normalmente colapsaría el teclado personalizado al icono pequeño.
+  is_persistent: true,
 };
 const CATEGORIA_POR_BOTON = {
   "📋 Todas": null,

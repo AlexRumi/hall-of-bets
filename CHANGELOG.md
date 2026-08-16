@@ -4345,3 +4345,37 @@ separadas, probando cada una antes de pasar a la siguiente.
   `copiarApuesta` de `useApuestas.js` y el prop `onCopiar`, hasta ahora
   encadenado por `App.jsx` → `PantallaInicio.jsx`/`Historial.jsx`/
   `EstadisticasDashboard.jsx`/`ListaApuestas.jsx` → `ApuestaItem.jsx`.
+
+- **Bug real: el aviso de Telegram "ya puedes confirmarla" tardaba hasta
+  el doble del margen previsto (o directamente no llegaba en la ventana
+  que el usuario esperaba)**. Reportado como "esperé 2h30 y no llegó
+  nada" y "en una apuesta en directo, esperé 10-15 minutos tras el
+  pitido final y tampoco". La causa: `horaInicioPartido`
+  (`src/utils/apuestas.js`) combinaba la fecha y hora del partido (que
+  siempre vienen en hora de España, `api/partidos.js` pide con
+  `timezone=Europe/Madrid`) con `new Date('YYYY-MM-DDTHH:mm:00')` — sin
+  indicar zona horaria, esa cadena se interpreta en la zona horaria de
+  donde CORRA el código. En el navegador del usuario (España) eso daba
+  la hora correcta por pura coincidencia; en `api/telegram-avisos.js`
+  (Vercel, que corre en UTC) el resultado quedaba desplazado 1h
+  (invierno, CET) o 2h (verano, CEST) respecto a la hora real de inicio.
+  Con el margen de 2h del aviso, en verano hacían falta 4h reales desde
+  el saque inicial para que se disparara, no 2h — el comentario que ya
+  existía en la función avisaba de esto pero lo daba por un "caso raro
+  de cambio de hora a mitad de consulta", subestimando que en realidad
+  es el desfase de todos los días del año, no un caso puntual.
+  Corregido calculando el desfase real Madrid↔UTC en cada instante con
+  `Intl.DateTimeFormat` (sin librería nueva, disponible en cualquier
+  entorno JS) y restándolo — el resultado ya no depende de la zona
+  horaria de quien ejecute el código, mismo comportamiento en el
+  navegador y en el servidor.
+
+- **Bug real: el teclado personalizado de Telegram (📋 Todas/💼 Apuestas/
+  🎮 Entretenimiento) desaparecía al volver de la Mini App o de otra
+  pantalla**, obligando a mandar `/start` de nuevo para que volviera a
+  salir — reportado como "no son botones fijados". Le faltaba
+  `is_persistent: true` en el `reply_markup` (Bot API 6.7+, api/telegram-
+  webhook.js): sin ese flag, Telegram puede colapsar un teclado
+  personalizado al navegar fuera del chat y volver, y sin él algunos
+  clientes lo dan por cerrado del todo en vez de solo minimizado al
+  icono pequeño. Con el flag, el cliente lo mantiene siempre visible.
