@@ -4,8 +4,8 @@ import { tg } from "./_lib/telegram.js";
 // Serverless Function pensada para un cron EXTERNO (cron-job.org, cada 15
 // min — mismo mecanismo que api/telegram-avisos.js, con su propio secreto,
 // LIMPIEZA_CRON_SECRET, distinto de AVISOS_CRON_SECRET). Petición directa:
-// "autoeliminar" el chat de Telegram cada mañana entre las 8 y las 9 (hora
-// de España), conservando solo lo que sigue siendo útil.
+// "autoeliminar" el chat de Telegram cada mañana a las 9:00 (hora de
+// España), conservando solo lo que sigue siendo útil.
 //
 // Un bot solo puede borrar SUS PROPIOS mensajes (nunca lo que escribe el
 // usuario, ni los toques a los botones del teclado) — así que "se elimina
@@ -14,28 +14,33 @@ import { tg } from "./_lib/telegram.js";
 // - tipo "start" (la confirmación de /start): NUNCA se borra — borrarlo
 //   colapsaría el teclado personalizado (Telegram vincula qué teclado se
 //   muestra al mensaje más reciente que lo trajo consigo).
-// - tipo "listado"/"aviso" (los mensajes con botón "Ver apuesta" de una
-//   apuesta que SIGUE pendiente): se conservan mientras lo esté, para que
-//   los botones Todas/Apuestas/Entretenimiento del teclado se refieran a
-//   algo real. En cuanto la apuesta se resuelve (actualizarBotonesApuesta,
-//   en api/_lib/telegramMensajes.js, marca "resuelta_en" en vez de borrar
-//   la fila como hacía antes) quedan libres para la limpieza.
-// - tipo "registro"/"resuelta": siempre libres, no tienen un estado
+// - tipo "listado" (los mensajes con botón "Ver apuesta" de /pendientes y
+//   de los botones Todas/Apuestas/Entretenimiento, de una apuesta que SIGUE
+//   pendiente): se conservan mientras lo esté, para que esos botones del
+//   teclado se refieran a algo real. En cuanto la apuesta se resuelve
+//   (actualizarBotonesApuesta, en api/_lib/telegramMensajes.js, marca
+//   "resuelta_en" en vez de borrar la fila como hacía antes) quedan libres
+//   para la limpieza.
+// - tipo "aviso"/"registro"/"resuelta": siempre libres, no tienen un estado
 //   "pendiente" que respetar — decidido con el usuario (AskUserQuestion):
 //   se borran igual que el resto, el chat queda limpio de verdad cada
 //   mañana; los datos reales siguen intactos en la app, esto es solo el
-//   canal de avisos.
+//   canal de avisos. "aviso" ya no lleva botón "Ver apuesta" (petición
+//   directa, texto plano igual que "registro"), así que tampoco tiene ya
+//   sentido esperar a que se resuelva para poder borrarlo.
 export default async function handler(req, res) {
   if (req.query.secret !== process.env.LIMPIEZA_CRON_SECRET) {
     res.status(401).end();
     return;
   }
 
-  // Solo actúa dentro de la franja 8:00-8:59 hora de Madrid — cualquier
-  // otro tic del cron (cada 15 min, las 24h) responde sin tocar nada. No
-  // hace falta guardar "ya se limpió hoy": tras la primera pasada de la
-  // mañana no queda nada elegible, así que las siguientes 3 pasadas de esa
-  // misma hora no encuentran nada que borrar.
+  // Solo actúa dentro de la franja 9:00-9:59 hora de Madrid — cualquier
+  // otro tic del cron (cada 15 min, las 24h) responde sin tocar nada. Con
+  // un cron de 15 en 15 min no se puede clavar el minuto exacto (9:00:00),
+  // pero sí asegurar que caiga dentro de esa hora. No hace falta guardar
+  // "ya se limpió hoy": tras la primera pasada de la mañana no queda nada
+  // elegible, así que las siguientes 3 pasadas de esa misma hora no
+  // encuentran nada que borrar.
   const horaMadrid = Number(
     new Intl.DateTimeFormat("en-US", {
       timeZone: "Europe/Madrid",
@@ -43,7 +48,7 @@ export default async function handler(req, res) {
       hour12: false,
     }).format(new Date())
   );
-  if (horaMadrid !== 8) {
+  if (horaMadrid !== 9) {
     res.status(200).json({ ventana: false });
     return;
   }
@@ -60,11 +65,11 @@ export default async function handler(req, res) {
   const { data: sinEstado, error: errorSinEstado } = await supabaseAdmin
     .from("telegram_mensajes")
     .select(columnas)
-    .in("tipo", ["registro", "resuelta"]);
+    .in("tipo", ["aviso", "registro", "resuelta"]);
   const { data: resueltos, error: errorResueltos } = await supabaseAdmin
     .from("telegram_mensajes")
     .select(columnas)
-    .in("tipo", ["listado", "aviso"])
+    .eq("tipo", "listado")
     .not("resuelta_en", "is", null);
 
   const error = errorSinEstado ?? errorResueltos;

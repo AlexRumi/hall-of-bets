@@ -173,15 +173,13 @@ export default async function handler(req, res) {
 
     let enviado;
     try {
+      // Sin botón "Ver apuesta" (petición directa: ya no se resuelve desde
+      // la Mini App, así que aquí no aportaba nada) — texto plano, igual
+      // que el aviso de registro.
       enviado = await tg("sendMessage", {
         chat_id: process.env.TELEGRAM_OWNER_ID,
         text: renderAviso(apuesta, grupos, cachePorId, numerosPorId.get(apuesta.id) ?? "?"),
         parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${apuesta.id}` } }],
-          ],
-        },
       });
     } catch (envioError) {
       console.error("telegram-avisos: fallo de red al enviar", apuesta.id, envioError);

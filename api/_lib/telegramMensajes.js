@@ -31,10 +31,15 @@ export async function guardarMensajeSuelto(supabaseAdmin, chatId, messageId, tip
   }
 }
 
-// Edita el botón de TODOS los mensajes guardados de una apuesta (petición
-// directa: que refleje el resultado en vez de seguir diciendo siempre "Ver
-// apuesta"). Antes, una vez editados, se borraban las filas — ahora se
-// marcan con "resuelta_en" en su lugar (sin borrar), para que
+// Edita el botón de TODOS los mensajes "listado" guardados de una apuesta
+// (petición directa: que refleje el resultado en vez de seguir diciendo
+// siempre "Ver apuesta"). Solo tipo "listado" (los mensajes de /pendientes
+// y de los botones Todas/Apuestas/Entretenimiento) — es el único tipo que
+// sigue llevando un botón que editar: "aviso" ya no lleva botón (texto
+// plano, petición directa) y "resuelta" gestiona su propio mensaje aparte
+// (ver api/telegram-resuelta.js, que lo EDITA directamente si ya existe en
+// vez de pasar por aquí). Antes, una vez editados, se borraban las filas —
+// ahora se marcan con "resuelta_en" en su lugar (sin borrar), para que
 // api/telegram-limpieza.js sepa que esos mensajes ya no hacen falta y
 // pueda borrarlos de verdad en su siguiente pasada, en vez de perder el
 // rastro de a qué mensajes de Telegram habría que ir a borrar.
@@ -43,6 +48,7 @@ export async function actualizarBotonesApuesta(supabaseAdmin, apuestaId, textoBo
     .from("telegram_mensajes")
     .select("chat_id, message_id")
     .eq("apuesta_id", apuestaId)
+    .eq("tipo", "listado")
     .is("resuelta_en", null);
 
   if (!mensajes?.length) return;
@@ -69,5 +75,6 @@ export async function actualizarBotonesApuesta(supabaseAdmin, apuestaId, textoBo
     .from("telegram_mensajes")
     .update({ resuelta_en: new Date().toISOString() })
     .eq("apuesta_id", apuestaId)
+    .eq("tipo", "listado")
     .is("resuelta_en", null);
 }

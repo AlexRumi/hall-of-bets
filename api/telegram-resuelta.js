@@ -13,6 +13,17 @@ import { actualizarBotonesApuesta, guardarMensajeSuelto } from "./_lib/telegramM
 // mensajes ya enviados de esa apuesta (api/_lib/telegramMensajes.js) para
 // que reflejen el resultado en vez de quedarse siempre igual.
 //
+// Bug real: el ticket marca cada partido con una pastilla que cicla
+// Pendiente→Ganada→Perdida→Nula (ApuestaItem.jsx) y escribe en Supabase en
+// cada clic — como el ciclo siempre pasa primero por "Ganada", este aviso
+// (que antes solo miraba la transición pendiente→resuelto) se disparaba con
+// el resultado equivocado en el primer clic, y las correcciones
+// siguientes (Ganada→Perdida) ya no volvían a avisar. Ahora dispara en
+// CUALQUIER cambio de resultado mientras no sea "pendiente" — y en vez de
+// mandar un mensaje nuevo cada vez (spam de mensajes contradictorios), EDITA
+// el mismo mensaje de esta apuesta si ya existe uno (ver más abajo), así
+// solo hay un mensaje que siempre refleja el último resultado.
+//
 // Petición directa: solo tiene sentido saber "ganada/perdida" DESPUÉS de
 // que tú hayas marcado a mano todos los picks (V/X/- en la app o la Mini
 // App) — la app nunca deduce sola si un pick acertó o no (la mayoría de
@@ -93,10 +104,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Solo dispara justo en la transición pendiente → resuelto — no en
-  // cualquier otro UPDATE (editar la apuesta, marcar un pick suelto que
-  // todavía no la resuelve del todo, etc.).
-  if (filaAnterior?.resultado !== "pendiente" || fila.resultado === "pendiente") {
+  // Dispara en cualquier cambio de resultado mientras no sea "pendiente" —
+  // no solo en la primera transición pendiente→resuelto (ver comentario de
+  // arriba), pero tampoco en un UPDATE que no toca el resultado (editar la
+  // apuesta ya resuelta, por ejemplo).
+  if (fila.resultado === "pendiente" || fila.resultado === filaAnterior?.resultado) {
     res.status(200).json({ ok: true });
     return;
   }
@@ -119,21 +131,53 @@ export default async function handler(req, res) {
     const numerosPorId = await calcularNumerosPorCategoria(supabaseAdmin);
     const numero = numerosPorId.get(fila.id) ?? "?";
 
-    const enviado = await tg("sendMessage", {
-      chat_id: process.env.TELEGRAM_OWNER_ID,
-      text: renderResuelta(apuestaCamel, grupos, cachePorId, numero),
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${fila.id}` } }]],
-      },
-    });
-    // tipo "resuelta": la limpieza diaria (api/telegram-limpieza.js) lo
-    // borra siempre — el botón "Ver apuesta" de este mensaje concreto nunca
-    // se edita (no está en la lista que gestiona actualizarBotonesApuesta,
-    // esos son los mensajes ANTERIORES a este, de cuando la apuesta seguía
-    // pendiente), así que no necesita quedarse.
-    if (enviado.ok) {
-      await guardarMensajeSuelto(supabaseAdmin, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id, "resuelta", fila.id);
+    const texto = renderResuelta(apuestaCamel, grupos, cachePorId, numero);
+    const replyMarkup = {
+      inline_keyboard: [[{ text: "📱 Ver apuesta", web_app: { url: `${URL_APP}/telegram/apuesta/${fila.id}` } }]],
+    };
+
+    // ¿Ya se había mandado un mensaje de "resuelta" para esta apuesta (una
+    // corrección posterior, ver comentario de arriba)? Si sí, se EDITA en
+    // vez de mandar uno nuevo — un solo mensaje por apuesta, siempre con el
+    // último resultado.
+    const { data: previo } = await supabaseAdmin
+      .from("telegram_mensajes")
+      .select("id, chat_id, message_id")
+      .eq("apuesta_id", fila.id)
+      .eq("tipo", "resuelta")
+      .maybeSingle();
+
+    let editadoOk = false;
+    if (previo) {
+      const editado = await tg("editMessageText", {
+        chat_id: previo.chat_id,
+        message_id: previo.message_id,
+        text: texto,
+        parse_mode: "HTML",
+        reply_markup: replyMarkup,
+      });
+      editadoOk = editado.ok;
+      if (!editado.ok) {
+        // El mensaje ya no existe (borrado a mano, o por la limpieza
+        // diaria) — se manda uno nuevo abajo y se sustituye el rastro.
+        await supabaseAdmin.from("telegram_mensajes").delete().eq("id", previo.id);
+      }
+    }
+
+    if (!editadoOk) {
+      const enviado = await tg("sendMessage", {
+        chat_id: process.env.TELEGRAM_OWNER_ID,
+        text: texto,
+        parse_mode: "HTML",
+        reply_markup: replyMarkup,
+      });
+      // tipo "resuelta": la limpieza diaria (api/telegram-limpieza.js) lo
+      // borra siempre — su botón nunca lo toca actualizarBotonesApuesta
+      // (esa función solo gestiona los mensajes "listado" de cuando la
+      // apuesta seguía pendiente), así que no necesita quedarse.
+      if (enviado.ok) {
+        await guardarMensajeSuelto(supabaseAdmin, process.env.TELEGRAM_OWNER_ID, enviado.result.message_id, "resuelta", fila.id);
+      }
     }
 
     await actualizarBotonesApuesta(

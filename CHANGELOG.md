@@ -4425,3 +4425,32 @@ separadas, probando cada una antes de pasar a la siguiente.
     (SQL Editor), la variable de entorno `LIMPIEZA_CRON_SECRET` en
     Vercel, y un segundo trabajo en cron-job.org contra
     `/api/telegram-limpieza?secret=<LIMPIEZA_CRON_SECRET>`.
+
+- **Bug real: el aviso de "apuesta resuelta" avisaba con el resultado
+  equivocado**. Reportado como "clico en la píldora de pendiente, como
+  lo primero que sale es Ganada, se envía el aviso de que es ganadora
+  cuando a lo mejor es perdida". Causa: cada pastilla de partido cicla
+  Pendiente→Ganada→Perdida→Nula y escribe en Supabase en cada clic; el
+  aviso solo miraba la transición pendiente→resuelto (la primera), así
+  que el primer clic (aunque la intención final fuera Perdida/Nula) ya
+  disparaba el aviso con "Ganada", y los clics siguientes para
+  corregirlo ya no volvían a avisar (la app quedaba bien, el aviso de
+  Telegram se quedaba mal). Corregido en `api/telegram-resuelta.js`:
+  ahora dispara en cualquier cambio de resultado (mientras no sea
+  "pendiente"), y en vez de mandar un mensaje nuevo cada vez (que
+  habría espameado mensajes contradictorios mientras se corrige), EDITA
+  el mismo mensaje si ya existe uno para esa apuesta — decidido con el
+  usuario (`AskUserQuestion`). Si la edición falla (mensaje ya borrado,
+  p.ej. por la limpieza diaria), se manda uno nuevo y se sustituye el
+  rastro guardado.
+- **Aviso "📝 Ya puedes confirmarla" sin botón** (petición directa, tras
+  confirmar con el usuario que ahora resuelve desde la app, no desde la
+  Mini App): `api/telegram-avisos.js` deja de mandar el botón "📱 Ver
+  apuesta", queda en texto plano igual que el de registro. Como ya no
+  tiene nada que editar ni un estado "pendiente" que respetar, pasa a
+  borrarse siempre en la limpieza diaria (`api/telegram-limpieza.js`),
+  junto con registro/resuelta, en vez de esperar a que la apuesta se
+  resuelva. `actualizarBotonesApuesta` (`api/_lib/telegramMensajes.js`)
+  se limita ahora a tipo `listado` — es el único que sigue llevando un
+  botón editable (antes también tocaba `aviso`, que ya no tiene botón
+  que editar).
