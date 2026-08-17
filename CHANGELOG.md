@@ -4454,3 +4454,17 @@ separadas, probando cada una antes de pasar a la siguiente.
   se limita ahora a tipo `listado` — es el único que sigue llevando un
   botón editable (antes también tocaba `aviso`, que ya no tiene botón
   que editar).
+
+- **Limpieza diaria movida a las 9:00 en punto** (petición directa —
+  antes actuaba en toda la franja 8:00-8:59): `api/telegram-limpieza.js`
+  ahora solo actúa si la hora en Madrid es la 9.
+- **Verificación de punta a punta de todo el sistema de Telegram**, tras
+  varias rondas de pruebas en real: registro, aviso de partido terminado,
+  aviso de resuelta (con la edición en el mismo mensaje) y la limpieza
+  diaria funcionan correctamente y de forma automática, sin intervención
+  manual. La confusión inicial ("el aviso no llega") se debía a probar
+  antes de que le tocara el siguiente tic del cron (hasta 15 min de
+  espera desde que se crea/actualiza una apuesta) — no había ningún bug
+  de fondo; confirmado comparando el histórico de ejecuciones de
+  cron-job.org (200 OK cada 15 min) contra la hora real de creación de
+  las apuestas de prueba.
