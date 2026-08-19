@@ -90,12 +90,12 @@ export default function SelectorFecha({ valor, onCambiar }) {
               type="button"
               disabled={!activo}
               onClick={() => onCambiar(iso)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg py-2 text-[11px] font-bold transition-colors ${
+              className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 text-[11px] font-bold transition-colors ${
                 !activo
-                  ? "text-slate/40 cursor-not-allowed"
+                  ? "border-line/50 text-slate/40 cursor-not-allowed"
                   : seleccionado
-                  ? "bg-felt text-paper"
-                  : "border border-line text-ink hover:border-gold/50"
+                  ? "border-felt bg-felt text-paper"
+                  : "border-line text-ink hover:border-gold/50"
               }`}
             >
               <span className={!seleccionado && esHoy && activo ? "text-gold" : ""}>
