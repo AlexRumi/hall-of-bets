@@ -95,14 +95,14 @@ export default function SelectorFecha({ valor, onCambiar }) {
               disabled={!activo}
               onClick={() => onCambiar(iso)}
               className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-colors ${
-                !activo ? "text-slate/40 cursor-not-allowed" : seleccionado ? "text-gold" : "text-ink"
+                !activo ? "text-slate/40 cursor-not-allowed" : seleccionado ? "text-goldDark" : "text-ink"
               }`}
             >
               <span>{esHoy ? "HOY" : DIAS_SEMANA[dia.getDay()]}</span>
-              <span className="font-mono font-normal">
+              <span className={`font-mono ${seleccionado ? "font-bold" : "font-normal"}`}>
                 {String(dia.getDate()).padStart(2, "0")}.{String(dia.getMonth() + 1).padStart(2, "0")}.
               </span>
-              <span className={`h-0.5 w-6 rounded-full ${seleccionado ? "bg-gold" : "bg-transparent"}`} />
+              <span className={`h-0.5 w-6 rounded-full ${seleccionado ? "bg-goldDark" : "bg-transparent"}`} />
             </button>
           );
         })}
