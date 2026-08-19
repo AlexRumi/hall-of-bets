@@ -77,7 +77,11 @@ export default function SelectorFecha({ valor, onCambiar }) {
         </button>
       </div>
 
-      {/* Móvil: tira de 7 días (DO/LU/MA/HOY/JU/VI/SA + fecha). */}
+      {/* Móvil: tira de 7 días (DO/LU/MA/HOY/JU/VI/SA + fecha) — sin
+          recuadro, solo texto (petición directa, según captura de
+          referencia): el día elegido se distingue en dorado con una rayita
+          debajo, el resto en un solo tono salvo los que no se pueden tocar
+          (más tenues todavía, para no parecer clicables). */}
       <div className="grid grid-cols-7 gap-1 sm:hidden">
         {dias.map((dia) => {
           const iso = formatearISO(dia);
@@ -90,20 +94,15 @@ export default function SelectorFecha({ valor, onCambiar }) {
               type="button"
               disabled={!activo}
               onClick={() => onCambiar(iso)}
-              className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 text-[11px] font-bold transition-colors ${
-                !activo
-                  ? "border-line/50 text-slate/40 cursor-not-allowed"
-                  : seleccionado
-                  ? "border-felt bg-felt text-paper"
-                  : "border-line text-ink hover:border-gold/50"
+              className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-colors ${
+                !activo ? "text-slate/40 cursor-not-allowed" : seleccionado ? "text-gold" : "text-ink"
               }`}
             >
-              <span className={!seleccionado && esHoy && activo ? "text-gold" : ""}>
-                {esHoy ? "HOY" : DIAS_SEMANA[dia.getDay()]}
-              </span>
+              <span>{esHoy ? "HOY" : DIAS_SEMANA[dia.getDay()]}</span>
               <span className="font-mono font-normal">
                 {String(dia.getDate()).padStart(2, "0")}.{String(dia.getMonth() + 1).padStart(2, "0")}.
               </span>
+              <span className={`h-0.5 w-6 rounded-full ${seleccionado ? "bg-gold" : "bg-transparent"}`} />
             </button>
           );
         })}
