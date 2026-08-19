@@ -13,7 +13,17 @@ import SelectorFecha from "./SelectorFecha";
 // tener más sentido en un futuro "modo planificación" antes de apostar.
 // import CuotasDialog from "./CuotasDialog";
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+// Bug real: ".toISOString()" convierte a UTC — pasada la medianoche en
+// España (UTC+1/+2), eso todavía era "ayer" en UTC durante 1-2h, así que el
+// formulario abría con la fecha de ayer en vez de hoy. Con las piezas de
+// fecha en hora LOCAL (las mismas que usa SelectorFecha.jsx) da igual dónde
+// corra el código, siempre es el día real de quien lo abre.
+const hoy = () => {
+  const ahora = new Date();
+  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(
+    ahora.getDate()
+  ).padStart(2, "0")}`;
+};
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 
 function fechaCorta(fechaIso) {

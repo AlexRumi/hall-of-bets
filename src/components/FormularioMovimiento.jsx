@@ -2,7 +2,16 @@ import { useState } from "react";
 import { PlusCircle } from "lucide-react";
 import CampoCasa from "./CampoCasa";
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+// Bug real (mismo que en FormularioApuesta.jsx): ".toISOString()" convierte
+// a UTC — pasada la medianoche en España, eso todavía era "ayer" en UTC
+// durante 1-2h. Con las piezas de fecha en hora LOCAL da igual dónde corra
+// el código.
+const hoy = () => {
+  const ahora = new Date();
+  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(
+    ahora.getDate()
+  ).padStart(2, "0")}`;
+};
 
 // "casaFija" se usa cuando el formulario se abre desde dentro de la ficha
 // de una casa concreta: no hace falta volver a escribirla ni se puede tocar.

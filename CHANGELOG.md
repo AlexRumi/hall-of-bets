@@ -4489,3 +4489,20 @@ separadas, probando cada una antes de pasar a la siguiente.
   apuestas atrasadas. Si se edita una apuesta con fecha fuera de estos 7
   días, no se resalta ningún día mientras no se toque el selector (no
   se fuerza ningún cambio de fecha solo por abrir el formulario).
+
+- **Bug real: el formulario de nueva apuesta (y el de movimientos de Casas
+  de apuestas) abría con la fecha de AYER durante la 1-2h siguientes a la
+  medianoche.** Reportado justo al probar el nuevo `SelectorFecha.jsx`:
+  "son las 12 [de la noche], sale correctamente el HOY en el día 20, pero
+  al abrir el formulario sale primero el día 19". Causa: el helper
+  `hoy()` de `FormularioApuesta.jsx`/`FormularioMovimiento.jsx` usaba
+  `new Date().toISOString().slice(0, 10)` — `toISOString()` convierte a
+  UTC, así que justo después de medianoche en España (UTC+1/+2) seguía
+  siendo "ayer" en UTC durante 1-2h. `SelectorFecha.jsx` no tenía este
+  fallo (ya calculaba con piezas de fecha en hora local, no con
+  `toISOString()`), por eso navegar con las flechas sí llegaba bien al
+  día 20 — el problema era solo el valor con el que arrancaba el
+  formulario. Corregido con el mismo criterio que ya se usó para el
+  desfase horario del aviso de Telegram: construir la fecha con
+  `getFullYear()/getMonth()/getDate()` (hora local) en vez de
+  `toISOString()` (UTC).
