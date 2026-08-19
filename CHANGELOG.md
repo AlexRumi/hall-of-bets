@@ -4468,3 +4468,24 @@ separadas, probando cada una antes de pasar a la siguiente.
   de fondo; confirmado comparando el histórico de ejecuciones de
   cron-job.org (200 OK cada 15 min) contra la hora real de creación de
   las apuestas de prueba.
+
+- **Selector de fecha nuevo en "Nueva apuesta"** (petición directa, tras
+  preguntar si buscar partidos de una fecha lejana como el 7 de agosto
+  traería resultados — no, el plan gratuito de API-Football solo cubre
+  aproximadamente ayer/hoy/mañana, ver `api/partidos.js`). El campo
+  "Fecha" del formulario (`SelectorFecha.jsx`, nuevo) sustituye al
+  `<input type="date">` nativo, que dejaba elegir cualquier día aunque
+  estuviera garantizado que el buscador de partidos no iba a encontrar
+  nada. Muestra 7 días (3 antes de hoy, hoy, 3 después): solo
+  ayer/hoy/mañana son seleccionables, el resto se ven pero no se pueden
+  tocar, para que la razón sea visible en vez de parecer un fallo.
+  Escritorio: flechas compactas (mismo patrón que el navegador de
+  periodo de Informe); móvil: tira de 7 casillas
+  (DO/LU/MA/HOY/JU/VI/SA + fecha), según capturas de referencia
+  compartidas por el usuario. Al ser el único campo de fecha de la
+  apuesta (decidido con el usuario, `AskUserQuestion`: no queda un
+  enlace aparte para fechas libres), se acepta perder la posibilidad de
+  registrar una apuesta con fecha antigua a mano — no se usaba para
+  apuestas atrasadas. Si se edita una apuesta con fecha fuera de estos 7
+  días, no se resalta ningún día mientras no se toque el selector (no
+  se fuerza ningún cambio de fecha solo por abrir el formulario).

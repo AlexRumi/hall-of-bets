@@ -6,6 +6,7 @@ import { equiposDesdeEvento, esFormatoEquipos, etiquetaCategoriaDeTexto } from "
 import CampoCasa from "./CampoCasa";
 import ConstructorPartido from "./ConstructorPartido";
 import SelectorMercado from "./SelectorMercado";
+import SelectorFecha from "./SelectorFecha";
 // "Ver cuotas" (CuotasDialog) se queda comentado, no borrado: al registrar
 // una apuesta la casa ya está decidida (la apuesta ya está hecha), así que
 // comparar cuotas de otras casas aquí tiene poco sentido ahora mismo. Podría
@@ -314,13 +315,7 @@ export default function FormularioApuesta({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-slate mb-1">Fecha</label>
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            required
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
-          />
+          <SelectorFecha valor={fecha} onCambiar={setFecha} />
         </div>
 
         <div>
