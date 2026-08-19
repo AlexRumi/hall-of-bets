@@ -41,6 +41,10 @@ export default async function handler(req, res) {
   // "ya se limpió hoy": tras la primera pasada de la mañana no queda nada
   // elegible, así que las siguientes 3 pasadas de esa misma hora no
   // encuentran nada que borrar.
+  //
+  // "forzar=1" salta esta comprobación de hora — solo para probarlo a mano
+  // (con el secreto en la URL, así que sigue protegido); el cron de verdad
+  // nunca lo manda.
   const horaMadrid = Number(
     new Intl.DateTimeFormat("en-US", {
       timeZone: "Europe/Madrid",
@@ -48,7 +52,7 @@ export default async function handler(req, res) {
       hour12: false,
     }).format(new Date())
   );
-  if (horaMadrid !== 9) {
+  if (horaMadrid !== 9 && req.query.forzar !== "1") {
     res.status(200).json({ ventana: false });
     return;
   }
@@ -80,13 +84,17 @@ export default async function handler(req, res) {
   }
   const mensajes = [...(sinEstado ?? []), ...(resueltos ?? [])];
   if (mensajes.length === 0) {
-    res.status(200).json({ ventana: true, comprobados: 0, borrados: 0 });
+    res.status(200).json({ ventana: true, comprobados: 0, borrados: 0, detalle: [] });
     return;
   }
 
   let borrados = 0;
   const idsProcesados = [];
-  for (const { id, chat_id, message_id } of mensajes) {
+  // "detalle": diagnóstico temporal (petición directa, mensajes de varios
+  // días sin borrarse pese al cron en verde) — para ver por qué falla cada
+  // uno sin tener acceso directo a Supabase.
+  const detalle = [];
+  for (const { id, chat_id, message_id, tipo } of mensajes) {
     let enviado;
     try {
       enviado = await tg("deleteMessage", { chat_id, message_id });
@@ -94,6 +102,7 @@ export default async function handler(req, res) {
       // Fallo de red: se deja la fila para reintentarlo en el siguiente
       // tic (todavía dentro de la misma hora 8).
       console.error("telegram-limpieza: fallo de red al borrar", message_id, fetchError);
+      detalle.push({ tipo, ok: false, motivo: "fallo_red" });
       continue;
     }
     // Un rechazo de Telegram (ok: false — p.ej. mensaje ya borrado a mano,
@@ -101,7 +110,11 @@ export default async function handler(req, res) {
     // marca como procesado: reintentarlo no serviría de nada, casi siempre
     // significa que ya no existe. Solo se cuenta en "borrados" lo que de
     // verdad se borró.
-    if (enviado.ok) borrados++;
+    if (enviado.ok) {
+      borrados++;
+    } else {
+      detalle.push({ tipo, ok: false, motivo: enviado.description ?? "rechazado_telegram" });
+    }
     idsProcesados.push(id);
   }
 
@@ -109,5 +122,5 @@ export default async function handler(req, res) {
     await supabaseAdmin.from("telegram_mensajes").delete().in("id", idsProcesados);
   }
 
-  res.status(200).json({ ventana: true, comprobados: mensajes.length, borrados });
+  res.status(200).json({ ventana: true, comprobados: mensajes.length, borrados, detalle });
 }
