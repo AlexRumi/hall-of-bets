@@ -1,12 +1,14 @@
-import { calcularEstadisticas, calcularRachaActual, pendientesAntiguas } from "../utils/apuestas";
+import { calcularEstadisticas, calcularRachaActual, todasPendientes } from "../utils/apuestas";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import ListaApuestas from "./ListaApuestas";
 import AvisoPendientes from "./AvisoPendientes";
 
 // Resumen de bienvenida: solo compone datos que ya se calculan en otras
 // secciones (ningún cálculo nuevo), combinando Apuestas + Entretenimiento.
-// El único acceso directo a otra sección es el del aviso de pendientes
-// antiguas, porque es una acción, no navegación normal.
+// El único acceso directo a otra sección es el del aviso de pendientes,
+// porque es una acción, no navegación normal — lleva a Historial con el
+// filtro "Pendientes" ya puesto, combinando los dos bankrolls (antes
+// llevaba a un solo bankroll, mezclado con el resto de apuestas).
 export default function PantallaInicio({
   apuestas,
   casas,
@@ -16,7 +18,7 @@ export default function PantallaInicio({
   onActualizarCuotaSeleccion,
   onBorrar,
   onEditar,
-  onIrASeccion,
+  onVerPendientes,
 }) {
   const stats = calcularEstadisticas(apuestas);
   const racha = calcularRachaActual(apuestas);
@@ -24,13 +26,13 @@ export default function PantallaInicio({
     (suma, b) => suma + b.bankroll,
     0
   );
-  const pendientes = pendientesAntiguas(apuestas);
+  const pendientes = todasPendientes(apuestas);
   // "apuestas" ya viene ordenado de más reciente a más antigua.
   const ultimas = apuestas.slice(0, 5);
 
   return (
     <div className="space-y-4">
-      <AvisoPendientes pendientes={pendientes} onIrASeccion={onIrASeccion} />
+      <AvisoPendientes pendientes={pendientes} onVerPendientes={onVerPendientes} />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-surface border border-line rounded-xl p-4 text-center">

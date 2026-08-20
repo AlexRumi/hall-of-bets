@@ -327,15 +327,18 @@ export function calcularDesglosePorCasa(apuestas) {
     .sort((a, b) => b.beneficio - a.beneficio);
 }
 
-// Apuestas pendientes cuyo evento ya pasó (la fecha guardada es la del
-// partido, no la de creación) — candidatas a que el usuario actualice el
-// resultado. No usa un umbral de días: si el partido ya se jugó, ya se
-// puede marcar.
-export function pendientesAntiguas(apuestas, referencia = new Date()) {
-  const hoy = new Date(referencia.getFullYear(), referencia.getMonth(), referencia.getDate());
-  return apuestas.filter(
-    (a) => a.resultado === "pendiente" && fechaLocal(a.fecha) < hoy
-  );
+// Todas las apuestas sin resolver, de los dos bankrolls a la vez — usada
+// por el aviso de Inicio y el filtro "Pendientes" de Historial (ver
+// AvisoPendientes.jsx/Historial.jsx). Antes se exigía además que la fecha
+// del partido ya hubiera pasado (pendientesAntiguas, día a día, sin hora
+// ni margen) para considerarla "vencida" — se descartó (petición directa):
+// una combinada puede incluir un partido dentro de varios días que la API
+// de fútbol (plan gratuito) todavía no puede confirmar como jugado, así
+// que "ya debería haber terminado" no siempre era cierto. Ahora es
+// simplemente "sigue pendiente", sin intentar adivinar si el partido ya
+// se jugó.
+export function todasPendientes(apuestas) {
+  return apuestas.filter((a) => a.resultado === "pendiente");
 }
 
 // Para rachas y % de acierto (aquí, utils/trofeos.js y

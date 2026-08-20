@@ -106,6 +106,12 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState("inicio");
+  // Filtro con el que debe arrancar Historial la próxima vez que se monte
+  // (ver AvisoPendientes.jsx en Inicio: su botón "Ver pendientes" pone
+  // "pendientes" aquí antes de cambiar de sección) — se limpia solo al
+  // salir de Historial, para que entrar ahí desde el menú normal siempre
+  // arranque en "Todas", no arrastrando el último filtro del aviso.
+  const [filtroHistorialInicial, setFiltroHistorialInicial] = useState(null);
   const [filtroCasa, setFiltroCasa] = useState("todas");
   const [filtroFondos, setFiltroFondos] = useState("todas");
   const [verArchivadas, setVerArchivadas] = useState(false);
@@ -134,7 +140,14 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   // con el scroll donde estaba la sección anterior).
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (seccionActiva !== "historial") setFiltroHistorialInicial(null);
   }, [seccionActiva]);
+
+  // Handler del botón "Ver pendientes" del aviso de Inicio (AvisoPendientes.jsx).
+  function irAPendientesEnHistorial() {
+    setFiltroHistorialInicial("pendientes");
+    setSeccionActiva("historial");
+  }
 
   // Siembra la lista gestionable de casas con los nombres ya usados en
   // apuestas de fases anteriores, para no perder ese historial.
@@ -409,7 +422,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
-                onIrASeccion={setSeccionActiva}
+                onVerPendientes={irAPendientesEnHistorial}
               />
             ) : esBankroll ? (
               <>
@@ -534,6 +547,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
                 onEditar={editarApuesta}
+                filtroInicial={filtroHistorialInicial}
               />
             ) : seccionActiva === "trofeos" ? (
               <SalaTrofeos trofeos={trofeos} />

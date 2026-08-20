@@ -4572,3 +4572,44 @@ separadas, probando cada una antes de pasar a la siguiente.
   `api/telegram-webhook.js`).
   - **Manual, en Supabase (SQL Editor)**: `alter table apuestas add
     column if not exists titulo text;`.
+
+- **Aviso de "apuestas pendientes" de Inicio, arreglado y simplificado**
+  (petición directa: el botón del aviso solo llevaba a UN bankroll —
+  Apuestas o Entretenimiento, mezclado además con el resto de apuestas de
+  esa sección — así que si había pendientes vencidas en los dos
+  bankrolls a la vez, uno se quedaba sin visibilidad). Primer intento
+  descartado a medio camino: reusar el criterio de "partido ya terminado"
+  del aviso de Telegram (`horaInicioPartido` + margen de 2h,
+  `api/telegram-avisos.js`) para distinguir pendientes "vencidas" de las
+  demás — el propio usuario lo frenó ("no tiene sentido lo de 'ya
+  deberían haber terminado'"): una combinada puede incluir un partido
+  dentro de varios días que la API de fútbol (plan gratuito) todavía no
+  puede confirmar como jugado, así que ese cálculo podía dar por hecho
+  algo que no era cierto. Se simplificó a "sigue pendiente", sin
+  intentar adivinar si el partido ya se jugó (confirmado con el usuario,
+  `AskUserQuestion`: contar TODAS las pendientes, no solo las de fecha ya
+  pasada).
+  - `utils/apuestas.js`: `pendientesAntiguas` (exigía fecha del partido <
+    hoy) sustituida por `todasPendientes` (solo `resultado ===
+    "pendiente"`, sin mirar fecha).
+  - `AvisoPendientes.jsx`: texto simplificado a "Tienes X apuesta(s)
+    pendiente(s)." (sin afirmar que el partido "ya debería haber
+    terminado"); un solo botón "Ver pendientes" en vez de un botón por
+    bankroll.
+  - `Historial.jsx`: nueva 4ª pastilla "Pendientes" (oculta si no hay
+    ninguna) que combina Apuestas + Entretenimiento — mismo criterio
+    `todasPendientes`; si se resuelven todas mientras se está viendo ese
+    filtro, vuelve solo a "Todas" en vez de quedarse con un listado vacío.
+    Nuevo prop `filtroInicial` para poder abrir la sección con esa
+    pastilla ya puesta.
+  - `PantallaInicio.jsx`: usa `todasPendientes`; el aviso navega con
+    `onVerPendientes` en vez de `onIrASeccion` (bankroll).
+  - `App.jsx`: nuevo estado `filtroHistorialInicial` +
+    `irAPendientesEnHistorial()` — al pulsar el botón del aviso, va a
+    Historial con "Pendientes" ya seleccionado; se limpia solo al salir
+    de Historial, para no interferir si luego se entra ahí desde el menú
+    normal (arranca en "Todas", como siempre).
+  - Fuera de alcance a propósito: `api/telegram-avisos.js` no se toca —
+    su propio criterio de "partido terminado" (con caché real de
+    resultados de la API, no solo tiempo transcurrido) sigue igual, es
+    independiente de este aviso de Inicio.

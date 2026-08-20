@@ -5,9 +5,13 @@ const ETIQUETAS_SECCION = {
   entretenimiento: "Entretenimiento",
 };
 
-// Aviso de apuestas cuyo partido ya pasó y siguen en "Pendiente". No se
-// muestra nada si no hay ninguna (ver PantallaInicio.jsx).
-export default function AvisoPendientes({ pendientes, onIrASeccion }) {
+// Aviso de apuestas sin resolver, de los dos bankrolls a la vez. No se
+// muestra nada si no hay ninguna (ver PantallaInicio.jsx). Un solo botón
+// lleva a Historial con el filtro "Pendientes" ya puesto (antes había un
+// botón por bankroll, y cada uno llevaba a una sección mezclada con el
+// resto de apuestas de ese bankroll — con los dos bankrolls a la vez ya no
+// hace falta elegir, ni se queda ninguno sin visibilidad).
+export default function AvisoPendientes({ pendientes, onVerPendientes }) {
   if (pendientes.length === 0) return null;
 
   const porCategoria = pendientes.reduce((acc, a) => {
@@ -25,8 +29,8 @@ export default function AvisoPendientes({ pendientes, onIrASeccion }) {
           <span className="font-semibold">
             {pendientes.length}{" "}
             {pendientes.length === 1 ? "apuesta pendiente" : "apuestas pendientes"}
-          </span>{" "}
-          de partidos que ya deberían haber terminado.
+          </span>
+          .
           {categorias.length > 1 && (
             <span className="text-slate">
               {" "}
@@ -38,18 +42,13 @@ export default function AvisoPendientes({ pendientes, onIrASeccion }) {
         </p>
       </div>
 
-      <div className="flex gap-2 shrink-0">
-        {categorias.map((categoria) => (
-          <button
-            key={categoria}
-            type="button"
-            onClick={() => onIrASeccion(categoria)}
-            className="px-3 py-1.5 rounded-full text-xs font-medium border border-gold/40 text-gold hover:bg-gold/10 transition-colors"
-          >
-            Ver {ETIQUETAS_SECCION[categoria]}
-          </button>
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={onVerPendientes}
+        className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border border-gold/40 text-gold hover:bg-gold/10 transition-colors"
+      >
+        Ver pendientes
+      </button>
     </div>
   );
 }
