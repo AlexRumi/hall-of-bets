@@ -183,9 +183,14 @@ export default function ApuestaItem({
   return (
     <div className="bg-surface border border-line rounded-xl overflow-hidden">
       <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-line">
-        <h2 className="font-display text-lg font-semibold text-ink truncate">
-          {esCombinada ? `Combinada ${gruposPartido.length} partidos` : "Apuesta simple"}
-        </h2>
+        <div className="min-w-0">
+          {apuesta.titulo && (
+            <p className="text-xs font-semibold text-gold truncate">{apuesta.titulo}</p>
+          )}
+          <h2 className="font-display text-lg font-semibold text-ink truncate">
+            {esCombinada ? `Combinada ${gruposPartido.length} partidos` : "Apuesta simple"}
+          </h2>
+        </div>
         {onCerrar && (
           <button
             type="button"

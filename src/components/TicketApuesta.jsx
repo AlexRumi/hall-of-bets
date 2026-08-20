@@ -51,6 +51,12 @@ export default function TicketApuesta({
         {ETIQUETAS_ESTADO[apuesta.resultado] ?? apuesta.resultado}
       </div>
 
+      {apuesta.titulo && (
+        <p className="font-mono text-[11.5px] font-bold pr-16" style={{ color: "#e0c464" }}>
+          {apuesta.titulo}
+        </p>
+      )}
+
       <div className="flex items-center gap-2 text-[11.5px] pr-16" style={{ color: "#8fa99a" }}>
         <span>{apuesta.fecha}</span>
         <span style={{ color: "#24493a" }}>·</span>

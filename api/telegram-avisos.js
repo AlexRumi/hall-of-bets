@@ -54,6 +54,7 @@ function renderAviso(apuesta, grupos, cachePorId, numero) {
   const icono = iconoDeporte(apuesta.deporte);
   const lineas = [
     `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[apuesta.categoria] ?? apuesta.categoria}</b>`,
+    ...(apuesta.titulo ? [`🏷 ${escapeHtml(apuesta.titulo)}`] : []),
     "",
     `📝 <b>Ya puedes confirmarla — todos sus partidos han terminado</b>`,
     "",

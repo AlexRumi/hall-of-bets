@@ -45,6 +45,7 @@ export default async function handler(req, res) {
 
     const lineas = [
       `🎯 <b>Apuesta nº${numero} · ${ETIQUETAS_CATEGORIA[fila.categoria] ?? fila.categoria}</b>`,
+      ...(fila.titulo ? [`🏷 ${escapeHtml(fila.titulo)}`] : []),
       "",
       ...grupos.map((grupo) => escapeHtml(grupo.evento)),
       "",

@@ -4547,3 +4547,28 @@ separadas, probando cada una antes de pasar a la siguiente.
   - **Manual, en Supabase (SQL Editor)**: `alter table apuestas add
     column if not exists stake_freebet numeric;` (nullable, como
     `seguro_freebet_importe`/`aumento_pct`).
+
+- **Título opcional de la apuesta** (petición directa: identificar
+  apuestas de una promoción concreta de la casa, ej. la "Winiela" de
+  Winamax — no como un "titular libre" cualquiera, sino pensado para
+  ese caso). Se valoró primero revivir algo parecido a la sección
+  "Promociones" ya eliminada (ver más arriba, "Promociones, eliminada
+  por completo"), pero el usuario solo quería un campo suelto al elegir
+  la casa, no una sección aparte — mismo espíritu que ya quedó anotado
+  entonces ("una promoción se registra ahora como una apuesta normal").
+  Campo nuevo `titulo` (columna `text`, nullable, sin migración de
+  datos) en `FormularioApuesta.jsx`, justo debajo del selector de casa;
+  se guarda tal cual (recortado, o `null` si se deja vacío) desde
+  `useApuestas.js` (`agregarApuesta`/`editarApuesta`) y se lee en
+  `desdeFila` (`utils/apuestas.js`). No participa en ningún cálculo
+  (beneficio, estadísticas, filtros) — solo se muestra: en gold encima
+  del nombre de la combinada/simple en `ApuestaItem.jsx`, como línea (o
+  prefijo, en la fila densa de escritorio) junto al evento en
+  `TarjetaApuestaResumen.jsx`, en la tira resumen colapsada del propio
+  formulario, en el ticket de la Mini App de Telegram
+  (`TicketApuesta.jsx`) y con el emoji 🏷 en los cuatro mensajes de
+  Telegram que citan el nº de apuesta (`api/telegram-registro.js`,
+  `api/telegram-resuelta.js`, `api/telegram-avisos.js`,
+  `api/telegram-webhook.js`).
+  - **Manual, en Supabase (SQL Editor)**: `alter table apuestas add
+    column if not exists titulo text;`.

@@ -39,7 +39,7 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
 
 ## Funcionalidades objetivo (ver guion completo para detalle)
 
-- Registro de apuestas: fecha, casa, deporte (lista cerrada: Fútbol/Baloncesto/Tenis/eSports/Otro), evento (texto libre, sin desplegable de mercados), stake, cuota, resultado
+- Registro de apuestas: fecha, casa, título opcional (texto libre, ej. "Winiela" — identifica apuestas de una promoción concreta de la casa; se muestra en el ticket y en los mensajes de Telegram, no afecta a ningún cálculo), deporte (lista cerrada: Fútbol/Baloncesto/Tenis/eSports/Otro), evento (texto libre, sin desplegable de mercados), stake, cuota, resultado
 - Estado inicial de toda apuesta nueva: **Pendiente**
 - Resultados posibles: Ganada / Perdida / Nula / **Cash Out** (cierre anticipado pagado por la casa; pide el importe recibido, no se calcula con la cuota). Disponible en Apuestas y en Entretenimiento por igual
 - Combinadas: apuesta con varias selecciones ("añadir nueva cuota"); la cuota total es el producto de las cuotas de cada selección

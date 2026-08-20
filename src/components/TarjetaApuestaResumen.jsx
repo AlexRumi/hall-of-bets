@@ -95,6 +95,9 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
               Archivada
             </span>
           )}
+          {apuesta.titulo && (
+            <p className="text-xs font-semibold text-gold truncate">{apuesta.titulo}</p>
+          )}
           <p className="text-base font-bold text-ink truncate">{textoEvento(gruposPartido)}</p>
         </div>
 
@@ -154,6 +157,7 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
                   {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
                 </span>
                 <p className="flex-1 min-w-0 truncate text-sm font-bold text-ink">
+                  {apuesta.titulo && <span className="text-gold">{apuesta.titulo} · </span>}
                   {textoEvento(gruposPartido)}
                 </p>
               </div>

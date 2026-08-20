@@ -76,6 +76,10 @@ export default function FormularioApuesta({
   const categoriaEfectiva = apuestaInicial?.categoria ?? categoria;
   const [fecha, setFecha] = useState(apuestaInicial?.fecha ?? hoy());
   const [casa, setCasa] = useState(apuestaInicial?.casa ?? "");
+  // Título libre opcional (ej. "Winiela") para identificar apuestas de una
+  // promoción concreta de la casa — no afecta a ningún cálculo, solo se
+  // muestra en el ticket.
+  const [titulo, setTitulo] = useState(apuestaInicial?.titulo ?? "");
   const [cantidadApostada, setCantidadApostada] = useState(
     apuestaInicial ? String(apuestaInicial.stake) : ""
   );
@@ -281,6 +285,7 @@ export default function FormularioApuesta({
       stakeFreebet: tipoFondos === "mixta" ? Number(cantidadFreebetMixta) : null,
       tipoFondos,
       deporte,
+      titulo: titulo.trim() ? titulo.trim() : null,
       seguroFreebetImporte: asegurada ? Number(seguroImporte) : null,
       aumentoPct: conAumento ? Number(aumentoPct) : null,
       cuotaTotalManual,
@@ -293,6 +298,7 @@ export default function FormularioApuesta({
     }
 
     setCasa("");
+    setTitulo("");
     setCantidadApostada("");
     setCantidadFreebetMixta("");
     setTipoFondos("real");
@@ -329,7 +335,8 @@ export default function FormularioApuesta({
           className="w-full flex items-center justify-between gap-2 bg-paperDim border border-line rounded-lg px-4 py-3 text-left hover:border-gold/40 transition-colors"
         >
           <span className="text-sm text-ink truncate">
-            {fechaCorta(fecha)} · {casa} ·{" "}
+            {fechaCorta(fecha)} · {casa}
+            {titulo.trim() && ` "${titulo.trim()}"`} ·{" "}
             {tipoFondos === "mixta"
               ? `${stakeNumero.toFixed(2)}€ real + ${stakeFreebetNumero.toFixed(2)}€ freebet`
               : `${stakeNumero.toFixed(2)}€ · ${tipoFondos === "real" ? "Real" : "Freebet"}`}{" "}
@@ -383,6 +390,17 @@ export default function FormularioApuesta({
               </p>
             </div>
           )}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-slate mb-1">Título (opcional)</label>
+          <input
+            type="text"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Ej: Winiela"
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm bg-surface"
+          />
         </div>
 
         {tipoFondos === "mixta" ? (

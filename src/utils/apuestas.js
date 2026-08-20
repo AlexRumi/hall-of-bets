@@ -397,6 +397,10 @@ export function desdeFila(fila) {
       fila.cashout_importe === null ? null : Number(fila.cashout_importe),
     // Las apuestas de antes de tener este campo no tienen deporte asignado.
     deporte: fila.deporte ?? "Otro",
+    // Título opcional libre (ej. "Winiela") para identificar apuestas de una
+    // promoción concreta de la casa — no filtra ni calcula nada, solo se
+    // muestra en el ticket.
+    titulo: fila.titulo ?? null,
     seguroFreebetImporte:
       fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
     aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
