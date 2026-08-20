@@ -111,7 +111,9 @@ export default function ApuestaItem({
   // aumento de cuota aplicado si lo hay). Ganancia = retorno total
   // (beneficio + stake); en freebet no se suma el stake, nunca fue dinero
   // real que "recuperar" — mismo criterio que TarjetaApuestaResumen.jsx.
-  const baseGanancia = apuesta.stake * (cuotaTotal - 1);
+  // "mixta": se gana sobre TODO lo apostado (parte real + freebet), igual
+  // que calcularBeneficio — stakeFreebet es null/0 en real y freebet puras.
+  const baseGanancia = (apuesta.stake + (apuesta.stakeFreebet ?? 0)) * (cuotaTotal - 1);
   const gananciaPotencial = apuesta.aumentoPct
     ? baseGanancia * (1 + apuesta.aumentoPct / 100)
     : baseGanancia;
@@ -206,6 +208,9 @@ export default function ApuestaItem({
         {apuesta.tipoFondos === "freebet" && (
           <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gold/10 text-gold">Freebet</span>
         )}
+        {apuesta.tipoFondos === "mixta" && (
+          <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gold/10 text-gold">Mixta</span>
+        )}
         {apuesta.seguroFreebetImporte > 0 && (
           <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gold/10 text-gold">Asegurada</span>
         )}
@@ -233,7 +238,9 @@ export default function ApuestaItem({
         </div>
         <div className="flex-1 text-center py-3">
           <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">Importe</p>
-          <p className="font-mono text-sm sm:text-base font-bold text-ink">{apuesta.stake.toFixed(2)}€</p>
+          <p className="font-mono text-sm sm:text-base font-bold text-ink">
+            {(apuesta.stake + (apuesta.stakeFreebet ?? 0)).toFixed(2)}€
+          </p>
         </div>
         <div className="flex-1 text-center py-3">
           <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">Ganancia</p>

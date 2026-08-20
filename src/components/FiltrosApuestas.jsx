@@ -32,6 +32,7 @@ export default function FiltrosApuestas({
         <option value="todas">Todos los fondos</option>
         <option value="real">Real</option>
         <option value="freebet">Freebet</option>
+        <option value="mixta">Mixta</option>
       </select>
 
       <label className="flex items-center gap-1.5 text-sm text-slate cursor-pointer">

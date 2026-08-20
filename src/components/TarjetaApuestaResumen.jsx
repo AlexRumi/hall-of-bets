@@ -167,7 +167,9 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
                 <p className="text-[10px] tracking-wide text-slate">Cuota</p>
               </div>
               <div className="w-16 text-right">
-                <p className="font-mono text-base font-bold text-ink">{apuesta.stake.toFixed(2)}€</p>
+                <p className="font-mono text-base font-bold text-ink">
+                  {(apuesta.stake + (apuesta.stakeFreebet ?? 0)).toFixed(2)}€
+                </p>
                 <p className="text-[10px] tracking-wide text-slate">Importe</p>
               </div>
               <div className="w-16 text-right">

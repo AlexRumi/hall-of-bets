@@ -4506,3 +4506,44 @@ separadas, probando cada una antes de pasar a la siguiente.
   desfase horario del aviso de Telegram: construir la fecha con
   `getFullYear()/getMonth()/getDate()` (hora local) en vez de
   `toISOString()` (UTC).
+
+- **Tipo de fondos "Mixta" (dinero real + freebet en la misma apuesta)**
+  (petición directa, tras un caso real: apuesta con 5€ de freebet + 0,33€
+  de dinero real, imposible de registrar bien con el modelo binario de
+  antes). Decisión clave que simplifica casi todo: `stake` sigue
+  significando "dinero real" (igual que en el modo "real" de siempre) y
+  se añade un campo nuevo, `stakeFreebet`, solo para la parte freebet —
+  con eso, las ramas "perdida"/"cashout" de `calcularBeneficio`
+  (`utils/apuestas.js`) y la fórmula de "Ganancia" de
+  `ApuestaItem.jsx`/`TarjetaApuestaResumen.jsx` ya daban el resultado
+  correcto sin tocarlas (restan/devuelven solo la parte real, que es
+  justo lo que corresponde). Solo hizo falta:
+  - `calcularBeneficio`, rama "ganada": suma la parte freebet a la real
+    antes de multiplicar por la cuota (se gana sobre todo lo apostado).
+  - `calcularEstadisticas`: "dinero real apostado" pasa de filtrar
+    `tipoFondos === "real"` a `!== "freebet"` (incluye "mixta", cuyo
+    `.stake` ya es la parte real); "freebet apostado" suma `.stake` en
+    freebet pura o `.stakeFreebet` en mixta.
+  - `App.jsx`, los tres sitios que ajustan el saldo de freebet de la
+    casa (crear/nula/borrar pendiente) ganan una rama para "mixta" que
+    descuenta/devuelve `stakeFreebet` en vez de `stake`.
+  - `FormularioApuesta.jsx`: tercera pastilla "Mixta"; con ella
+    elegida, el campo único "Cantidad apostada" se sustituye por dos
+    ("Dinero real (€)" + "Freebet (€)"), y los avisos de bankroll/saldo
+    de freebet disponible se activan a la vez comparando cada uno
+    contra su importe correspondiente. Exige los dos importes > 0 (con
+    uno a 0 no tiene sentido "mixta").
+  - Pastilla "Mixta" en `ApuestaItem.jsx` (decidido con el usuario,
+    `AskUserQuestion`: sin importes en la pastilla, solo el texto —
+    el desglose ya se ve al editar la apuesta) y opción nueva en el
+    filtro de tipo de fondos (`FiltrosApuestas.jsx`) — una apuesta mixta
+    solo aparece bajo "Mixta", no bajo "Real" ni "Freebet".
+  - `api/telegram-resuelta.js`: el resumen que llega a Telegram también
+    dice "Mixta" en vez de caer por defecto en "Real".
+  - Fuera de alcance a propósito: los trofeos de freebet
+    (`utils/trofeos.js`) siguen contando solo apuestas 100% freebet, no
+    mixtas; la Mini App de Telegram no crea apuestas nuevas (solo
+    resuelve/cashea), así que no necesita selector de tipo de fondos.
+  - **Manual, en Supabase (SQL Editor)**: `alter table apuestas add
+    column if not exists stake_freebet numeric;` (nullable, como
+    `seguro_freebet_importe`/`aumento_pct`).

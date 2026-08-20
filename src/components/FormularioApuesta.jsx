@@ -79,6 +79,12 @@ export default function FormularioApuesta({
   const [cantidadApostada, setCantidadApostada] = useState(
     apuestaInicial ? String(apuestaInicial.stake) : ""
   );
+  // Solo se usa (y se muestra) cuando tipoFondos es "mixta" — la parte
+  // freebet de la apuesta; "cantidadApostada" sigue siendo la parte real
+  // en ese caso, igual que en "real" a secas (ver calcularBeneficio).
+  const [cantidadFreebetMixta, setCantidadFreebetMixta] = useState(
+    apuestaInicial?.stakeFreebet ? String(apuestaInicial.stakeFreebet) : ""
+  );
   const [tipoFondos, setTipoFondos] = useState(
     apuestaInicial?.tipoFondos ?? "real"
   );
@@ -107,6 +113,7 @@ export default function FormularioApuesta({
   // const [indiceCuotas, setIndiceCuotas] = useState(null); // "Ver cuotas", ver import de arriba
 
   const stakeNumero = Number(cantidadApostada) || 0;
+  const stakeFreebetNumero = Number(cantidadFreebetMixta) || 0;
 
   // Bloque superior (Fecha...Aumento de cuota) colapsable tras confirmarlo
   // (ver collapse-summary-demo.html, referencia aportada por el usuario):
@@ -121,7 +128,12 @@ export default function FormularioApuesta({
   // colapsado.
   const [confirmado, setConfirmado] = useState(esEdicion);
   const [bloqueSuperiorAbierto, setBloqueSuperiorAbierto] = useState(!esEdicion);
-  const puedeConfirmar = casa.trim() !== "" && stakeNumero > 0;
+  // "mixta" exige los dos importes — con uno solo a 0 no tiene sentido
+  // "mixta", tocaría elegir Real o Freebet a secas.
+  const puedeConfirmar =
+    casa.trim() !== "" &&
+    stakeNumero > 0 &&
+    (tipoFondos !== "mixta" || stakeFreebetNumero > 0);
 
   function confirmarBloqueSuperior() {
     if (!puedeConfirmar) return;
@@ -153,7 +165,11 @@ export default function FormularioApuesta({
     categoriaEfectiva === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
   const freebetsCasa = casa ? casas.find((c) => c.nombre === casa)?.[campoFreebet] ?? 0 : 0;
   const sinFreebets = freebetsCasa <= 0;
-  const superaFreebets = !sinFreebets && stakeNumero > freebetsCasa;
+  // En "mixta" el importe a comparar contra el saldo de freebet es
+  // stakeFreebetNumero (la parte freebet), no stakeNumero (que ahí es la
+  // parte real) — en "freebet" a secas sigue siendo stakeNumero, como siempre.
+  const montoFreebet = tipoFondos === "mixta" ? stakeFreebetNumero : stakeNumero;
+  const superaFreebets = !sinFreebets && montoFreebet > freebetsCasa;
 
   const cuotaTotalBloques = bloques.reduce((total, b) => total * b.cuota, 1);
 
@@ -262,6 +278,7 @@ export default function FormularioApuesta({
       fecha,
       casa: casaFinal,
       stake: cantidadApostada,
+      stakeFreebet: tipoFondos === "mixta" ? Number(cantidadFreebetMixta) : null,
       tipoFondos,
       deporte,
       seguroFreebetImporte: asegurada ? Number(seguroImporte) : null,
@@ -277,6 +294,7 @@ export default function FormularioApuesta({
 
     setCasa("");
     setCantidadApostada("");
+    setCantidadFreebetMixta("");
     setTipoFondos("real");
     setDeporte("Fútbol");
     setBloques([]);
@@ -311,8 +329,11 @@ export default function FormularioApuesta({
           className="w-full flex items-center justify-between gap-2 bg-paperDim border border-line rounded-lg px-4 py-3 text-left hover:border-gold/40 transition-colors"
         >
           <span className="text-sm text-ink truncate">
-            {fechaCorta(fecha)} · {casa} · {stakeNumero.toFixed(2)}€ ·{" "}
-            {tipoFondos === "real" ? "Real" : "Freebet"} · {deporte}
+            {fechaCorta(fecha)} · {casa} ·{" "}
+            {tipoFondos === "mixta"
+              ? `${stakeNumero.toFixed(2)}€ real + ${stakeFreebetNumero.toFixed(2)}€ freebet`
+              : `${stakeNumero.toFixed(2)}€ · ${tipoFondos === "real" ? "Real" : "Freebet"}`}{" "}
+            · {deporte}
           </span>
           <span className="flex items-center gap-1 text-xs font-semibold text-gold shrink-0">
             <Pencil size={12} />
@@ -334,29 +355,29 @@ export default function FormularioApuesta({
             <div className="mt-1 space-y-0.5">
               <p
                 className={`text-xs flex items-center gap-1 ${
-                  tipoFondos === "real" && (sinBankroll || superaBankroll)
+                  tipoFondos !== "freebet" && (sinBankroll || superaBankroll)
                     ? "text-lose"
                     : "text-slate"
                 }`}
               >
-                {tipoFondos === "real" && (sinBankroll || superaBankroll) && (
+                {tipoFondos !== "freebet" && (sinBankroll || superaBankroll) && (
                   <AlertTriangle size={12} />
                 )}
-                {tipoFondos === "real" && superaBankroll
+                {tipoFondos !== "freebet" && superaBankroll
                   ? `Dinero real: el importe supera lo disponible (${bankrollCasa.toFixed(2)}€).`
                   : `Dinero real: ${sinBankroll ? "no disponible" : `${bankrollCasa.toFixed(2)}€ disponibles`}.`}
               </p>
               <p
                 className={`text-xs flex items-center gap-1 ${
-                  tipoFondos === "freebet" && (sinFreebets || superaFreebets)
+                  tipoFondos !== "real" && (sinFreebets || superaFreebets)
                     ? "text-lose"
                     : "text-gold"
                 }`}
               >
-                {tipoFondos === "freebet" && (sinFreebets || superaFreebets) && (
+                {tipoFondos !== "real" && (sinFreebets || superaFreebets) && (
                   <AlertTriangle size={12} />
                 )}
-                {tipoFondos === "freebet" && superaFreebets
+                {tipoFondos !== "real" && superaFreebets
                   ? `Freebets: el importe supera el saldo disponible (${freebetsCasa.toFixed(2)}€).`
                   : `Freebets: ${sinFreebets ? "no disponibles" : `${freebetsCasa.toFixed(2)}€ disponibles`}.`}
               </p>
@@ -364,20 +385,49 @@ export default function FormularioApuesta({
           )}
         </div>
 
-        <div>
-          <label className="block text-xs text-slate mb-1">
-            Cantidad apostada (€)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={cantidadApostada}
-            onChange={(e) => setCantidadApostada(e.target.value)}
-            required
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
-          />
-        </div>
+        {tipoFondos === "mixta" ? (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-slate mb-1">Dinero real (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={cantidadApostada}
+                onChange={(e) => setCantidadApostada(e.target.value)}
+                required
+                className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate mb-1">Freebet (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={cantidadFreebetMixta}
+                onChange={(e) => setCantidadFreebetMixta(e.target.value)}
+                required
+                className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
+              />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs text-slate mb-1">
+              Cantidad apostada (€)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={cantidadApostada}
+              onChange={(e) => setCantidadApostada(e.target.value)}
+              required
+              className="w-full border border-line rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-xs text-slate mb-1">Deporte</label>
@@ -402,6 +452,7 @@ export default function FormularioApuesta({
             {[
               { valor: "real", etiqueta: "Real" },
               { valor: "freebet", etiqueta: "Freebet" },
+              { valor: "mixta", etiqueta: "Mixta" },
             ].map(({ valor, etiqueta }) => (
               <button
                 key={valor}

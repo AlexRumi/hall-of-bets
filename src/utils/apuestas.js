@@ -120,17 +120,23 @@ export function agruparSeleccionesPorPartido(selecciones) {
 // stake puesto; con freebet, el importe recibido es ganancia entera (el stake
 // nunca fue dinero propio).
 export function calcularBeneficio(apuesta) {
-  const { resultado, stake, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
+  const { resultado, stake, stakeFreebet, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
   if (resultado === "pendiente") return 0;
 
   const cuotaTotal = calcularCuotaTotal(apuesta);
   if (resultado === "ganada") {
-    const base = stake * (cuotaTotal - 1);
+    // "mixta": se gana sobre TODO lo apostado, parte real + parte freebet
+    // (stakeFreebet es null/0 en real y freebet puras, así que sumarlo no
+    // cambia nada ahí).
+    const base = (stake + (stakeFreebet ?? 0)) * (cuotaTotal - 1);
     // Aumento de cuota: la casa añade un % sobre la ganancia neta, no
     // sobre el retorno total (comprobado con una captura real de Bet365:
     // cuota 4,00, 5€, 30% de aumento → 15€ base × 1,30 = 19,50€, no 20€×1,30).
     return aumentoPct ? base * (1 + aumentoPct / 100) : base;
   }
+  // "perdida"/"cashout": solo se resta/pierde la parte REAL (stake) — en
+  // "mixta" ese campo ya es solo la parte real (ver desdeFila), así que la
+  // parte freebet nunca "se pierde de verdad", igual que en freebet pura.
   if (resultado === "perdida") return tipoFondos === "freebet" ? 0 : -stake;
   if (resultado === "cashout") {
     return tipoFondos === "freebet" ? cashoutImporte : cashoutImporte - stake;
@@ -148,11 +154,19 @@ export function calcularEstadisticas(apuestas) {
   const decididas = apuestas.filter((a) => cuentaComoGanada(a) || cuentaComoPerdida(a));
   const resueltas = apuestas.filter((a) => a.resultado !== "pendiente");
   const pendientes = apuestas.filter((a) => a.resultado === "pendiente");
-  const reales = apuestas.filter((a) => a.tipoFondos === "real");
+  // "mixta" cuenta como "real" para el dinero real apostado (su .stake ya
+  // es solo la parte real, ver desdeFila) — por eso el filtro es
+  // "!== freebet" en vez de "=== real".
+  const reales = apuestas.filter((a) => a.tipoFondos !== "freebet");
   const freebets = apuestas.filter((a) => a.tipoFondos === "freebet");
 
   const stakeTotalReal = reales.reduce((suma, a) => suma + a.stake, 0);
-  const stakeTotalFreebet = freebets.reduce((suma, a) => suma + a.stake, 0);
+  // El total de freebet sale de .stake en las freebet puras, pero de
+  // .stakeFreebet en las mixtas (su .stake es la parte real, no la freebet).
+  const stakeTotalFreebet = apuestas.reduce(
+    (suma, a) => suma + (a.tipoFondos === "freebet" ? a.stake : a.tipoFondos === "mixta" ? a.stakeFreebet ?? 0 : 0),
+    0
+  );
   const beneficio = resueltas.reduce(
     (suma, a) => suma + calcularBeneficio(a),
     0
@@ -171,7 +185,7 @@ export function calcularEstadisticas(apuestas) {
     // Dinero que sigue "en juego": apuestas pendientes de resolver.
     numPendientes: pendientes.length,
     stakePendienteReal: pendientes
-      .filter((a) => a.tipoFondos === "real")
+      .filter((a) => a.tipoFondos !== "freebet")
       .reduce((suma, a) => suma + a.stake, 0),
     beneficio,
     yieldPct: stakeTotalReal ? (beneficio / stakeTotalReal) * 100 : 0,
@@ -370,6 +384,11 @@ export function desdeFila(fila) {
     fecha: fila.fecha,
     casa: fila.casa,
     stake: Number(fila.stake),
+    // Solo relevante cuando tipoFondos es "mixta" — la parte freebet de la
+    // apuesta (stake ya es la parte real, ver calcularBeneficio/
+    // calcularEstadisticas). null en apuestas de antes de este campo, y en
+    // las de tipo "real"/"freebet" (100% de un solo tipo).
+    stakeFreebet: fila.stake_freebet == null ? null : Number(fila.stake_freebet),
     selecciones: fila.selecciones,
     resultado: fila.resultado,
     categoria: fila.categoria,

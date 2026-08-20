@@ -190,6 +190,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     agregarApuesta({ ...datos, categoria });
     if (datos.tipoFondos === "freebet") {
       ajustarSaldoFreebet(datos.casa, -Number(datos.stake), categoria);
+    } else if (datos.tipoFondos === "mixta") {
+      ajustarSaldoFreebet(datos.casa, -Number(datos.stakeFreebet), categoria);
     }
     setMostrandoFormulario(false);
   }
@@ -199,19 +201,46 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     setConfirmandoBorrarTodo(false);
   }
 
-  // Si la apuesta tenía "seguro" (freebet si pierde) y se marca como
-  // Perdida, el freebet se suma solo al saldo de esa casa — sin este paso
-  // habría que añadirlo a mano en Casas de apuestas. Si se marca como
-  // Nula y era una apuesta de fondos Freebet, el stake que se descontó al
-  // crearla se devuelve (una nula no "gasta" el freebet de verdad).
+  // Cuánto freebet "extra" (además de lo ya descontado al crearla, eso es
+  // fijo y no depende del resultado) corresponde a esta apuesta si su
+  // resultado fuera "resultado": el reembolso de una Nula (freebet/mixta,
+  // el stake que se descontó al crearla vuelve porque una nula no "gasta"
+  // el freebet de verdad) y el seguro (freebet si pierde, aparte del tipo
+  // de fondos). Función PURA — no toca nada, solo calcula.
+  function efectoFreebetPorResultado(apuesta, resultado) {
+    const reembolsoNula =
+      apuesta.tipoFondos === "freebet"
+        ? apuesta.stake
+        : apuesta.tipoFondos === "mixta"
+        ? apuesta.stakeFreebet ?? 0
+        : 0;
+    let efecto = 0;
+    if (resultado === "nula") efecto += reembolsoNula;
+    if (resultado === "perdida" && apuesta.seguroFreebetImporte) {
+      efecto += apuesta.seguroFreebetImporte;
+    }
+    return efecto;
+  }
+
+  // Bug real: la pastilla de cada partido cicla Pendiente→Ganada→Perdida→
+  // Nula→Pendiente… — si se pasaba varias veces por "Perdida" (probando
+  // cómo se veía cada estado antes de dejarla en la definitiva) o por
+  // "Nula", el seguro/reembolso de freebet se sumaba UNA VEZ POR CADA
+  // PASADA, no solo la primera. Ahora se aplica la DIFERENCIA entre el
+  // efecto del resultado anterior y el nuevo (ver efectoFreebetPorResultado
+  // arriba) — el saldo siempre acaba correcto sin importar cuántas veces
+  // se haya ciclado por el medio, porque cada cambio solo mueve lo que
+  // falta entre "dónde estaba" y "adónde va", nunca una cantidad fija.
   function manejarMarcarResultado(id, resultado, cashoutImporte) {
     const apuesta = apuestas.find((a) => a.id === id);
     marcarResultado(id, resultado, cashoutImporte);
-    if (resultado === "perdida" && apuesta?.seguroFreebetImporte) {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.seguroFreebetImporte, apuesta.categoria);
-    }
-    if (resultado === "nula" && apuesta?.tipoFondos === "freebet") {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.stake, apuesta.categoria);
+    if (apuesta) {
+      const delta =
+        efectoFreebetPorResultado(apuesta, resultado) -
+        efectoFreebetPorResultado(apuesta, apuesta.resultado);
+      if (delta !== 0) {
+        ajustarSaldoFreebet(apuesta.casa, delta, apuesta.categoria);
+      }
     }
   }
 
@@ -247,8 +276,12 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   function manejarBorrarApuesta(id) {
     const apuesta = apuestas.find((a) => a.id === id);
     borrarApuesta(id);
-    if (apuesta?.tipoFondos === "freebet" && apuesta.resultado === "pendiente") {
-      ajustarSaldoFreebet(apuesta.casa, apuesta.stake, apuesta.categoria);
+    if (apuesta?.resultado === "pendiente") {
+      if (apuesta.tipoFondos === "freebet") {
+        ajustarSaldoFreebet(apuesta.casa, apuesta.stake, apuesta.categoria);
+      } else if (apuesta.tipoFondos === "mixta") {
+        ajustarSaldoFreebet(apuesta.casa, apuesta.stakeFreebet, apuesta.categoria);
+      }
     }
   }
 

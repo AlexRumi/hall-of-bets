@@ -60,7 +60,13 @@ function renderResuelta(apuestaCamel, grupos, cachePorId, numero) {
     "",
     `${apuestaCamel.fecha} · ${escapeHtml(apuestaCamel.casa)} · ${
       grupos.length > 1 ? `Combinada (${grupos.length} partidos)` : "Simple"
-    } · ${apuestaCamel.tipoFondos === "freebet" ? "Freebet" : "Real"}`,
+    } · ${
+      apuestaCamel.tipoFondos === "freebet"
+        ? "Freebet"
+        : apuestaCamel.tipoFondos === "mixta"
+        ? "Mixta"
+        : "Real"
+    }`,
     "",
   ];
 
