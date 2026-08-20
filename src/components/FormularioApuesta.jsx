@@ -147,9 +147,8 @@ export default function FormularioApuesta({
 
   // Bankroll actual de la casa elegida, del bankroll que corresponda
   // (Apuestas/Entretenimiento — mismo cálculo que en Casas de apuestas:
-  // ingresos - retiradas + beneficio de apuestas ya resueltas, filtrado por
-  // categoría). Ojo: no descuenta el stake de apuestas todavía pendientes
-  // en esa casa, igual que el resto de la app.
+  // ingresos - retiradas + beneficio de apuestas ya resueltas - dinero real
+  // ya comprometido en pendientes, filtrado por categoría).
   const bankrollCasa = casa
     ? calcularBankrollPorCasa(movimientos, apuestas, categoriaEfectiva).find(
         (b) => b.casa === casa

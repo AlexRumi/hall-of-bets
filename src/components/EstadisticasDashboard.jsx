@@ -84,20 +84,26 @@ export default function EstadisticasDashboard({
   // apuestasDelBankroll/movimientosDelBankroll (solo filtrados por
   // bankroll), NO sobre apuestasFiltradas/movimientosFiltrados — el
   // dinero real de cada casa no debe cambiar solo porque se esté mirando
-  // una casa/rango/archivado concreto en el resto del dashboard, mismo
-  // criterio que ya usa "Casas de apuestas". Con "Todas" se suman los dos
-  // saldos de freebet (Apuestas + Entretenimiento) de cada casa.
-  const dineroRealBankroll = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll).reduce(
-    (suma, b) => suma + b.bankroll,
-    0
-  );
-  const freebetsBankroll = casas.reduce((suma, c) => {
-    if (filtroBankroll === "todas") {
-      return suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento;
-    }
-    const campo = filtroBankroll === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
-    return suma + c[campo];
-  }, 0);
+  // un rango/archivado concreto en el resto del dashboard, mismo criterio
+  // que ya usa "Casas de apuestas". Sí se acota a la casa elegida en el
+  // desplegable (hayFiltro) cuando hay una — antes sumaba siempre TODAS
+  // las casas sin importar cuál estuviera elegida, petición directa tras
+  // detectar que el Bankroll no cambiaba nunca al cambiar de casa. Con
+  // "Todas" (bankroll) se suman los dos saldos de freebet (Apuestas +
+  // Entretenimiento) de cada casa.
+  const bankrollsPorCasa = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll);
+  const dineroRealBankroll = hayFiltro
+    ? bankrollsPorCasa.find((b) => b.casa === filtroCasa)?.bankroll ?? 0
+    : bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0);
+  const freebetsBankroll = casas
+    .filter((c) => !hayFiltro || c.nombre === filtroCasa)
+    .reduce((suma, c) => {
+      if (filtroBankroll === "todas") {
+        return suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento;
+      }
+      const campo = filtroBankroll === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
+      return suma + c[campo];
+    }, 0);
 
   // Todo el dashboard se recalcula sobre las apuestas y movimientos de la
   // casa elegida, en vez de sobre todas.

@@ -64,14 +64,29 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
   // Mismo hook que ApuestaItem.jsx: cada casa se ve siempre con el mismo
   // color "de firma" en toda la app.
   const colorCasa = useColorCasa(casaObj ?? { nombre: apuesta.casa, logo: null });
+  const esPendiente = apuesta.resultado === "pendiente";
+  const cuotaTotal = calcularCuotaTotal(apuesta);
   const beneficio = calcularBeneficio(apuesta);
+  // Mientras está pendiente, calcularBeneficio siempre da 0 (aún no ha
+  // pasado nada) — mismo criterio que ApuestaItem.jsx: en su lugar se
+  // muestra el potencial (con el aumento de cuota aplicado si lo hay), para
+  // no confundir "pendiente" con "nula" (las dos daban 0€/stake antes de
+  // este cambio, aunque signifiquen cosas muy distintas — petición directa,
+  // detectado con una combinada de cuota alta que parecía "recuperar solo
+  // el stake" en vez de mostrar cuánto se ganaría si acierta).
+  const baseGanancia = (apuesta.stake + (apuesta.stakeFreebet ?? 0)) * (cuotaTotal - 1);
+  const gananciaPotencial = apuesta.aumentoPct
+    ? baseGanancia * (1 + apuesta.aumentoPct / 100)
+    : baseGanancia;
+  const beneficioMostrado = esPendiente ? gananciaPotencial : beneficio;
   // "Ganancia" = beneficio + lo apostado: el retorno total (stake incluido),
   // no solo el neto — al lado ya se ve el Beneficio (el neto), así que
   // Ganancia responde a "cuánto dinero recibes en total" (petición directa).
   // En freebet no se suma el stake: ese dinero nunca fue tuyo, así que no
   // "lo recuperas" al ganar, y si pierdes la freebet no recibes nada (0€,
   // no el importe del freebet) — mismo criterio que ya usa calcularBeneficio.
-  const ganancia = apuesta.tipoFondos === "freebet" ? beneficio : beneficio + apuesta.stake;
+  const ganancia =
+    apuesta.tipoFondos === "freebet" ? beneficioMostrado : beneficioMostrado + apuesta.stake;
 
   return (
     <button
@@ -165,9 +180,7 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
 
             <div className="shrink-0 flex items-center gap-4">
               <div className="w-14 text-right">
-                <p className="font-mono text-base font-bold text-ink">
-                  {calcularCuotaTotal(apuesta).toFixed(2)}
-                </p>
+                <p className="font-mono text-base font-bold text-ink">{cuotaTotal.toFixed(2)}</p>
                 <p className="text-[10px] tracking-wide text-slate">Cuota</p>
               </div>
               <div className="w-16 text-right">
@@ -185,11 +198,11 @@ export default function TarjetaApuestaResumen({ apuesta, onAbrir, denso = false,
               <div className="w-20 text-right">
                 <p
                   className={`font-mono text-base font-bold ${
-                    beneficio > 0 ? "text-win" : beneficio < 0 ? "text-lose" : "text-ink"
+                    beneficioMostrado > 0 ? "text-win" : beneficioMostrado < 0 ? "text-lose" : "text-ink"
                   }`}
                 >
-                  {beneficio > 0 ? "+" : ""}
-                  {beneficio.toFixed(2)}€
+                  {beneficioMostrado > 0 ? "+" : ""}
+                  {beneficioMostrado.toFixed(2)}€
                 </p>
                 <p className="text-[10px] tracking-wide text-slate">Beneficio</p>
               </div>

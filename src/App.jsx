@@ -46,6 +46,20 @@ const ETIQUETAS_SECCION = {
   entretenimiento: "Entretenimiento",
 };
 
+// Recordar la sección activa entre recargas (F5) — sin esto, "seccionActiva"
+// es solo estado de React, así que un F5 siempre volvía a Inicio sin
+// importar dónde estuvieras. Mismo patrón que useModoOscuro.js (localStorage,
+// preferencia de este dispositivo, no se sincroniza entre dispositivos).
+const CLAVE_SECCION_ACTIVA = "hall-of-bets:seccion-activa";
+
+function seccionActivaInicial() {
+  try {
+    return localStorage.getItem(CLAVE_SECCION_ACTIVA) ?? "inicio";
+  } catch {
+    return "inicio";
+  }
+}
+
 export default function App() {
   // Se lee aquí arriba (y no dentro de AppAutenticada) para que el tema
   // también se aplique en la pantalla de login, antes de identificarse.
@@ -108,7 +122,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   } = useMovimientos(userId);
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
-  const [seccionActiva, setSeccionActiva] = useState("inicio");
+  const [seccionActiva, setSeccionActiva] = useState(seccionActivaInicial);
   // Filtro con el que debe arrancar Historial la próxima vez que se monte
   // (ver AvisoPendientes.jsx en Inicio: su botón "Ver pendientes" pone
   // "pendientes" aquí antes de cambiar de sección) — se limpia solo al
@@ -140,10 +154,16 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const masBotonRef = useRef(null);
 
   // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
-  // con el scroll donde estaba la sección anterior).
+  // con el scroll donde estaba la sección anterior) y recordarla para el
+  // próximo F5 (ver seccionActivaInicial más arriba).
   useEffect(() => {
     window.scrollTo(0, 0);
     if (seccionActiva !== "historial") setFiltroHistorialInicial(null);
+    try {
+      localStorage.setItem(CLAVE_SECCION_ACTIVA, seccionActiva);
+    } catch {
+      // localStorage no disponible: simplemente no se recuerda, sin romper nada.
+    }
   }, [seccionActiva]);
 
   // Handler del botón "Ver pendientes" del aviso de Inicio (AvisoPendientes.jsx).

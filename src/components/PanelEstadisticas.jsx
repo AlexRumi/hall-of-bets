@@ -73,20 +73,25 @@ export default function PanelEstadisticas({ apuestas, movimientos, casas, oscuro
     .filter((m) => !m.archivado)
     .filter((m) => !hayFiltro || m.casa === filtroCasa);
 
-  // Bankroll (fila 1+2): igual que TarjetaBankroll en EstadisticasDashboard.jsx,
-  // sobre *DelBankroll (solo filtro de categoría) — el dinero real no cambia
-  // solo por mirar una casa concreta.
-  const dineroReal = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll).reduce(
-    (suma, b) => suma + b.bankroll,
-    0
-  );
-  const freebets = casas.reduce((suma, c) => {
-    if (filtroBankroll === "todas") {
-      return suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento;
-    }
-    const campo = filtroBankroll === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
-    return suma + c[campo];
-  }, 0);
+  // Bankroll (fila 1+2): igual que TarjetaBankroll en EstadisticasDashboard.jsx
+  // — sobre *DelBankroll (solo filtro de categoría) y, si hay una casa
+  // concreta elegida en el desplegable, acotado solo a esa casa (antes
+  // sumaba siempre TODAS las casas sin importar cuál estuviera elegida,
+  // petición directa tras detectar que el Bankroll no cambiaba nunca al
+  // cambiar de casa).
+  const bankrollsPorCasa = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll);
+  const dineroReal = hayFiltro
+    ? bankrollsPorCasa.find((b) => b.casa === filtroCasa)?.bankroll ?? 0
+    : bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0);
+  const freebets = casas
+    .filter((c) => !hayFiltro || c.nombre === filtroCasa)
+    .reduce((suma, c) => {
+      if (filtroBankroll === "todas") {
+        return suma + c.freebetSaldoApuestas + c.freebetSaldoEntretenimiento;
+      }
+      const campo = filtroBankroll === "entretenimiento" ? "freebetSaldoEntretenimiento" : "freebetSaldoApuestas";
+      return suma + c[campo];
+    }, 0);
 
   const stats = calcularEstadisticas(apuestasFiltradas);
   const statsMes = calcularEstadisticas(filtrarPorPeriodo(apuestasFiltradas, "mes"));

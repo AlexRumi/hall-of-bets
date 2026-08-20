@@ -34,11 +34,22 @@ export default function PantallaInicio({
     <div className="space-y-4">
       <AvisoPendientes pendientes={pendientes} onVerPendientes={onVerPendientes} />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-surface border border-line rounded-xl p-4 text-center">
           <p className="text-xs text-slate">Bankroll total</p>
           <p className="font-mono text-xl font-bold text-goldDark">
             {bankrollTotal.toFixed(2)}€
+          </p>
+        </div>
+        {/* Dinero real de apuestas todavía pendientes (mismo dato que ya
+            existía en el panel de Estadísticas, "En juego") — junto al
+            Bankroll de arriba, para ver de un vistazo cuánto de lo tuyo
+            está jugado ahora mismo, ya que ese dinero ya no cuenta en el
+            Bankroll (ver calcularBankrollPorCasa en utils/movimientos.js). */}
+        <div className="bg-surface border border-line rounded-xl p-4 text-center">
+          <p className="text-xs text-slate">En juego</p>
+          <p className="font-mono text-xl font-bold text-gold">
+            {stats.stakePendienteReal.toFixed(2)}€
           </p>
         </div>
         <div className="bg-surface border border-line rounded-xl p-4 text-center">
@@ -71,7 +82,10 @@ export default function PantallaInicio({
             {stats.yieldPct.toFixed(2)}%
           </p>
         </div>
-        <div className="bg-surface border border-line rounded-xl p-4 text-center">
+        {/* col-span-2 en móvil: con 5 tarjetas en una rejilla de 2 columnas,
+            esta quedaba sola y descentrada en la última fila — a todo el
+            ancho se ve mejor. Desde "sm:" vuelve a ocupar 1 de las 5. */}
+        <div className="col-span-2 sm:col-span-1 bg-surface border border-line rounded-xl p-4 text-center">
           <p className="text-xs text-slate">Racha actual</p>
           <p className="font-mono text-xl font-bold text-gold">{racha}</p>
         </div>

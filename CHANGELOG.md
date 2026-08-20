@@ -4644,3 +4644,66 @@ separadas, probando cada una antes de pasar a la siguiente.
     el nombre viejo — sin actualizarla, el guard que cierra el panel al
     borrar una casa ("ya no existe con ese nombre") lo habría cerrado
     justo al terminar de renombrarla, como si se hubiera borrado.
+
+- **Dos fallos de Bankroll, detectados juntos** (petición directa, con un
+  caso real: 2€ pendientes en Winamax y 1€ pendientes en Betfair — el
+  Bankroll de Estadísticas mostraba 2,00€ con CUALQUIER casa elegida en
+  el desplegable, y el 1€ de Betfair no afectaba a nada en ningún sitio).
+  Confirmados los dos con el usuario (`AskUserQuestion`) antes de tocar
+  nada, porque cambian cálculos usados en toda la app.
+  - **Bug real**: en `EstadisticasDashboard.jsx` y `PanelEstadisticas.jsx`,
+    el recuadro "Bankroll" se calculaba siempre sobre TODAS las casas
+    (`apuestasDelBankroll`/`movimientosDelBankroll`, solo filtrados por
+    Apuestas/Entretenimiento), ignorando qué casa concreta estuviera
+    elegida en el desplegable — a propósito en su día ("mismo criterio
+    que 'Bankroll total' en Casas de apuestas"), pero confuso en la
+    práctica: elegir una casa cualquiera enseñaba siempre el mismo
+    número. Ahora, si hay una casa elegida (`hayFiltro`), el Bankroll (y
+    los freebets) se acotan a esa casa; sin ninguna elegida, sigue siendo
+    el total de todas, como antes.
+  - **Cambio de criterio**: `calcularBankrollPorCasa` (`src/utils/
+    movimientos.js`) pasa de `ingresos − retiradas + beneficio` a
+    `ingresos − retiradas + beneficio − dinero real ya comprometido en
+    apuestas pendientes de esa casa` (nuevo campo `stakePendienteReal` en
+    lo que devuelve, por si hace falta mostrarlo aparte más adelante). El
+    dinero de una apuesta ya jugada pero sin resolver dejó de contar como
+    "disponible" — antes se contaba dos veces en la práctica (seguía en
+    el bankroll Y estaba jugado en la apuesta). Freebet puro no resta
+    nada (esa parte nunca fue dinero real, ya se descontó del saldo de
+    freebet al crear la apuesta); en mixta solo la parte real (`stake`).
+    Como esta función la usan Inicio, Casas de apuestas, Estadísticas y
+    el aviso de bankroll superado en `FormularioApuesta.jsx`, el cambio
+    se propaga solo a los cuatro sitios sin tocar cada uno.
+
+- **Tarjeta "En juego" en Inicio** (petición directa, junto al Bankroll):
+  reutiliza `stats.stakePendienteReal` (`calcularEstadisticas`,
+  `utils/apuestas.js` — mismo dato que ya mostraba el panel de
+  Estadísticas), sin ningún cálculo nuevo. `PantallaInicio.jsx` pasa de 4
+  a 5 tarjetas (`grid-cols-2 sm:grid-cols-5`); "Racha actual" (la última)
+  gana `col-span-2 sm:col-span-1` para no quedar sola y descentrada en la
+  última fila de móvil.
+
+- **"Ganancia"/"Beneficio" de una apuesta pendiente en la fila densa de
+  listados** (`TarjetaApuestaResumen.jsx`, la fila con Cuota/Importe/
+  Ganancia/Beneficio de Inicio/Historial en escritorio) — petición
+  directa tras ver una combinada de cuota alta (27.55, "Winiela")
+  mostrando "Beneficio 0,00€ / Ganancia 2,00€" (el propio stake) como si
+  fuera una apuesta nula, en vez de lo que se ganaría si acierta. Mismo
+  fallo que ya se había corregido antes en el ticket completo
+  (`ApuestaItem.jsx`, ver más arriba en este historial): `calcularBeneficio`
+  siempre da 0 mientras está "pendiente" (aún no ha pasado nada), y
+  pendiente/nula acababan mostrando el mismo número aunque signifiquen
+  cosas muy distintas. Se aplica aquí el mismo criterio que ya usa
+  `ApuestaItem.jsx`: si está pendiente, se muestra el potencial (stake ×
+  (cuota−1), con el aumento de cuota si lo hay) en vez de 0/stake.
+
+- **Recordar la sección activa entre recargas (F5)** (petición directa:
+  al recargar en cualquier sección que no fuera Inicio, la app volvía
+  siempre a Inicio). `seccionActiva` (`App.jsx`) es solo estado de React,
+  sin URL/router propio (ver Stack, "sin router — la ruta se resuelve a
+  mano" es solo para la Mini App de Telegram) — se guarda ahora en
+  `localStorage` (clave `hall-of-bets:seccion-activa`), mismo patrón que
+  `useModoOscuro.js` (preferencia de este dispositivo, no se sincroniza
+  entre dispositivos). No hace falta validar el valor guardado contra una
+  lista de secciones válidas: la cadena de condiciones de `App.jsx` ya
+  cae en Estadísticas por defecto si no coincide con ninguna.

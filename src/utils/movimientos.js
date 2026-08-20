@@ -32,12 +32,25 @@ export function calcularBankrollPorCasa(movimientos, apuestas, categoria = null)
         .filter((a) => a.casa === casa && a.resultado !== "pendiente")
         .reduce((suma, a) => suma + calcularBeneficio(a), 0);
 
+      // Dinero real ya comprometido en apuestas todavía pendientes de esta
+      // casa: no cuenta como disponible hasta que se resuelvan (petición
+      // directa — antes el bankroll lo seguía contando como si estuviera
+      // libre, aunque ya estuviera jugado). En freebet no se resta nada (esa
+      // parte nunca fue dinero real: ya se descontó del saldo de freebet al
+      // crear la apuesta, ver ajustarSaldoFreebet en useCasas.js); en mixta
+      // solo la parte real, "stake" (ver calcularBeneficio/FormularioApuesta.jsx
+      // — "stake" siempre es la parte real, incluso en mixta).
+      const stakePendienteReal = apuestasUsadas
+        .filter((a) => a.casa === casa && a.resultado === "pendiente" && a.tipoFondos !== "freebet")
+        .reduce((suma, a) => suma + a.stake, 0);
+
       return {
         casa,
         ingresos,
         retiradas,
         beneficio,
-        bankroll: ingresos - retiradas + beneficio,
+        stakePendienteReal,
+        bankroll: ingresos - retiradas + beneficio - stakePendienteReal,
         roiPct: ingresos ? (beneficio / ingresos) * 100 : 0,
       };
     })
