@@ -78,6 +78,57 @@ export function useCasas(userId) {
     }
   }
 
+  // Cambia (o quita, con logo=null) el logo de una casa ya existente, sin
+  // tocar nada más — antes, para corregir un logo había que borrar la casa
+  // y volver a añadirla. Las apuestas y los movimientos no se habrían
+  // perdido (se enlazan por el nombre de la casa, no por su fila), pero el
+  // saldo de freebet sí, porque vive en la propia fila de "casas"
+  // (freebet_saldo_apuestas/entretenimiento) — recrearla la reiniciaba a 0.
+  async function editarLogoCasa(nombre, logo) {
+    const { error } = await supabase
+      .from("casas")
+      .update({ logo })
+      .eq("user_id", userId)
+      .eq("nombre", nombre);
+
+    if (!error) {
+      setCasas((actuales) =>
+        actuales.map((c) => (c.nombre === nombre ? { ...c, logo } : c))
+      );
+    }
+  }
+
+  // Cambia el nombre de una casa ya existente (solo la fila de "casas" —
+  // ver renombrarCasaEnApuestas/EnMovimientos en useApuestas.js/
+  // useMovimientos.js, que App.jsx dispara a la vez para que las apuestas y
+  // movimientos ya guardados sigan encontrando esta casa por su nombre
+  // nuevo, PERO solo si esto devuelve true: si el nombre no es válido o ya
+  // lo usa otra casa, no se toca nada, y esos dos renombrados tampoco deben
+  // dispararse). No permite chocar con una casa ya existente, igual que
+  // agregarCasa — fundir dos casas en una no es el caso de uso (es un
+  // simple cambio de nombre, ej. la casa se rebautiza), así que se bloquea
+  // en vez de intentar fundirlas.
+  async function editarNombreCasa(nombreAnterior, nombreNuevo) {
+    const limpio = nombreNuevo.trim();
+    if (!limpio || limpio === nombreAnterior) return false;
+    if (casas.some((casa) => casa.nombre.toLowerCase() === limpio.toLowerCase())) {
+      return false;
+    }
+
+    const { error } = await supabase
+      .from("casas")
+      .update({ nombre: limpio })
+      .eq("user_id", userId)
+      .eq("nombre", nombreAnterior);
+
+    if (error) return false;
+
+    setCasas((actuales) =>
+      actuales.map((c) => (c.nombre === nombreAnterior ? { ...c, nombre: limpio } : c))
+    );
+    return true;
+  }
+
   // Borrar una casa del registro no toca las apuestas ya guardadas (su
   // campo "casa" es solo texto); si se vuelve a añadir con el
   // mismo nombre, esas apuestas antiguas recuperan el logo automáticamente.
@@ -126,5 +177,12 @@ export function useCasas(userId) {
     a.nombre.localeCompare(b.nombre, "es")
   );
 
-  return { casas: casasOrdenadas, agregarCasa, borrarCasa, ajustarSaldoFreebet };
+  return {
+    casas: casasOrdenadas,
+    agregarCasa,
+    editarLogoCasa,
+    editarNombreCasa,
+    borrarCasa,
+    ajustarSaldoFreebet,
+  };
 }

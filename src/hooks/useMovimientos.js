@@ -70,6 +70,24 @@ export function useMovimientos(userId) {
     }
   }
 
+  // Mismo motivo que renombrarCasaEnApuestas (useApuestas.js): "casa" es
+  // texto, no una clave foránea, así que renombrar una casa (useCasas.js/
+  // editarNombreCasa) necesita actualizar también los movimientos ya
+  // guardados o se quedarían apuntando al nombre viejo.
+  async function renombrarCasaEnMovimientos(nombreAnterior, nombreNuevo) {
+    const { error } = await supabase
+      .from("movimientos")
+      .update({ casa: nombreNuevo })
+      .eq("user_id", userId)
+      .eq("casa", nombreAnterior);
+
+    if (!error) {
+      setMovimientos((actuales) =>
+        actuales.map((m) => (m.casa === nombreAnterior ? { ...m, casa: nombreNuevo } : m))
+      );
+    }
+  }
+
   async function borrarMovimiento(id) {
     const { error } = await supabase.from("movimientos").delete().eq("id", id);
     if (!error) {
@@ -108,6 +126,7 @@ export function useMovimientos(userId) {
   return {
     movimientos,
     agregarMovimiento,
+    renombrarCasaEnMovimientos,
     borrarMovimiento,
     borrarTodosMovimientos,
     archivarPorRango,

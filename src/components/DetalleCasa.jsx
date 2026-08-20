@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, ChevronDown, ChevronUp, PlusCircle, X, Landmark } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, PlusCircle, X, Landmark, Pencil } from "lucide-react";
 import FormularioMovimiento from "./FormularioMovimiento";
 import FormularioBono from "./FormularioBono";
 import ListaMovimientos from "./ListaMovimientos";
@@ -88,35 +88,128 @@ export default function DetalleCasa({
   onAgregarMovimiento,
   onAjustarSaldoFreebet,
   onBorrarMovimiento,
+  onEditarLogo,
+  onEditarNombre,
   onPedirBorrar,
   onCerrar,
 }) {
   const [mostrandoBono, setMostrandoBono] = useState(false);
+  const [renombrando, setRenombrando] = useState(false);
+  const [nombreEditado, setNombreEditado] = useState(casa.nombre);
+  const [nombreDuplicado, setNombreDuplicado] = useState(false);
+
+  // Mismo truco que FormularioCasa.jsx (base64, no hay almacenamiento de
+  // archivos propio): al elegir una imagen nueva, se sustituye el logo de
+  // la casa ya existente sin tocar nada más (movimientos, saldo, apuestas).
+  function manejarCambioLogo(e) {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = () => onEditarLogo(casa.nombre, lector.result);
+    lector.readAsDataURL(archivo);
+    e.target.value = "";
+  }
+
+  function abrirRenombrar() {
+    setNombreEditado(casa.nombre);
+    setNombreDuplicado(false);
+    setRenombrando(true);
+  }
+
+  async function manejarGuardarNombre(e) {
+    e.preventDefault();
+    const hecho = await onEditarNombre(casa.nombre, nombreEditado);
+    if (hecho) {
+      setRenombrando(false);
+    } else {
+      setNombreDuplicado(true);
+    }
+  }
+
+  // Cambiar logo / cambiar nombre sin borrar la casa (antes había que
+  // borrarla y volver a añadirla para corregir cualquiera de los dos,
+  // perdiendo el saldo de freebet acumulado — ver comentarios de
+  // editarLogoCasa/editarNombreCasa en useCasas.js). Debajo del nombre y
+  // antes de la línea divisoria (petición directa), tanto en escritorio
+  // (dentro de la cabecera propia, ver más abajo) como en móvil (aquí no
+  // hay cabecera propia — la fila de ListadoCasas.jsx ya muestra el
+  // nombre — así que este mismo bloque se coloca justo debajo de esa fila).
+  const controlesEdicion = renombrando ? (
+    <form onSubmit={manejarGuardarNombre} className="flex items-center gap-2">
+      <input
+        type="text"
+        value={nombreEditado}
+        onChange={(e) => {
+          setNombreEditado(e.target.value);
+          setNombreDuplicado(false);
+        }}
+        autoFocus
+        className="flex-1 min-w-0 border border-line rounded-lg px-2 py-1 text-sm bg-surface"
+      />
+      <button type="submit" className="shrink-0 text-xs font-semibold text-gold hover:underline">
+        Guardar
+      </button>
+      <button
+        type="button"
+        onClick={() => setRenombrando(false)}
+        className="shrink-0 text-xs font-medium text-slate hover:text-ink"
+      >
+        Cancelar
+      </button>
+    </form>
+  ) : (
+    <div className="flex items-center gap-4">
+      <label className="inline-flex items-center gap-1.5 text-xs font-medium text-gold hover:underline cursor-pointer">
+        <Pencil size={14} />
+        {casa.logo ? "Cambiar logo" : "Añadir logo"}
+        <input type="file" accept="image/*" onChange={manejarCambioLogo} className="hidden" />
+      </label>
+      <button
+        type="button"
+        onClick={abrirRenombrar}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-gold hover:underline"
+      >
+        <Pencil size={14} />
+        Cambiar nombre
+      </button>
+    </div>
+  );
 
   return (
     <div>
       {onCerrar && (
-        <div className="flex items-center justify-between gap-3 p-4 sm:p-5 border-b border-line">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {casa.logo ? (
-              <img src={casa.logo} alt="" className="w-9 h-9 rounded-lg object-contain shrink-0" />
-            ) : (
-              <Landmark size={22} className="text-gold shrink-0" />
-            )}
-            <h2 className="font-display text-lg font-semibold text-ink truncate">{casa.nombre}</h2>
+        <div className="p-4 sm:p-5 border-b border-line space-y-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {casa.logo ? (
+                <img src={casa.logo} alt="" className="w-9 h-9 rounded-lg object-contain shrink-0" />
+              ) : (
+                <Landmark size={22} className="text-gold shrink-0" />
+              )}
+              <h2 className="font-display text-lg font-semibold text-ink truncate">{casa.nombre}</h2>
+            </div>
+            <button
+              type="button"
+              onClick={onCerrar}
+              aria-label="Cerrar"
+              className="shrink-0 text-slate hover:text-ink transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onCerrar}
-            aria-label="Cerrar"
-            className="shrink-0 text-slate hover:text-ink transition-colors"
-          >
-            <X size={18} />
-          </button>
+          {controlesEdicion}
+          {nombreDuplicado && <p className="text-xs text-lose">Ya existe una casa con ese nombre.</p>}
         </div>
       )}
 
-      <div className={onCerrar ? "px-4 sm:px-5 pb-5 pt-4 space-y-4" : "px-3 sm:px-4 pb-4 pt-4 space-y-4 border-t border-line"}>
+      {!onCerrar && (
+        <div className="px-3 sm:px-4 pt-3 pb-3 space-y-2 border-b border-line">
+          {controlesEdicion}
+          {nombreDuplicado && <p className="text-xs text-lose">Ya existe una casa con ese nombre.</p>}
+        </div>
+      )}
+
+      <div className={onCerrar ? "px-4 sm:px-5 pb-5 pt-4 space-y-4" : "px-3 sm:px-4 pb-4 pt-4 space-y-4"}>
       {/* Ingresos/Retiradas/Beneficio/Yield/ROI/Freebet, una fila por
           bankroll — antes era una sola fila combinada; ahora que
           movimientos y el freebet también tienen categoría, se puede ver

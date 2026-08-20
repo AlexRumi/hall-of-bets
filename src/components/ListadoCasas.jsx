@@ -18,6 +18,8 @@ const SIN_ESTADISTICAS = { numApuestas: 0, yieldPct: 0 };
 export default function ListadoCasas({
   casas,
   onAgregarCasa,
+  onEditarLogoCasa,
+  onEditarNombreCasa,
   onBorrarCasa,
   movimientos,
   apuestas,
@@ -92,6 +94,16 @@ export default function ListadoCasas({
   function manejarBorrarTodosMovimientos() {
     onBorrarTodosMovimientos();
     setConfirmandoBorrarMovimientos(false);
+  }
+
+  // Si se renombra la casa que está abierta (fila expandida en móvil, o
+  // panel de escritorio), "casaExpandida" sigue el nuevo nombre — si no, el
+  // guard de más abajo (casaAbierta ya no encontraría ese nombre) cerraría
+  // el panel justo al terminar de renombrarla, como si se hubiera borrado.
+  async function manejarEditarNombre(nombreAnterior, nombreNuevo) {
+    const hecho = await onEditarNombreCasa(nombreAnterior, nombreNuevo);
+    if (hecho && casaExpandida === nombreAnterior) setCasaExpandida(nombreNuevo);
+    return hecho;
   }
 
   return (
@@ -241,6 +253,8 @@ export default function ListadoCasas({
                         onAgregarMovimiento={onAgregarMovimiento}
                         onAjustarSaldoFreebet={onAjustarSaldoFreebet}
                         onBorrarMovimiento={onBorrarMovimiento}
+                        onEditarLogo={onEditarLogoCasa}
+                        onEditarNombre={manejarEditarNombre}
                         onPedirBorrar={() => setCasaABorrar(casa.nombre)}
                       />
                     </div>
@@ -265,6 +279,8 @@ export default function ListadoCasas({
             onAgregarMovimiento={onAgregarMovimiento}
             onAjustarSaldoFreebet={onAjustarSaldoFreebet}
             onBorrarMovimiento={onBorrarMovimiento}
+            onEditarLogo={onEditarLogoCasa}
+            onEditarNombre={manejarEditarNombre}
             onPedirBorrar={() => setCasaABorrar(casaAbierta.nombre)}
             onCerrar={() => setCasaExpandida(null)}
           />

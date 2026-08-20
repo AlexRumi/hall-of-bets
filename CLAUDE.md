@@ -49,7 +49,7 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
   - El stake en freebet NO cuenta en el stake total ni en el yield — se muestra aparte (en mixta, solo la parte freebet)
   - Filtro de tipo de fondos (Todas / Real / Freebet) dentro de cada sección, no es una sección propia
 - Dos bankrolls independientes: **Apuestas** y **Entretenimiento**, cada uno con sus propias estadísticas
-- Casas de apuestas gestionables (añadir nuevas), filtro por casa
+- Casas de apuestas gestionables (añadir nuevas, editar logo/nombre sin perder movimientos ni saldo de freebet), filtro por casa
 - Estadísticas: nº apuestas, stake medio, cuota media, stake total, beneficio, yield, % acierto
 - Estadísticas y gráfico por periodo: hoy / semana / mes / año
 - Gráfico de beneficio acumulado

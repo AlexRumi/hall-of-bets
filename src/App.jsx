@@ -87,11 +87,13 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     marcarResultado,
     marcarResultadoGrupo,
     actualizarCuotaSeleccion,
+    renombrarCasaEnApuestas,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango: archivarApuestasPorRango,
   } = useApuestas(userId);
-  const { casas, agregarCasa, borrarCasa, ajustarSaldoFreebet } = useCasas(userId);
+  const { casas, agregarCasa, editarLogoCasa, editarNombreCasa, borrarCasa, ajustarSaldoFreebet } =
+    useCasas(userId);
   // Los trofeos se calculan sobre todas las apuestas, sin importar la
   // sección que se esté viendo, para que la notificación de un trofeo nuevo
   // pueda saltar aunque no estés en la pestaña de Trofeos.
@@ -99,6 +101,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const {
     movimientos,
     agregarMovimiento,
+    renombrarCasaEnMovimientos,
     borrarMovimiento,
     borrarTodosMovimientos,
     archivarPorRango: archivarMovimientosPorRango,
@@ -147,6 +150,22 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   function irAPendientesEnHistorial() {
     setFiltroHistorialInicial("pendientes");
     setSeccionActiva("historial");
+  }
+
+  // Renombrar una casa (DetalleCasa.jsx, "Cambiar nombre") toca tres sitios
+  // a la vez: la fila de "casas" y, como "casa" es texto en vez de clave
+  // foránea (ver supabase-setup.sql), también las apuestas y movimientos ya
+  // guardados que la referencian por su nombre viejo — si no, se quedarían
+  // apuntando a un nombre que ya no existe en el registro de casas. Los
+  // otros dos solo se disparan si editarNombreCasa devuelve true (nombre
+  // válido y libre) — devuelve ese resultado para que DetalleCasa.jsx pueda
+  // avisar si el cambio no se hizo (nombre repetido).
+  async function manejarRenombrarCasa(nombreAnterior, nombreNuevo) {
+    const hecho = await editarNombreCasa(nombreAnterior, nombreNuevo);
+    if (!hecho) return false;
+    renombrarCasaEnApuestas(nombreAnterior, nombreNuevo);
+    renombrarCasaEnMovimientos(nombreAnterior, nombreNuevo);
+    return true;
   }
 
   // Siembra la lista gestionable de casas con los nombres ya usados en
@@ -555,6 +574,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
               <ListadoCasas
                 casas={casas}
                 onAgregarCasa={agregarCasa}
+                onEditarLogoCasa={editarLogoCasa}
+                onEditarNombreCasa={manejarRenombrarCasa}
                 onBorrarCasa={borrarCasa}
                 movimientos={movimientos}
                 apuestas={apuestas}

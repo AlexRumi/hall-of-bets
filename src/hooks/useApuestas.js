@@ -269,6 +269,27 @@ export function useApuestas(userId) {
     }
   }
 
+  // Al renombrar una casa (ver useCasas.js/editarNombreCasa), las apuestas
+  // ya guardadas la referencian por texto ("casa" no es una clave foránea,
+  // ver supabase-setup.sql) — sin esto se quedarían apuntando al nombre
+  // viejo, invisibles para esa casa en filtros/estadísticas aunque los
+  // datos siguieran intactos en la tabla. App.jsx dispara esto a la vez que
+  // editarNombreCasa y renombrarCasaEnMovimientos, no hace falta llamarlo
+  // por separado.
+  async function renombrarCasaEnApuestas(nombreAnterior, nombreNuevo) {
+    const { error } = await supabase
+      .from("apuestas")
+      .update({ casa: nombreNuevo })
+      .eq("user_id", userId)
+      .eq("casa", nombreAnterior);
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) => (a.casa === nombreAnterior ? { ...a, casa: nombreNuevo } : a))
+      );
+    }
+  }
+
   async function borrarApuesta(id) {
     const { error } = await supabase.from("apuestas").delete().eq("id", id);
     if (!error) {
@@ -317,6 +338,7 @@ export function useApuestas(userId) {
     marcarResultado,
     marcarResultadoGrupo,
     actualizarCuotaSeleccion,
+    renombrarCasaEnApuestas,
     borrarApuesta,
     borrarTodoBankroll,
     archivarPorRango,

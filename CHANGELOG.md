@@ -4613,3 +4613,34 @@ separadas, probando cada una antes de pasar a la siguiente.
     su propio criterio de "partido terminado" (con caché real de
     resultados de la API, no solo tiempo transcurrido) sigue igual, es
     independiente de este aviso de Inicio.
+
+- **Editar logo y nombre de una casa de apuestas, sin borrarla** (petición
+  directa: el usuario había hecho un lienzo nuevo para que todos los
+  logos midieran igual, pero corregir uno significaba borrar la casa y
+  volver a añadirla — el nombre de la casa es solo texto en apuestas y
+  movimientos, no una clave foránea, así que no se habrían perdido, pero
+  el saldo de freebet sí, al vivir en la propia fila de "casas"). En
+  `DetalleCasa.jsx`, debajo del nombre y antes de la línea divisoria
+  (primer sitio propuesto: más abajo, después de la línea — cambiado por
+  petición directa), un enlace "✎ Cambiar logo"/"Añadir logo" y otro "✎
+  Cambiar nombre" (abre un campo de texto en línea con Guardar/Cancelar),
+  en el mismo sitio tanto en móvil (aquí no hay cabecera propia — la fila
+  de `ListadoCasas.jsx` ya muestra el nombre, así que este bloque va justo
+  debajo) como en el panel de escritorio (dentro de su propia cabecera).
+  - `useCasas.js`: `editarLogoCasa(nombre, logo)` (solo actualiza esa
+    fila) y `editarNombreCasa(nombreAnterior, nombreNuevo)` (bloquea el
+    cambio, igual que `agregarCasa`, si ya existe otra casa con ese
+    nombre — fundir dos casas en una no es el caso de uso; devuelve
+    `true`/`false` para que la UI pueda avisar si no se hizo).
+  - Renombrar (no el logo) tiene que tocar también las apuestas y
+    movimientos ya guardados, que referencian la casa por su nombre en
+    texto: `renombrarCasaEnApuestas` (`useApuestas.js`) y
+    `renombrarCasaEnMovimientos` (`useMovimientos.js`), disparadas juntas
+    desde `App.jsx` (`manejarRenombrarCasa`) solo si `editarNombreCasa`
+    confirma que el cambio se hizo — si no, esos dos no se disparan, para
+    no desincronizar nombres.
+  - `ListadoCasas.jsx`: si la casa renombrada es la que está abierta
+    (fila expandida en móvil, o panel de escritorio), `casaExpandida` seguía
+    el nombre viejo — sin actualizarla, el guard que cierra el panel al
+    borrar una casa ("ya no existe con ese nombre") lo habría cerrado
+    justo al terminar de renombrarla, como si se hubiera borrado.
