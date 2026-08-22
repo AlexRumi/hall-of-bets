@@ -5,7 +5,7 @@ import DetalleCasa from "./DetalleCasa";
 import ConfirmDialog from "./ConfirmDialog";
 import TarjetaBankroll from "./TarjetaBankroll";
 import PanelLateral from "./PanelLateral";
-import { calcularBankrollPorCasa } from "../utils/movimientos";
+import { calcularBankrollPorCasa, redondearCentimos } from "../utils/movimientos";
 import { calcularDesglosePorCasa } from "../utils/apuestas";
 
 const SIN_MOVIMIENTOS = { ingresos: 0, retiradas: 0, beneficio: 0, bankroll: 0, roiPct: 0 };
@@ -55,7 +55,7 @@ export default function ListadoCasas({
   });
   // Dinero real que hay ahora mismo entre todas las casas (el mismo cálculo
   // que "Bankroll actual" de cada tarjeta, sumado).
-  const bankrollTotal = bankrolls.reduce((suma, b) => suma + b.bankroll, 0);
+  const bankrollTotal = redondearCentimos(bankrolls.reduce((suma, b) => suma + b.bankroll, 0));
   // Saldo de freebet de todas las casas (Fase A: ver useCasas.js), sumando
   // los dos bankrolls — "Bankroll total" pasa a ser dinero real + freebets:
   // cuánto tienes en total para jugar ahora mismo, contando también lo

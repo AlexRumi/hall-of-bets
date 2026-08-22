@@ -187,6 +187,16 @@ export function calcularEstadisticas(apuestas) {
     stakePendienteReal: pendientes
       .filter((a) => a.tipoFondos !== "freebet")
       .reduce((suma, a) => suma + a.stake, 0),
+    // Mismo criterio que stakeTotalFreebet (arriba), pero solo sobre
+    // pendientes: cuánto freebet sigue "en juego", sin poder tocarse hasta
+    // que la apuesta se resuelva — se muestra aparte de stakePendienteReal
+    // (petición directa: no mezclar dinero real y freebet en una sola
+    // cifra, mismo criterio que ya sigue el resto de la app).
+    stakePendienteFreebet: pendientes.reduce(
+      (suma, a) =>
+        suma + (a.tipoFondos === "freebet" ? a.stake : a.tipoFondos === "mixta" ? a.stakeFreebet ?? 0 : 0),
+      0
+    ),
     beneficio,
     yieldPct: stakeTotalReal ? (beneficio / stakeTotalReal) * 100 : 0,
     aciertoPct: decididas.length

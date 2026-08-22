@@ -1,5 +1,15 @@
 import { calcularBeneficio } from "./apuestas";
 
+// Redondea a céntimos: encadenar sumas/restas de decimales en JS puede dejar
+// un resto minúsculo (ej. -0.0000000000002) que con toFixed(2) se ve como
+// "-0.00€" — un saldo que en realidad es 0 parece negativo. Se aplica al
+// bankroll final (y a cualquier suma posterior sobre él, ver PantallaInicio.jsx/
+// PanelEstadisticas.jsx/EstadisticasDashboard.jsx) para que nunca se enseñe
+// ese resto de coma flotante.
+export function redondearCentimos(valor) {
+  return Math.round(valor * 100) / 100;
+}
+
 // El bankroll real de una casa se calcula sobre sus movimientos y apuestas
 // — por defecto TODAS, combinando Apuestas y Entretenimiento (así se
 // calculaba antes de que movimientos tuviera categoría, y varias pantallas
@@ -50,7 +60,7 @@ export function calcularBankrollPorCasa(movimientos, apuestas, categoria = null)
         retiradas,
         beneficio,
         stakePendienteReal,
-        bankroll: ingresos - retiradas + beneficio - stakePendienteReal,
+        bankroll: redondearCentimos(ingresos - retiradas + beneficio - stakePendienteReal),
         roiPct: ingresos ? (beneficio / ingresos) * 100 : 0,
       };
     })

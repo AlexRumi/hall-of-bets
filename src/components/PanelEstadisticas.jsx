@@ -13,7 +13,7 @@ import CalendarioActividad from "./CalendarioActividad";
 import InsightsAutomaticos from "./InsightsAutomaticos";
 import TablaFrecuenciaMercados from "./TablaFrecuenciaMercados";
 import { calcularEstadisticas, filtrarPorPeriodo } from "../utils/apuestas";
-import { calcularBankrollPorCasa } from "../utils/movimientos";
+import { calcularBankrollPorCasa, redondearCentimos } from "../utils/movimientos";
 import {
   calcularBeneficioPorRangoCuota,
   calcularDesglosePorDeporte,
@@ -82,7 +82,7 @@ export default function PanelEstadisticas({ apuestas, movimientos, casas, oscuro
   const bankrollsPorCasa = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll);
   const dineroReal = hayFiltro
     ? bankrollsPorCasa.find((b) => b.casa === filtroCasa)?.bankroll ?? 0
-    : bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0);
+    : redondearCentimos(bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0));
   const freebets = casas
     .filter((c) => !hayFiltro || c.nombre === filtroCasa)
     .reduce((suma, c) => {
@@ -219,7 +219,10 @@ export default function PanelEstadisticas({ apuestas, movimientos, casas, oscuro
         {stats.stakeTotalFreebet > 0 && (
           <p className="text-xs text-slate mt-3 pt-3 border-t border-line">
             Además, {stats.stakeTotalFreebet.toFixed(2)}€ en stake de freebets (no cuenta en el
-            stake total ni en el yield).
+            stake total ni en el yield)
+            {stats.stakePendienteFreebet > 0 &&
+              `, de los cuales ${stats.stakePendienteFreebet.toFixed(2)}€ siguen en juego`}
+            .
           </p>
         )}
 

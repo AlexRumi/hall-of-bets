@@ -4707,3 +4707,42 @@ separadas, probando cada una antes de pasar a la siguiente.
   entre dispositivos). No hace falta validar el valor guardado contra una
   lista de secciones válidas: la cadena de condiciones de `App.jsx` ya
   cae en Estadísticas por defecto si no coincide con ninguna.
+
+- **"Otro bono" admite importes negativos** (`FormularioBono.jsx`) —
+  bug real detectado en directo: un bono metido de más (2,05€ en vez de
+  2€, mezclando por error 0,05€ de dinero real) no se podía corregir de
+  ninguna forma, porque a diferencia de un Ingreso/Retirada, un bono no
+  crea ningún movimiento en `movimientos` — solo suma directo al saldo de
+  freebet de la casa (`ajustarSaldoFreebet`), así que no había nada que
+  borrar en la lista de Movimientos. Quitado el `min="0.01"` del campo
+  Importe (sigue exigiendo que no sea exactamente 0): un importe negativo
+  resta del saldo igual que uno positivo suma, con una nota debajo del
+  campo explicándolo.
+
+- **"-0.00€" en vez de "0.00€", y un aviso falso de "supera el bankroll
+  disponible"** — dos síntomas de la misma causa, detectados juntos con
+  el caso de arriba: encadenar sumas y restas de decimales en
+  JavaScript puede dejar un resto minúsculo (ej. 0,0499999999999998 en
+  vez de 0,05 exacto) — ese resto hacía que un bankroll que en realidad
+  era 0€ se mostrara como "-0.00€", y que comparar un stake de 0,05€
+  contra ese bankroll "casi 0,05 pero no exactamente" disparara el aviso
+  de que el importe superaba lo disponible, aunque el usuario tenía
+  justo lo que hacía falta. Nueva `redondearCentimos(valor)` en
+  `utils/movimientos.js` (`Math.round(valor * 100) / 100`), aplicada al
+  `bankroll` que devuelve `calcularBankrollPorCasa` (la fuente de
+  prácticamente todos los importes de dinero real de la app) y a las
+  sumas posteriores sobre él en `PantallaInicio.jsx`, `ListadoCasas.jsx`,
+  `PanelEstadisticas.jsx` y `EstadisticasDashboard.jsx`.
+
+- **"En juego (freebet)", cifra aparte de "En juego"** (petición
+  directa, tras preguntar si convenía sumarlas: no, mismo criterio que ya
+  separa "Dinero real"/"Freebets" en toda la app, nunca mezclados salvo
+  en el titular "Bankroll total"). Nuevo campo `stakePendienteFreebet` en
+  `calcularEstadisticas` (`utils/apuestas.js`, mismo criterio que
+  `stakeTotalFreebet` pero solo sobre pendientes). Sexto recuadro en
+  Inicio (`PantallaInicio.jsx`, `sm:grid-cols-6` — con 6 tarjetas ya no
+  hace falta el `col-span-2` que llevaba "Racha actual" para no quedar
+  descentrada); en el panel y la página de Estadísticas (`PanelEstadisticas.jsx`/
+  `KpisEstadisticas.jsx`) se añade como una cláusula más a la nota que ya
+  existía sobre el stake de freebets ("... de los cuales Y€ siguen en
+  juego"), sin tocar la rejilla de tarjetas de esas dos vistas.

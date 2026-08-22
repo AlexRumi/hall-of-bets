@@ -19,7 +19,7 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
   function manejarEnvio(e) {
     e.preventDefault();
     const casaFinal = (casaFija ?? casa).trim();
-    if (!casaFinal || !importe) return;
+    if (!casaFinal || !importe || Number(importe) === 0) return;
 
     onAjustarSaldoFreebet(casaFinal, Number(importe), categoria);
 
@@ -71,7 +71,6 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
           <input
             type="number"
             step="0.01"
-            min="0.01"
             value={importe}
             onChange={(e) => setImporte(e.target.value)}
             required
@@ -79,6 +78,15 @@ export default function FormularioBono({ onAjustarSaldoFreebet, casas, casaFija 
           />
         </div>
       </div>
+
+      {/* Sin "min" positivo (a propósito): esta es la única forma de
+          corregir un bono metido de más — al no crear un movimiento
+          propio (ver comentario de arriba), no hay nada que "borrar" en
+          Movimientos. Un importe negativo aquí resta del saldo igual que
+          uno positivo suma (mismo ajustarSaldoFreebet de siempre). */}
+      <p className="text-xs text-slate">
+        Usa un importe negativo (ej. -2.05) para corregir un bono añadido de más.
+      </p>
 
       <button
         type="submit"

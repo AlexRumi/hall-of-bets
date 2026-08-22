@@ -12,7 +12,7 @@ import InsightsAutomaticos from "./InsightsAutomaticos";
 import TablaEstadisticasMercado from "./TablaEstadisticasMercado";
 import TablaFrecuenciaMercados from "./TablaFrecuenciaMercados";
 import { calcularDesglosePorCasa, filtrarPorRango } from "../utils/apuestas";
-import { calcularBankrollPorCasa } from "../utils/movimientos";
+import { calcularBankrollPorCasa, redondearCentimos } from "../utils/movimientos";
 import {
   calcularBeneficioPorRangoCuota,
   calcularDesglosePorDeporte,
@@ -94,7 +94,7 @@ export default function EstadisticasDashboard({
   const bankrollsPorCasa = calcularBankrollPorCasa(movimientosDelBankroll, apuestasDelBankroll);
   const dineroRealBankroll = hayFiltro
     ? bankrollsPorCasa.find((b) => b.casa === filtroCasa)?.bankroll ?? 0
-    : bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0);
+    : redondearCentimos(bankrollsPorCasa.reduce((suma, b) => suma + b.bankroll, 0));
   const freebetsBankroll = casas
     .filter((c) => !hayFiltro || c.nombre === filtroCasa)
     .reduce((suma, c) => {

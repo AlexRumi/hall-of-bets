@@ -94,7 +94,10 @@ export default function KpisEstadisticas({ apuestas, movimientos }) {
       {stats.stakeTotalFreebet > 0 && (
         <p className="text-xs text-slate mt-4 pt-4 border-t border-line">
           Además, {stats.stakeTotalFreebet.toFixed(2)}€ en stake de freebets
-          (no cuenta en el stake total ni en el yield).
+          (no cuenta en el stake total ni en el yield)
+          {stats.stakePendienteFreebet > 0 &&
+            `, de los cuales ${stats.stakePendienteFreebet.toFixed(2)}€ siguen en juego`}
+          .
         </p>
       )}
     </div>
