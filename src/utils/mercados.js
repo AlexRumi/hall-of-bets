@@ -207,6 +207,12 @@ const PLANTILLAS_JUGADOR = [
   { id: "asistencia", sufijo: " asistirá" },
   { id: "anota-o-asiste", sufijo: " anota o asiste" },
   ...plantillasLinea("remates-puerta", (l) => `: +${l} remates a puerta`),
+  // Dos mercados nuevos (petición directa), separados del genérico
+  // "Remates a puerta" de arriba — mismo patrón, otro prefijoId y otro
+  // sufijo, así que no compiten entre ellos en interpretarMercadoJugador
+  // (busca por sufijo exacto, y ninguno de los tres es sufijo de otro).
+  ...plantillasLinea("remates-puerta-cabeza", (l) => `: +${l} remates a puerta de cabeza`),
+  ...plantillasLinea("remates-puerta-fuera-area", (l) => `: +${l} remates a puerta fuera del área`),
   ...plantillasLinea("remates-totales", (l) => `: +${l} remates totales`),
   ...plantillasLinea("falta-cometida", (l) => ` comete +${l} faltas`),
   ...plantillasLinea("falta-recibida", (l) => ` recibe +${l} faltas`),
@@ -232,6 +238,12 @@ const OPCIONES_JUGADOR_ANOTA_O_ASISTE = opcionesJugador(["anota-o-asiste"]);
 // mezcladas).
 const OPCIONES_JUGADOR_REMATES = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-totales-${l}`));
 const OPCIONES_JUGADOR_REMATES_PUERTA = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-puerta-${l}`));
+const OPCIONES_JUGADOR_REMATES_PUERTA_CABEZA = opcionesJugador(
+  LINEAS_JUGADOR.map((l) => `remates-puerta-cabeza-${l}`)
+);
+const OPCIONES_JUGADOR_REMATES_PUERTA_FUERA_AREA = opcionesJugador(
+  LINEAS_JUGADOR.map((l) => `remates-puerta-fuera-area-${l}`)
+);
 // "Faltas" se divide en Comete/Recibe (petición directa, subcategoría
 // nueva) — ver ARBOL_MERCADOS más abajo.
 const OPCIONES_JUGADOR_FALTAS_COMETE = opcionesJugador(LINEAS_JUGADOR.map((l) => `falta-cometida-${l}`));
@@ -282,17 +294,29 @@ const OPCIONES_AMBAS_MITADES_GOL = [
 ];
 
 // Mismo mercado que el total pero acotado a una parte (líneas más cortas,
-// tiene menos sentido un "over 6.5" en 45 minutos) — sin mencionar la
-// mitad en el texto, un mercado sin ambigüedad porque no compite con
-// "goles por equipo" por nombre de equipo.
-function opcionesGolesMedioTiempo(prefijoId) {
+// tiene menos sentido un "over 6.5" en 45 minutos). Bug real: al no
+// mencionar la mitad en el texto, "Over 0.5 goles" de la 1ª mitad se veía
+// (y se guardaba) exactamente igual que el "Over 0.5 goles" del partido
+// completo — buscarMercadoPorTexto (más abajo) recorre las categorías en
+// orden y "Goles" va antes que "Goles 1ª/2ª mitad", así que una selección
+// de mitad se etiquetaba siempre como del partido completo. Se prefija
+// con la mitad y se usa "+/-" en vez de "Over/Under" (mismo estilo que ya
+// usa opcionesGolesEquipo para el mismo motivo: no competir por texto con
+// otro mercado de la misma categoría).
+function opcionesGolesMedioTiempo(prefijoId, etiquetaMitad) {
   return [
-    ...LINEAS_GOLES_MEDIO.map((l) => ({ id: `${prefijoId}-over-${l}`, texto: () => `Over ${l} goles` })),
-    ...LINEAS_GOLES_MEDIO.map((l) => ({ id: `${prefijoId}-under-${l}`, texto: () => `Under ${l} goles` })),
+    ...LINEAS_GOLES_MEDIO.map((l) => ({
+      id: `${prefijoId}-over-${l}`,
+      texto: () => `${etiquetaMitad}: +${l} goles`,
+    })),
+    ...LINEAS_GOLES_MEDIO.map((l) => ({
+      id: `${prefijoId}-under-${l}`,
+      texto: () => `${etiquetaMitad}: -${l} goles`,
+    })),
   ];
 }
-const OPCIONES_GOLES_1T = opcionesGolesMedioTiempo("g1t");
-const OPCIONES_GOLES_2T = opcionesGolesMedioTiempo("g2t");
+const OPCIONES_GOLES_1T = opcionesGolesMedioTiempo("g1t", "1ª mitad");
+const OPCIONES_GOLES_2T = opcionesGolesMedioTiempo("g2t", "2ª mitad");
 
 function opcionesGolesEquipo(clave) {
   return [
@@ -569,6 +593,28 @@ const OPCIONES_EXPULSION = [
   { id: "expulsion-no", texto: () => "Tarjeta roja: No" },
 ];
 
+// Un equipo recibe tarjeta en una mitad concreta (petición directa,
+// faltaba en el catálogo) — Sí/No por equipo y por mitad, mismo patrón
+// que OPCIONES_PRIMERA_TARJETA/OPCIONES_AMBOS_TARJETA (escrito a mano en
+// vez de con opcionesEspecialEquipo: aquí hace falta Sí Y No para cada
+// equipo, no un único texto por equipo).
+function opcionesTarjetaEquipoMitad(prefijoId, etiquetaMitad) {
+  return [
+    { id: `tarjeta-${prefijoId}-local-si`, texto: (eq) => `${eq.local} recibe tarjeta en la ${etiquetaMitad}: Sí` },
+    { id: `tarjeta-${prefijoId}-local-no`, texto: (eq) => `${eq.local} recibe tarjeta en la ${etiquetaMitad}: No` },
+    {
+      id: `tarjeta-${prefijoId}-visitante-si`,
+      texto: (eq) => `${eq.visitante} recibe tarjeta en la ${etiquetaMitad}: Sí`,
+    },
+    {
+      id: `tarjeta-${prefijoId}-visitante-no`,
+      texto: (eq) => `${eq.visitante} recibe tarjeta en la ${etiquetaMitad}: No`,
+    },
+  ];
+}
+const OPCIONES_TARJETA_EQUIPO_1T = opcionesTarjetaEquipoMitad("1t", "1ª mitad");
+const OPCIONES_TARJETA_EQUIPO_2T = opcionesTarjetaEquipoMitad("2t", "2ª mitad");
+
 // ---------------------------------------------------------------------
 // Equipo — mayor número, y Especiales
 // ---------------------------------------------------------------------
@@ -761,6 +807,8 @@ export const CATEGORIAS_MERCADO = [
       ...OPCIONES_TARJETAS_UNDER,
       ...OPCIONES_TARJETAS_EQUIPO_LOCAL,
       ...OPCIONES_TARJETAS_EQUIPO_VISITANTE,
+      ...OPCIONES_TARJETA_EQUIPO_1T,
+      ...OPCIONES_TARJETA_EQUIPO_2T,
       ...OPCIONES_PRIMERA_TARJETA,
       ...OPCIONES_AMBOS_TARJETA,
       ...OPCIONES_AMBOS_DOS_TARJETAS,
@@ -864,6 +912,16 @@ export const ARBOL_MERCADOS = [
       { id: "anota-o-asiste", etiqueta: "Anotará o Asistirá", opciones: OPCIONES_JUGADOR_ANOTA_O_ASISTE },
       { id: "remates", etiqueta: "Remates", opciones: OPCIONES_JUGADOR_REMATES },
       { id: "remates-puerta", etiqueta: "Remates a puerta", opciones: OPCIONES_JUGADOR_REMATES_PUERTA },
+      {
+        id: "remates-puerta-cabeza",
+        etiqueta: "Remates a puerta de cabeza",
+        opciones: OPCIONES_JUGADOR_REMATES_PUERTA_CABEZA,
+      },
+      {
+        id: "remates-puerta-fuera-area",
+        etiqueta: "Remates a puerta fuera del área",
+        opciones: OPCIONES_JUGADOR_REMATES_PUERTA_FUERA_AREA,
+      },
       {
         id: "faltas",
         etiqueta: "Faltas",
@@ -1038,6 +1096,14 @@ export const ARBOL_MERCADOS = [
         subcategorias: [
           { id: "local", etiqueta: "Local", opciones: OPCIONES_TARJETAS_EQUIPO_LOCAL },
           { id: "visitante", etiqueta: "Visitante", opciones: OPCIONES_TARJETAS_EQUIPO_VISITANTE },
+        ],
+      },
+      {
+        id: "recibe-tarjeta-mitad",
+        etiqueta: "Recibe tarjeta por mitad",
+        subcategorias: [
+          { id: "1t", etiqueta: "1ª mitad", opciones: OPCIONES_TARJETA_EQUIPO_1T },
+          { id: "2t", etiqueta: "2ª mitad", opciones: OPCIONES_TARJETA_EQUIPO_2T },
         ],
       },
       { id: "primera-tarjeta", etiqueta: "Primera tarjeta", opciones: OPCIONES_PRIMERA_TARJETA },

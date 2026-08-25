@@ -4746,3 +4746,24 @@ separadas, probando cada una antes de pasar a la siguiente.
   `KpisEstadisticas.jsx`) se añade como una cláusula más a la nota que ya
   existía sobre el stake de freebets ("... de los cuales Y€ siguen en
   juego"), sin tocar la rejilla de tarjetas de esas dos vistas.
+
+- **Tres retoques al catálogo de mercados** (`src/utils/mercados.js`,
+  petición directa):
+  - **Goles 1ª/2ª mitad, texto distinto del mercado general** — bug real
+    detectado en el ticket ("Over 0.5 goles" de la 1ª mitad se veía
+    exactamente igual que el "Over 0.5 goles" de todo el partido, y por
+    tanto también se confundían al editar: `buscarMercadoPorTexto`
+    recorre `CATEGORIAS_MERCADO` en orden y "Goles" va antes que "Goles
+    1ª/2ª mitad", así que una selección de mitad siempre se reconocía
+    como del partido completo). Texto nuevo: "1ª mitad: +0.5 goles"/"1ª
+    mitad: -0.5 goles" (mismo estilo "+/-" que ya usa "Goles por
+    equipo", por el mismo motivo: no competir por texto con otro
+    mercado).
+  - **Nuevo mercado "Recibe tarjeta por mitad"** (categoría Tarjetas):
+    Sí/No por equipo y por mitad (1ª/2ª) — faltaba en el catálogo.
+  - **Dos mercados nuevos en Jugador**: "Remates a puerta de cabeza" y
+    "Remates a puerta fuera del área", mismas líneas (0.5 a 4.5) que el
+    resto de mercados de jugador — sufijos de texto distintos de
+    "Remates a puerta" a secas, para no chocar en
+    `interpretarMercadoJugador` (que reconoce la plantilla por el final
+    exacto del texto guardado).
