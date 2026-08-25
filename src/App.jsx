@@ -300,23 +300,44 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   // entero (todos sus picks a la vez, ver marcarResultadoGrupo) — el
   // resultado real de la apuesta (el que mueve beneficio, freebet, racha
   // y trofeos) se deriva solo de los partidos, no se pone a mano en
-  // ningún sitio. En cuanto cambia de verdad, reutiliza
-  // manejarMarcarResultado de arriba, con los mismos efectos de freebet
-  // de siempre. Si la apuesta ya se cerró con Cash Out, los partidos se
+  // ningún sitio. Si la apuesta ya se cerró con Cash Out, los partidos se
   // pueden seguir marcando para llevar el registro, pero ya no pisan ese
   // resultado.
+  //
+  // Bug real: antes, en cuanto el resultado derivado cambiaba, se llamaba
+  // a manejarMarcarResultado (arriba) para actualizarlo — una SEGUNDA
+  // escritura a "apuestas" totalmente independiente de la de
+  // marcarResultadoGrupo, disparada justo después sin esperarla. Las dos
+  // respuestas de Supabase podían llegar en cualquier orden y se pisaban
+  // la una a la otra en el estado local: se veía como un parpadeo entre
+  // "Ganada" y "Pendiente" antes de asentarse en el valor correcto. Ahora
+  // se pasa el resultado nuevo a marcarResultadoGrupo para que lo escriba
+  // TODO en una sola llamada; el ajuste de saldo de freebet (mismo cálculo
+  // por diferencia que ya usa manejarMarcarResultado) se aplica aparte,
+  // sin volver a tocar la fila de "apuestas".
   function manejarMarcarResultadoPartido(id, indices, resultado) {
     const apuesta = apuestas.find((a) => a.id === id);
     if (!apuesta) return;
-    marcarResultadoGrupo(id, indices, resultado);
-    if (apuesta.resultado === "cashout") return;
+    if (apuesta.resultado === "cashout") {
+      marcarResultadoGrupo(id, indices, resultado);
+      return;
+    }
 
     const nuevasSelecciones = apuesta.selecciones.map((s, i) =>
       indices.includes(i) ? { ...s, resultado } : s
     );
     const nuevoResultado = derivarResultadoApuesta(agruparSeleccionesPorPartido(nuevasSelecciones));
-    if (nuevoResultado !== apuesta.resultado) {
-      manejarMarcarResultado(id, nuevoResultado);
+    const cambiaResultado = nuevoResultado !== apuesta.resultado;
+
+    marcarResultadoGrupo(id, indices, resultado, cambiaResultado ? nuevoResultado : null);
+
+    if (cambiaResultado) {
+      const delta =
+        efectoFreebetPorResultado(apuesta, nuevoResultado) -
+        efectoFreebetPorResultado(apuesta, apuesta.resultado);
+      if (delta !== 0) {
+        ajustarSaldoFreebet(apuesta.casa, delta, apuesta.categoria);
+      }
     }
   }
 

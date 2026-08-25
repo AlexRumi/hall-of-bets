@@ -204,7 +204,16 @@ export function useApuestas(userId) {
   // de una vez, no mercado a mercado), así que en una sola escritura basta
   // — "una llamada menos" que si se marcara pick a pick. Al no haber una
   // columna propia por selección (jsonb), se reescribe el array completo.
-  async function marcarResultadoGrupo(id, indices, resultado) {
+  //
+  // "nuevoResultadoApuesta" (opcional): si el resultado de TODA la apuesta
+  // cambia como consecuencia de este partido, se actualiza en la MISMA
+  // escritura — App.jsx (manejarMarcarResultadoPartido) lo calcula y lo
+  // pasa aquí. Bug real: antes eran dos llamadas independientes (esta
+  // función + marcarResultado, cada una con su propio await), una carrera
+  // de verdad entre sus dos respuestas — cuál llegaba después pisaba a la
+  // otra en el estado local, y se veía como un parpadeo entre "Ganada" y
+  // "Pendiente" antes de asentarse (detectado con capturas de un usuario).
+  async function marcarResultadoGrupo(id, indices, resultado, nuevoResultadoApuesta = null) {
     const apuestaActual = apuestas.find((a) => a.id === id);
     if (!apuestaActual) return;
 
@@ -222,11 +231,17 @@ export function useApuestas(userId) {
     const limpiarCuotaManual =
       (eraNula || resultado === "nula") && apuestaActual.cuotaTotalManual != null;
 
+    const cambiaResultadoApuesta =
+      nuevoResultadoApuesta != null && nuevoResultadoApuesta !== apuestaActual.resultado;
+
     const { data, error } = await supabase
       .from("apuestas")
       .update({
         selecciones: nuevasSelecciones,
         ...(limpiarCuotaManual ? { cuota_total_manual: null } : {}),
+        ...(cambiaResultadoApuesta
+          ? { resultado: nuevoResultadoApuesta, cashout_importe: null }
+          : {}),
       })
       .eq("id", id)
       .select()

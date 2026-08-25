@@ -4767,3 +4767,56 @@ separadas, probando cada una antes de pasar a la siguiente.
     "Remates a puerta" a secas, para no chocar en
     `interpretarMercadoJugador` (que reconoce la plantilla por el final
     exacto del texto guardado).
+
+- **"Flash" al marcar un partido en "Historial > Pendientes"** (petición
+  directa, reportado con capturas y vídeo reales — sesión larga de
+  diagnóstico, con varias causas reales encontradas por el camino, cada
+  una corregida aunque no fuera la definitiva):
+  - **Causa raíz, la que de verdad lo producía**: `ListaApuestas.jsx`
+    tenía una salida temprana ("si la lista ya filtrada está vacía, no
+    pintes nada más") que vivía ANTES de calcular el panel de detalle del
+    ticket abierto. Con una sola apuesta pendiente visible en el filtro
+    "Pendientes", marcarla resuelta vaciaba esa lista al instante — y esa
+    salida temprana se llevaba también el panel por delante durante un
+    frame entero (aunque el ticket seguía abierto y con datos correctos,
+    buscado aparte en `todasApuestas`), viéndose como un parpadeo/"salto".
+    Se mueve el caso "lista vacía" a dentro de "contenido", para que el
+    buscador y el panel se sigan pintando pase lo que pase con la lista
+    visible.
+  - **Bug real #1 (encontrado primero, corregido, no era el definitivo)**:
+    el panel buscaba la apuesta abierta en la lista YA FILTRADA en vez de
+    en `todasApuestas` — en "Pendientes", marcar un resultado hacía que la
+    apuesta dejara de cumplir el filtro y el panel se cerrara solo, sin
+    dejar corregir a Perdida/Nula si el primer clic había sido un error.
+  - **Bug real #2**: `manejarMarcarResultadoPartido` (`App.jsx`) disparaba
+    DOS escrituras independientes a la fila de "apuestas" desde un mismo
+    clic (`marcarResultadoGrupo` + `manejarMarcarResultado`, cada una con
+    su propio `await`), sin esperar la primera antes de lanzar la
+    segunda — una carrera real: sus dos respuestas podían llegar en
+    cualquier orden y pisarse la una a la otra, viéndose como un
+    parpadeo entre "Ganada" y "Pendiente" antes de asentarse (confirmado
+    con la pestaña Red del navegador: pasó de 2 peticiones a 1 tras
+    corregirlo). `marcarResultadoGrupo` (`useApuestas.js`) gana un cuarto
+    parámetro opcional (el nuevo resultado de la apuesta, si cambia) para
+    escribir las dos cosas en una sola llamada; el ajuste de saldo de
+    freebet se aplica aparte, sin volver a tocar "apuestas".
+  - **Detalle menor, corregido de paso**: la pastilla de estado general
+    del ticket (arriba a la derecha, "PENDIENTE"/"GANADA"/...) no tenía
+    ancho mínimo — al encoger con una palabra más corta, podía recolocar
+    el resto de etiquetas de esa fila (`flex-wrap`). Ahora lleva
+    `min-w-[88px]`.
+  - **Efecto secundario, detectado y corregido tras un intento fallido**:
+    se probó a reservar siempre el hueco de la barra de scroll vertical
+    (`overflow-y: scroll` en `html`, por si el parpadeo venía de ahí en
+    escritorio) — rompía el ancho de la página en MÓVIL (barra de scroll
+    táctil "overlay", sin hueco propio; capturas reales mostrando el
+    "Hall of Bets" cortado y la barra inferior desbordada). Se acotó a
+    `@media (min-width: 768px)`. De paso, se encontró y arregló el fallo
+    real de móvil que esto no causaba pero que quedó al descubierto: la
+    fila de pastillas de Historial ("Todas/Apuestas/Entretenimiento/
+    Pendientes") no cabía en una línea en pantallas estrechas y
+    desbordaba, desplazando toda la página hacia el lado al llegar con
+    "Pendientes" ya seleccionada (fuera de la vista) — arreglado con
+    `flex-wrap` en esa fila, más `overflow-x: hidden` en `html`/`body`
+    como red de seguridad general (la página nunca debería poder
+    desplazarse hacia los lados por un hijo que desborda).

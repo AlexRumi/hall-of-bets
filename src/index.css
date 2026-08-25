@@ -43,9 +43,37 @@
   --color-cashout: 111 168 220;
 }
 
+html,
+body {
+  /* Red de seguridad: la página nunca debe poder desplazarse hacia los
+     lados (algún hijo desbordando por accidente, ej. una fila de
+     pastillas que no cabe en móvil, es el bug real que lo disparó). Un
+     contenido concreto que sí necesite scroll horizontal debe llevar su
+     propio overflow-x-auto, no depender de que la página entera se mueva. */
+  overflow-x: hidden;
+}
+
 body {
   background: var(--color-fondo);
   font-family: "Inter", sans-serif;
+}
+
+/* Bug real: en "Historial > Pendientes" (solo escritorio, con el panel
+   lateral de detalle — ver PanelLateral.jsx), marcar una apuesta quitaba su
+   fila de la lista (deja de estar pendiente) y, si eso hacía que la página
+   ya no necesitara barra de scroll vertical, el ancho real de la ventana
+   cambiaba de golpe — desplazando todo lo posicionado "fixed" (el panel),
+   como si "saltara". Reservando siempre el hueco de la barra en escritorio,
+   el ancho nunca cambia por esto.
+   A propósito SOLO desde "md:" (768px, mismo corte que el resto de la app
+   para "es escritorio"): en móvil no hay panel lateral que se pueda
+   desplazar, y forzar esto ahí rompía el ancho de la página (barra de
+   scroll táctil "overlay", sin hueco propio — reservarle uno de todos
+   modos desajustaba el resto del layout, detectado con capturas reales). */
+@media (min-width: 768px) {
+  html {
+    overflow-y: scroll;
+  }
 }
 
 /* Los inputs/selects nativos del navegador pintan su propio gris de sistema

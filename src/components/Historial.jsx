@@ -55,7 +55,14 @@ export default function Historial({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-center gap-2">
+      {/* flex-wrap (bug real): con las 4 pastillas (sobre todo
+          "Entretenimiento", la más larga) no cabían en una sola línea en
+          móvil — al llegar aquí con "Pendientes" ya seleccionada (la
+          última, fuera de la pantalla), el navegador desplazaba toda la
+          página hacia la derecha para dejarla a la vista. Envolviendo en
+          una segunda línea en vez de desbordar, la página ya no tiene
+          motivo para moverse. */}
+      <div className="flex flex-wrap justify-center gap-2">
         {PASTILLAS.map(({ id, etiqueta }) => (
           <button
             key={etiqueta}

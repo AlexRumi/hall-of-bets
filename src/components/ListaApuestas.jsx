@@ -48,23 +48,37 @@ export default function ListaApuestas({
   const [overrides, setOverrides] = useState({});
   const [busqueda, setBusqueda] = useState("");
 
-  const apuestaAbierta = apuestas.find((a) => a.id === apuestaAbiertaId) ?? null;
+  // Se busca en "todasApuestas" (sin filtrar), no en "apuestas" (la lista
+  // que se ve, ya filtrada) — Bug real: en un filtro por resultado (ej.
+  // "Pendientes" de Historial.jsx), marcar un resultado hacía que la
+  // apuesta dejara de cumplir el filtro y desapareciera de "apuestas" al
+  // instante, cerrando el panel de detalle solo a mitad de marcarla (sin
+  // dejar corregir a Perdida/Nula si el primer clic había sido un error).
+  // Buscarla en la lista completa mantiene el panel abierto con los datos
+  // en vivo hasta que el usuario lo cierre a propósito.
+  const apuestaAbierta = (todasApuestas ?? apuestas).find((a) => a.id === apuestaAbiertaId) ?? null;
 
   useEffect(() => {
     if (apuestaAbiertaId && !apuestaAbierta) setApuestaAbiertaId(null);
   }, [apuestaAbiertaId, apuestaAbierta]);
 
-  if (apuestas.length === 0) {
-    return (
-      <p className="text-center text-sm text-slate py-10">
-        Todavía no hay apuestas registradas.
-      </p>
-    );
-  }
-
   const apuestasVisibles = agrupada ? apuestas.filter((a) => coincideApuesta(a, busqueda)) : apuestas;
 
-  const contenido = !agrupada ? (
+  // Bug real: esto vivía como un "return" temprano nada más entrar al
+  // componente, ANTES de calcular "apuestaAbierta"/el panel de detalle. Con
+  // un filtro por resultado (ej. "Pendientes" de Historial.jsx) y una sola
+  // apuesta pendiente en pantalla, marcarla resuelta vaciaba esta lista al
+  // instante — y ese "return" temprano se saltaba también el panel del
+  // ticket que seguía abierto, aunque la apuesta siguiera existiendo
+  // perfectamente (se buscaba en todasApuestas, no en esta lista filtrada).
+  // Se veía como un parpadeo: el panel desaparecía un frame entero. Ahora
+  // es un caso más de "contenido", así que el resto (buscador, panel) sigue
+  // rendered sin importar si la lista visible está vacía.
+  const contenido = apuestas.length === 0 ? (
+    <p className="text-center text-sm text-slate py-10">
+      Todavía no hay apuestas registradas.
+    </p>
+  ) : !agrupada ? (
     <div className="space-y-2">
       {apuestasVisibles.map((apuesta) => (
         <TarjetaApuestaResumen

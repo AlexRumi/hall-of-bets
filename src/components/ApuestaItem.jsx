@@ -227,8 +227,13 @@ export default function ApuestaItem({
         {apuesta.archivado && (
           <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-void/10 text-void">Archivada</span>
         )}
+        {/* min-w fijo (bug real): sin él, "PENDIENTE" (más larga) → "GANADA"
+            (más corta) encogía esta pastilla, y al estar en una fila que
+            envuelve (flex-wrap) con el resto de etiquetas, el hueco que
+            dejaba libre hacía que la fila recolocara todo de golpe — se
+            veía como un salto/flash al marcar un resultado. */}
         <span
-          className={`ml-auto shrink-0 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-lg ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}
+          className={`ml-auto shrink-0 min-w-[88px] text-center text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-lg ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}
         >
           {ETIQUETAS_RESULTADO[apuesta.resultado]}
         </span>
