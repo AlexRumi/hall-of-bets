@@ -4820,3 +4820,21 @@ separadas, probando cada una antes de pasar a la siguiente.
     `flex-wrap` en esa fila, más `overflow-x: hidden` en `html`/`body`
     como red de seguridad general (la página nunca debería poder
     desplazarse hacia los lados por un hijo que desborda).
+
+- **Dos ampliaciones al catálogo de mercados de Goles** (`src/utils/mercados.js`,
+  petición directa — después de probar un rediseño completo del selector
+  que finalmente se descartó y se revirtió por completo, sin subir nada
+  de eso):
+  - **Mercado nuevo "Portería a cero"**: Local/Visitante, Sí/No cada uno
+    (`opcionesPorteriaCero`) — distinto de "Gana a cero" (categoría
+    Especiales, que además exige ganar el partido), con ids propios
+    (`porteria-cero-*`) para no chocar con ese.
+  - **"Por equipo y mitad" gana la pastilla de equipo**: antes iba
+    mitad → Over/Under con los dos equipos mezclados en la misma lista;
+    ahora es mitad → **Local/Visitante** → Over/Under, con las mismas
+    líneas de siempre (nada inventado, solo reorganizado). Esto obligó a
+    añadir un **5º nivel de navegación** a `SelectorMercado.jsx`
+    (`nivel5Activa`/`elegirNivel4`/`tieneNivel5`/`nivel5Node`, mismo
+    patrón que ya tenía el 4º nivel) y a `rutaEnArbol` (para poder abrir
+    el árbol ya posicionado al editar una apuesta con este mercado) —
+    antes el selector solo llegaba a 4 niveles de profundidad.

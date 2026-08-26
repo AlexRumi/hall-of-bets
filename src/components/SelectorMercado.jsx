@@ -206,6 +206,9 @@ export default function SelectorMercado({
   // mitad → Over/Under) — mismo principio de crecimiento progresivo que
   // los otros tres, sin auto-elegir nada.
   const [nivel4Activa, setNivel4Activa] = useState(() => rutaInicial?.nivel4Id ?? null);
+  // 5º nivel (petición directa: Goles "por equipo y mitad" pasa a mitad →
+  // equipo → Over/Under) — mismo principio, un escalón más abajo.
+  const [nivel5Activa, setNivel5Activa] = useState(() => rutaInicial?.nivel5Id ?? null);
 
   // Bug real (2026-08-10): al elegir un mercado, el panel (buscador +
   // pestañas + lista) se quedaba abierto sin ninguna señal de que ya se
@@ -275,17 +278,25 @@ export default function SelectorMercado({
     setSubActiva(nodo?.subcategorias.length === 1 ? nodo.subcategorias[0].id : null);
     setNivel3Activa(null);
     setNivel4Activa(null);
+    setNivel5Activa(null);
   }
 
   function elegirSub(id) {
     setSubActiva(id);
     setNivel3Activa(null);
     setNivel4Activa(null);
+    setNivel5Activa(null);
   }
 
   function elegirNivel3(id) {
     setNivel3Activa(id);
     setNivel4Activa(null);
+    setNivel5Activa(null);
+  }
+
+  function elegirNivel4(id) {
+    setNivel4Activa(id);
+    setNivel5Activa(null);
   }
 
   function cambiarEquipoJugador(clave) {
@@ -328,7 +339,15 @@ export default function SelectorMercado({
   const nivel4Node = tieneNivel4
     ? nivel3Node.subcategorias.find((n) => n.id === nivel4Activa) ?? null
     : null;
-  const opcionesActuales = tieneNivel4
+  // 5º nivel (p.ej. Goles "por equipo y mitad": mitad → equipo →
+  // Over/Under) — mismo patrón, un escalón más abajo todavía.
+  const tieneNivel5 = !!(nivel4Node && nivel4Node.subcategorias);
+  const nivel5Node = tieneNivel5
+    ? nivel4Node.subcategorias.find((n) => n.id === nivel5Activa) ?? null
+    : null;
+  const opcionesActuales = tieneNivel5
+    ? nivel5Node?.opciones ?? []
+    : tieneNivel4
     ? nivel4Node?.opciones ?? []
     : tieneNivel3
     ? nivel3Node?.opciones ?? []
@@ -479,7 +498,20 @@ export default function SelectorMercado({
             <TabsDesplazables
               opciones={nivel3Node.subcategorias.map((n) => ({ valor: n.id, texto: n.etiqueta }))}
               valor={nivel4Activa}
-              onElegir={setNivel4Activa}
+              onElegir={elegirNivel4}
+              colorActivo="gold"
+              compacto
+            />
+          )}
+
+          {/* 5º nivel (petición directa: Goles "por equipo y mitad" pasa a
+              mitad → equipo → Over/Under) — mismo componente, un escalón
+              más abajo todavía. */}
+          {tieneNivel5 && (
+            <TabsDesplazables
+              opciones={nivel4Node.subcategorias.map((n) => ({ valor: n.id, texto: n.etiqueta }))}
+              valor={nivel5Activa}
+              onElegir={setNivel5Activa}
               colorActivo="gold"
               compacto
             />

@@ -293,6 +293,20 @@ const OPCIONES_AMBAS_MITADES_GOL = [
   { id: "gol-ambas-mitades-no", texto: () => "Gol en ambas mitades: No" },
 ];
 
+// "Portería a cero" (petición directa): a diferencia de "Gana a cero"
+// (más abajo, en Especiales — exige además ganar el partido), aquí solo
+// importa si el equipo encaja o no algún gol, Sí/No por separado para
+// cada equipo — ids propios, no se reutilizan los de "Gana a cero". Un
+// solo ":" en el texto.
+function opcionesPorteriaCero(clave) {
+  return [
+    { id: `porteria-cero-${clave}-si`, texto: (eq) => `${eq[clave]} - Portería a cero: Sí` },
+    { id: `porteria-cero-${clave}-no`, texto: (eq) => `${eq[clave]} - Portería a cero: No` },
+  ];
+}
+const OPCIONES_PORTERIA_CERO_LOCAL = opcionesPorteriaCero("local");
+const OPCIONES_PORTERIA_CERO_VISITANTE = opcionesPorteriaCero("visitante");
+
 // Mismo mercado que el total pero acotado a una parte (líneas más cortas,
 // tiene menos sentido un "over 6.5" en 45 minutos). Bug real: al no
 // mencionar la mitad en el texto, "Over 0.5 goles" de la 1ª mitad se veía
@@ -737,6 +751,8 @@ export const CATEGORIAS_MERCADO = [
       ...OPCIONES_GOLES_UNDER,
       ...OPCIONES_AMBOS_MARCAN,
       ...OPCIONES_AMBAS_MITADES_GOL,
+      ...OPCIONES_PORTERIA_CERO_LOCAL,
+      ...OPCIONES_PORTERIA_CERO_VISITANTE,
     ],
   },
   { id: "goles-1t", etiqueta: "Goles 1ª mitad", opciones: OPCIONES_GOLES_1T },
@@ -943,6 +959,14 @@ export const ARBOL_MERCADOS = [
       { id: "under", etiqueta: "Under", opciones: OPCIONES_GOLES_UNDER },
       { id: "ambos-marcan", etiqueta: "Ambos marcan", opciones: OPCIONES_AMBOS_MARCAN },
       { id: "ambas-mitades", etiqueta: "Ambas mitades", opciones: OPCIONES_AMBAS_MITADES_GOL },
+      {
+        id: "porteria-cero",
+        etiqueta: "Portería a cero",
+        subcategorias: [
+          { id: "local", etiqueta: "Local", opciones: OPCIONES_PORTERIA_CERO_LOCAL },
+          { id: "visitante", etiqueta: "Visitante", opciones: OPCIONES_PORTERIA_CERO_VISITANTE },
+        ],
+      },
       { id: "1t", etiqueta: "1ª mitad", opciones: OPCIONES_GOLES_1T },
       { id: "2t", etiqueta: "2ª mitad", opciones: OPCIONES_GOLES_2T },
       {
@@ -956,21 +980,52 @@ export const ARBOL_MERCADOS = [
       {
         id: "por-equipo-mitades",
         etiqueta: "Por equipo y mitad",
+        // Petición directa: mitad → equipo (Local/Visitante) → Over/Under,
+        // un 5º nivel de navegación (ver rutaEnArbol/SelectorMercado.jsx) —
+        // mismo patrón que el 4º, un escalón más abajo.
         subcategorias: [
           {
             id: "1t",
             etiqueta: "1ª mitad",
             subcategorias: [
-              { id: "over", etiqueta: "Over", opciones: OPCIONES_GOLES_EQUIPO_1T_OVER },
-              { id: "under", etiqueta: "Under", opciones: OPCIONES_GOLES_EQUIPO_1T_UNDER },
+              {
+                id: "local",
+                etiqueta: "Local",
+                subcategorias: [
+                  { id: "over", etiqueta: "Over", opciones: GOLES_EQUIPO_LOCAL_1T.over },
+                  { id: "under", etiqueta: "Under", opciones: GOLES_EQUIPO_LOCAL_1T.under },
+                ],
+              },
+              {
+                id: "visitante",
+                etiqueta: "Visitante",
+                subcategorias: [
+                  { id: "over", etiqueta: "Over", opciones: GOLES_EQUIPO_VISITANTE_1T.over },
+                  { id: "under", etiqueta: "Under", opciones: GOLES_EQUIPO_VISITANTE_1T.under },
+                ],
+              },
             ],
           },
           {
             id: "2t",
             etiqueta: "2ª mitad",
             subcategorias: [
-              { id: "over", etiqueta: "Over", opciones: OPCIONES_GOLES_EQUIPO_2T_OVER },
-              { id: "under", etiqueta: "Under", opciones: OPCIONES_GOLES_EQUIPO_2T_UNDER },
+              {
+                id: "local",
+                etiqueta: "Local",
+                subcategorias: [
+                  { id: "over", etiqueta: "Over", opciones: GOLES_EQUIPO_LOCAL_2T.over },
+                  { id: "under", etiqueta: "Under", opciones: GOLES_EQUIPO_LOCAL_2T.under },
+                ],
+              },
+              {
+                id: "visitante",
+                etiqueta: "Visitante",
+                subcategorias: [
+                  { id: "over", etiqueta: "Over", opciones: GOLES_EQUIPO_VISITANTE_2T.over },
+                  { id: "under", etiqueta: "Under", opciones: GOLES_EQUIPO_VISITANTE_2T.under },
+                ],
+              },
             ],
           },
         ],
@@ -1136,26 +1191,53 @@ export function rutaEnArbol(opcionId) {
     for (const sub of categoria.subcategorias) {
       if (sub.opciones) {
         if (sub.opciones.some((o) => o.id === opcionId)) {
-          return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: null, nivel4Id: null };
+          return {
+            categoriaId: categoria.id,
+            subcategoriaId: sub.id,
+            nivel3Id: null,
+            nivel4Id: null,
+            nivel5Id: null,
+          };
         }
         continue;
       }
       for (const nivel3 of sub.subcategorias) {
         if (nivel3.opciones) {
           if (nivel3.opciones.some((o) => o.id === opcionId)) {
-            return { categoriaId: categoria.id, subcategoriaId: sub.id, nivel3Id: nivel3.id, nivel4Id: null };
-          }
-          continue;
-        }
-        // 4º nivel (p.ej. Goles/Córners "por equipo y mitad": mitad → Over/Under).
-        for (const nivel4 of nivel3.subcategorias) {
-          if (nivel4.opciones.some((o) => o.id === opcionId)) {
             return {
               categoriaId: categoria.id,
               subcategoriaId: sub.id,
               nivel3Id: nivel3.id,
-              nivel4Id: nivel4.id,
+              nivel4Id: null,
+              nivel5Id: null,
             };
+          }
+          continue;
+        }
+        for (const nivel4 of nivel3.subcategorias) {
+          if (nivel4.opciones) {
+            if (nivel4.opciones.some((o) => o.id === opcionId)) {
+              return {
+                categoriaId: categoria.id,
+                subcategoriaId: sub.id,
+                nivel3Id: nivel3.id,
+                nivel4Id: nivel4.id,
+                nivel5Id: null,
+              };
+            }
+            continue;
+          }
+          // 5º nivel (Goles "por equipo y mitad": mitad → equipo → Over/Under).
+          for (const nivel5 of nivel4.subcategorias) {
+            if (nivel5.opciones.some((o) => o.id === opcionId)) {
+              return {
+                categoriaId: categoria.id,
+                subcategoriaId: sub.id,
+                nivel3Id: nivel3.id,
+                nivel4Id: nivel4.id,
+                nivel5Id: nivel5.id,
+              };
+            }
           }
         }
       }
