@@ -36,7 +36,7 @@ export default function ListaApuestas({
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
-  onEditar,
+  onAbrirEdicion,
   agrupada = true,
   denso = false,
 }) {
@@ -223,7 +223,7 @@ export default function ListaApuestas({
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
-              onEditar={onEditar}
+              onAbrirEdicion={onAbrirEdicion}
               onCerrar={() => setApuestaAbiertaId(null)}
             />
           </div>
@@ -245,7 +245,7 @@ export default function ListaApuestas({
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
-              onEditar={onEditar}
+              onAbrirEdicion={onAbrirEdicion}
               onCerrar={() => setApuestaAbiertaId(null)}
             />
           )}

@@ -10,17 +10,15 @@ import PanelMercados from "./PanelMercados";
 import PanelConfirmacion from "./PanelConfirmacion";
 import TicketFlotante from "./TicketFlotante";
 
-// Rediseño de "Nueva apuesta" (ver PROMPT_NUEVA_APUESTA_V3.md y
-// CHANGELOG.md), construido por fases. FASE 1: formulario inicial —
-// Bankroll como primer campo (sustituye el modal "¿En qué bankroll?"),
-// Fecha+Casa, Tipo de fondos, Opciones adicionales plegadas. FASE 2: lista
-// de partidos (PanelPartidos.jsx). FASE 3 (esta): mercados del partido
-// activo (PanelMercados.jsx) — empieza por los 9 mercados de la demo.
-// "pendientes" (selecciones marcadas, aún sin cuota) vive aquí porque la
-// Fase 4 (confirmación de cuota) también lo necesitará. El importe NO
-// va aquí (va en el ticket, Fase 5). Todavía NO sustituye a
-// FormularioApuesta.jsx — se prueba aparte (ver Ajustes > vista previa)
-// hasta que las 7 fases estén cerradas y verificadas.
+// Formulario real de crear/editar apuestas (ver CHANGELOG.md para el
+// porqué del rediseño) — sustituyó al antiguo FormularioApuesta.jsx en
+// los tres sitios donde se creaba/editaba una apuesta: "+ Añadir
+// apuesta" (cabecera de escritorio y "+" central en móvil, ambos abren
+// esto en modo crear) y "Modificar" en una apuesta ya guardada
+// (ApuestaItem.jsx, modo editar vía apuestaInicial). Bankroll como
+// primer campo, lista de partidos (PanelPartidos.jsx), mercados del
+// partido activo (PanelMercados.jsx), ticket flotante con el importe
+// (TicketFlotante.jsx).
 const DEPORTES = ["Fútbol", "Baloncesto", "Tenis", "eSports", "Otro"];
 
 function hoy() {
@@ -92,11 +90,12 @@ export default function NuevaApuestaV3({
   // "Editar apuesta" (petición directa): con apuestaInicial, el ticket
   // arranca ya cargado con sus partidos/mercados/cuota, y "Guardar"
   // actualiza esa MISMA apuesta (onEditarApuesta) en vez de crear una o
-  // varias nuevas. onCancelarEdicion vuelve a donde estuviera antes (ver
-  // Ajustes.jsx, único sitio que hoy abre esto en modo edición).
+  // varias nuevas. onCancelar vuelve a la sección de la que se venía (ver
+  // App.jsx, "seccionAnterior") — se usa tanto al cancelar una edición
+  // como al salir de crear sin guardar.
   apuestaInicial = null,
   onEditarApuesta,
-  onCancelarEdicion,
+  onCancelar,
 }) {
   const esEdicion = apuestaInicial !== null;
   const [bankroll, setBankroll] = useState(() => apuestaInicial?.categoria ?? "apuestas");
@@ -146,24 +145,78 @@ export default function NuevaApuestaV3({
     setMatchActivo(partido);
     setPendientes([]);
     setPaso(1);
+    // Bug real (solo en pantallas estrechas, por debajo de "lg"): el
+    // ticket de edición, si se había abierto para revisar los partidos ya
+    // metidos, es un recuadro fijo que puede ocupar casi toda la pantalla
+    // — tapaba el panel de Mercados/Confirmación (incluida la casilla de
+    // la cuota), así que marcar un mercado nuevo parecía "no dejar poner
+    // la cuota". Se cierra solo al elegir partido, para dejar sitio.
+    setTicketEdicionAbierto(false);
   }
 
   function confirmarSeleccion(cuota) {
     if (!matchActivo || pendientes.length === 0) return;
-    setBloques((actuales) => [
-      ...actuales,
-      {
-        matchId: matchActivo.id,
-        partido: matchActivo,
-        cuota: String(cuota),
-        stake: "",
-        // Solo se usa con tipoFondos "mixta" (ver CampoCuotaCantidad en
-        // TicketFlotante.jsx) — con "real"/"freebet" se queda vacío y no
-        // se manda al guardar.
-        stakeFreebet: "",
-        items: pendientes,
-      },
-    ]);
+    setBloques((actuales) => {
+      // Bug real: volver a elegir un partido que YA tenía bloque (p.ej.
+      // al editar una apuesta, añadir un mercado más a un partido que ya
+      // estaba en el ticket) creaba un bloque NUEVO y duplicado para el
+      // mismo partido, con su propia cuota en blanco — el partido
+      // original se quedaba tal cual, así que el mercado nuevo parecía
+      // "no añadirse". Se identifica el "mismo partido" por su id real
+      // cuando los DOS lados lo tienen (dos partidos reales con id
+      // distinto nunca se mezclan, aunque compartan equipos — dos
+      // partidos del mismo día entre los mismos rivales, por ejemplo).
+      // Si cualquiera de los dos lados no tiene un id real (apuestas de
+      // antes del buscador de partidos, reconstruidas con el id de
+      // repuesto -1 en bloquesDesdeApuestaV3 — o, en local sin
+      // `vercel dev`, los partidos de ejemplo de PanelPartidos.jsx, que
+      // por su cuenta también usan ids negativos), se compara por el
+      // texto del evento en su lugar: ese id de repuesto es ambiguo
+      // (vale para cualquier partido sin id real), así que comparar por
+      // id ahí habría dejado sin fusionar justo el caso más común —
+      // apuestas antiguas. Encontrado el bloque, sus selecciones nuevas
+      // se añaden a él; la cuota tecleada aquí es la de ESTA selección
+      // nueva sola (mismo criterio que pide PanelConfirmacion, "Cuota de
+      // esta selección"), así que se MULTIPLICA por la que ya tenía el
+      // bloque en vez de sustituirla — igual que entre partidos
+      // distintos la cuota total ya se calcula multiplicando cada
+      // bloque.
+      const indiceExistente = actuales.findIndex((b) =>
+        matchActivo.id > 0 && b.matchId > 0
+          ? b.matchId === matchActivo.id
+          : b.partido.evento === matchActivo.evento
+      );
+      if (indiceExistente === -1) {
+        return [
+          ...actuales,
+          {
+            matchId: matchActivo.id,
+            partido: matchActivo,
+            cuota: String(cuota),
+            stake: "",
+            // Solo se usa con tipoFondos "mixta" (ver CampoCuotaCantidad en
+            // TicketFlotante.jsx) — con "real"/"freebet" se queda vacío y no
+            // se manda al guardar.
+            stakeFreebet: "",
+            items: pendientes,
+          },
+        ];
+      }
+      // Bug real: al fusionar, la cuota tecleada SUSTITUÍA a la que ya
+      // tenía el bloque (2.00 de "Gana Real Madrid" + escribir 5 se
+      // quedaba en 5, en vez de multiplicarse) — igual que entre
+      // partidos distintos la cuota total ya se calcula multiplicando
+      // cada bloque (ver cuotaComboAutoEdicion/comboCuota más abajo), la
+      // cuota que se copia aquí es la de ESTA selección nueva sola (así
+      // lo pide PanelConfirmacion, "Cuota de esta selección"), así que
+      // hay que multiplicarla por la que ya tenía el bloque, no
+      // reemplazarla.
+      return actuales.map((b, i) =>
+        i === indiceExistente
+          ? { ...b, cuota: String(numero(b.cuota) * cuota), items: [...b.items, ...pendientes] }
+          : b
+      );
+    });
     setPendientes([]);
     setPaso(0);
   }
@@ -294,7 +347,7 @@ export default function NuevaApuestaV3({
         selecciones: bloques.flatMap(seleccionesDeBloque),
       });
       setAvisoGuardado({ ok: 1 });
-      onCancelarEdicion?.();
+      onCancelar?.();
     } catch (error) {
       console.error("Error al editar desde Nueva apuesta v3:", error);
       setAvisoGuardado({
@@ -368,7 +421,7 @@ export default function NuevaApuestaV3({
       // a que se refresque ese estado pisarían el mismo cambio en vez de
       // sumarse — con el total ya sumado de antemano no hay ese riesgo.
       // "Mixta" descuenta solo la parte freebet (datos.stakeFreebet), no
-      // el stake real — mismo criterio que manejarAgregar en App.jsx.
+      // el stake real.
       if (tipoFondos === "freebet") {
         const totalFreebet = porGuardar.reduce((total, d) => total + Number(d.stake), 0);
         await onAjustarSaldoFreebet(casa, -totalFreebet, bankroll);
@@ -401,6 +454,11 @@ export default function NuevaApuestaV3({
       const sinGrupo = grupo ? actuales.filter((p) => p.grupo !== grupo) : actuales;
       return [...sinGrupo, { mercado, label, grupo }];
     });
+    // Mismo motivo que en elegirPartido: si el ticket de edición estaba
+    // abierto (revisando los partidos ya metidos) y desde ahí se marca un
+    // mercado nuevo sin cambiar de partido, también hay que quitarlo de
+    // en medio para llegar a la casilla de la cuota.
+    setTicketEdicionAbierto(false);
   }
 
   const resumenApuestas = resumenBankroll(movimientos, apuestas, "apuestas");
@@ -509,16 +567,14 @@ export default function NuevaApuestaV3({
             <Pencil size={12} />
             Editar
           </button>
-          {esEdicion && (
-            <button
-              type="button"
-              onClick={onCancelarEdicion}
-              className="shrink-0 flex items-center gap-1 text-xs font-semibold text-slate hover:text-lose hover:underline"
-            >
-              <X size={12} />
-              Cancelar
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onCancelar}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-slate hover:text-lose hover:underline"
+          >
+            <X size={12} />
+            Cancelar
+          </button>
         </div>
 
         {/* Indicador de pasos — solo móvil (Fase 6): en escritorio las 3
@@ -730,7 +786,7 @@ export default function NuevaApuestaV3({
             mismo "bottom-24 lg:bottom-[22px]" que el ticket de crear, para
             no taparse con la barra inferior en móvil. */}
         {esEdicion && (
-          <div className="fixed inset-x-0 bottom-24 lg:bottom-[22px] z-50 flex justify-center px-4 pointer-events-none">
+          <div className="fixed inset-x-0 bottom-24 lg:bottom-[22px] z-50 flex flex-col-reverse items-center gap-2 px-4 pointer-events-none">
           <div className="w-full max-w-lg pointer-events-auto bg-surface border-2 border-gold rounded-2xl shadow-2xl overflow-hidden">
             {!ticketEdicionAbierto ? (
               <>
@@ -905,6 +961,32 @@ export default function NuevaApuestaV3({
               </>
             )}
           </div>
+          {/* Mismo aviso "Poner cuota ›" que ya tenía el modo crear (más
+              abajo) — al editar también hace falta un atajo a la ventana
+              de Confirmación tras marcar un mercado nuevo: en móvil, con
+              la lista de Mercados scrolleada, la fila de pasos de arriba
+              queda fuera de la vista y no había forma rápida de llegar
+              hasta la casilla de la cuota (bug real, reportado por el
+              usuario con capturas). */}
+          {pendientes.length > 0 && (
+            <div className="lg:hidden w-full max-w-lg pointer-events-auto bg-gold text-feltDark rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-lg">
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">
+                  {pendientes.length}{" "}
+                  {pendientes.length === 1 ? "selección marcada" : "selecciones marcadas"}
+                </span>
+                {matchActivo && (
+                  <span className="block text-xs opacity-75 truncate">
+                    {equiposDesdeEvento(matchActivo.evento).local} –{" "}
+                    {equiposDesdeEvento(matchActivo.evento).visitante}
+                  </span>
+                )}
+              </span>
+              <button type="button" onClick={() => setPaso(2)} className="text-sm font-semibold shrink-0">
+                Poner cuota ›
+              </button>
+            </div>
+          )}
           </div>
         )}
       </div>
@@ -913,10 +995,18 @@ export default function NuevaApuestaV3({
 
   return (
     <div className="bg-surface border border-line rounded-xl overflow-hidden">
-      <div className="p-4 sm:p-5 border-b border-line">
+      <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-semibold text-ink">
           {esEdicion ? "Editar apuesta" : "Nueva apuesta"}
         </h2>
+        <button
+          type="button"
+          onClick={onCancelar}
+          className="shrink-0 flex items-center gap-1 text-xs font-semibold text-slate hover:text-lose hover:underline"
+        >
+          <X size={12} />
+          Cancelar
+        </button>
       </div>
 
       <div className="p-4 sm:p-5 border-b border-line">

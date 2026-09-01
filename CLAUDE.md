@@ -112,8 +112,8 @@ Registro personal de apuestas deportivas (uso individual, no multiusuario). El d
      "Entretenimiento" y "Estadísticas" se OCULTARON del menú lateral
      (`SidebarNavegacion.jsx` → `ITEMS`) — no se borró nada, sus rutas
      siguen intactas en `App.jsx`. En su lugar: un botón dorado "+
-     Añadir apuesta" en la cabecera (elige bankroll → panel lateral con
-     `FormularioApuesta`), una sección nueva **Historial** (pastillas
+     Añadir apuesta" en la cabecera (abre directamente Nueva apuesta v3,
+     ver más abajo), una sección nueva **Historial** (pastillas
      Todas/Apuestas/Entretenimiento + el listado denso de siempre) y un
      botón "Estadísticas" en la cabecera que abre el panel
      `PanelEstadisticas.jsx` (ver Stack). El móvil no se ha tocado en

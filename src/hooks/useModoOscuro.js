@@ -1,25 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-const CLAVE_ALMACENAMIENTO = "hall-of-bets:modo-oscuro";
-
-function obtenerPreferenciaInicial() {
-  try {
-    const guardado = localStorage.getItem(CLAVE_ALMACENAMIENTO);
-    if (guardado !== null) return guardado === "true";
-  } catch {
-    // localStorage no disponible: seguimos con la preferencia del sistema.
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
+// Petición directa: se quita el selector claro/oscuro (icono de escritorio
+// y opción del menú "Más" en móvil) — se queda fijo en oscuro, que es el
+// que prefiere el usuario. "oscuro" se sigue devolviendo (siempre true)
+// porque varios componentes de gráficas (recharts necesita colores hex,
+// no puede leer las variables CSS) todavía lo reciben como prop para elegir
+// su paleta — así no hace falta tocarlos.
 export function useModoOscuro() {
-  const [oscuro, setOscuro] = useState(obtenerPreferenciaInicial);
-
-  // La clase "dark" en <html> es lo que activa las variables oscuras de index.css.
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", oscuro);
-    localStorage.setItem(CLAVE_ALMACENAMIENTO, String(oscuro));
-  }, [oscuro]);
+    document.documentElement.classList.add("dark");
+  }, []);
 
-  return { oscuro, alternar: () => setOscuro((actual) => !actual) };
+  return { oscuro: true };
 }

@@ -37,7 +37,6 @@ export default function EstadisticasDashboard({
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
-  onEditar,
 }) {
   // "Mejor apuesta"/"Peor apuesta" (RachasYExtremos) se pueden abrir en el
   // mismo modal de detalle que ya usa ListaApuestas.jsx — mismo patrón
@@ -366,7 +365,6 @@ export default function EstadisticasDashboard({
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
-              onEditar={onEditar}
               onCerrar={() => setApuestaAbiertaId(null)}
               soloLectura
             />

@@ -9,7 +9,6 @@ import {
 import { useColorCasa } from "../hooks/useColorCasa";
 import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
-import FormularioApuesta from "./FormularioApuesta";
 
 // Envoltorio "render prop" — se queda exportado porque TicketApuesta.jsx
 // (Mini App de Telegram) lo sigue usando para traer el resultado final del
@@ -75,13 +74,11 @@ const EMOJI_DEPORTE = {
 export default function ApuestaItem({
   apuesta,
   casas,
-  movimientos,
-  todasApuestas,
   onMarcarResultado,
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
-  onEditar,
+  onAbrirEdicion,
   onCerrar,
   // Vista de solo repaso (petición directa: "Mejor apuesta"/"Peor apuesta"
   // en Estadísticas) — sin nada tocable, ni pie de botones.
@@ -90,7 +87,6 @@ export default function ApuestaItem({
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
   const [importeCashOut, setImporteCashOut] = useState("");
-  const [editando, setEditando] = useState(false);
   // Aviso "¿cuál es la nueva cuota?" (Ajustar cuota) — un Set de
   // indiceLider con el aviso abierto, más el texto que se está
   // escribiendo en cada uno; cada partido lleva el suyo independiente.
@@ -179,19 +175,6 @@ export default function ApuestaItem({
     if (!(valor > 0)) return;
     onActualizarCuotaSeleccion(apuesta.id, grupo.indiceLider, valor);
     cerrarPromptCuota(grupo.indiceLider);
-  }
-
-  if (editando) {
-    return (
-      <FormularioApuesta
-        casas={casas}
-        movimientos={movimientos}
-        apuestas={todasApuestas}
-        apuestaInicial={apuesta}
-        onGuardar={(datos) => onEditar(apuesta.id, datos)}
-        onCancelar={() => setEditando(false)}
-      />
-    );
   }
 
   return (
@@ -443,7 +426,7 @@ export default function ApuestaItem({
             )}
             <button
               type="button"
-              onClick={() => setEditando(true)}
+              onClick={() => onAbrirEdicion(apuesta)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-line text-ink hover:border-gold/50 transition-colors"
             >
               <Pencil size={14} /> Modificar

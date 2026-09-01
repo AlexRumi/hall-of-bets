@@ -28,12 +28,12 @@ export default function BarraInferiorMovil({
   onCambiar,
   onIrABets,
   onIrANuevaApuesta,
-  mostrandoFormulario,
   onAbrirMas,
   masAbierto,
   masBotonRef,
 }) {
   const enBankroll = activa === "apuestas" || activa === "entretenimiento";
+  const enNuevaApuesta = activa === "nueva-apuesta";
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-felt border-t border-gold/30 flex items-stretch print:hidden">
@@ -45,7 +45,7 @@ export default function BarraInferiorMovil({
       />
 
       <BotonBarra
-        activa={enBankroll && !mostrandoFormulario}
+        activa={enBankroll}
         Icono={Wallet}
         etiqueta="Apuestas"
         onClick={onIrABets}
@@ -61,7 +61,7 @@ export default function BarraInferiorMovil({
       >
         <span
           className={`flex items-center justify-center w-14 h-14 -mt-6 rounded-full ring-4 ring-fondo shadow-lg transition-colors ${
-            enBankroll && mostrandoFormulario
+            enNuevaApuesta
               ? "bg-gold text-felt"
               : "bg-felt text-gold border-2 border-gold/40"
           }`}

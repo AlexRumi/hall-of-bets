@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
 import { normalizarTexto } from "../utils/texto";
 import { equiposDesdeEvento } from "../utils/mercados";
@@ -21,29 +21,41 @@ const PARTIDOS_DEMO = [
   { id: -6, evento: "PSG - Manchester City", pais: "Competición Europea", competicion: "Champions League", hora: "21:00", equipoLocalId: 85, equipoVisitanteId: 50 },
 ];
 
-// Bandera por país — mismas cadenas exactas que ya usa api/partidos.js
+// Bandera por país — mismas claves exactas que ya usa api/partidos.js
 // (objeto LIGAS) para no depender de traducciones ni comparar mal. Sin
 // entrada para un país nuevo, se ve el nombre solo (sin bandera rota).
-const BANDERAS = {
-  Alemania: "🇩🇪",
-  Argentina: "🇦🇷",
-  Austria: "🇦🇹",
-  Bélgica: "🇧🇪",
-  Brasil: "🇧🇷",
-  "Competición Europea": "🇪🇺",
-  Dinamarca: "🇩🇰",
-  España: "🇪🇸",
-  "Estados Unidos": "🇺🇸",
-  Francia: "🇫🇷",
-  Holanda: "🇳🇱",
-  Inglaterra: "🇬🇧",
-  Italia: "🇮🇹",
-  México: "🇲🇽",
-  Noruega: "🇳🇴",
-  Portugal: "🇵🇹",
-  Suecia: "🇸🇪",
-  Suiza: "🇨🇭",
-  Turquía: "🇹🇷",
+// Petición directa: antes era el emoji de bandera del sistema operativo,
+// oculto en escritorio porque algunas versiones de Windows no renderizan
+// bien los compuestos (país como par de letras regionales) y se veían en
+// blanco o rotos. Ahora es una imagen SVG de flagcdn.com (gratis, sin
+// api key, sin librería nueva que instalar) — se ve igual en cualquier
+// sistema, así que ya no hace falta ocultarla en escritorio. Los valores
+// son códigos ISO 3166-1 alfa-2 (flagcdn.com/{codigo}.svg), salvo "eu"
+// (Unión Europea, para "Competición Europea") y "gb-eng" (bandera de
+// Inglaterra en concreto — subdivisión de Reino Unido soportada por
+// flagcdn.com; con el emoji no se podía usar la real de Inglaterra
+// porque esos compuestos son aún más propensos a fallar en Windows, pero
+// una imagen no tiene ese problema).
+const CODIGOS_BANDERA = {
+  Alemania: "de",
+  Argentina: "ar",
+  Austria: "at",
+  Bélgica: "be",
+  Brasil: "br",
+  "Competición Europea": "eu",
+  Dinamarca: "dk",
+  España: "es",
+  "Estados Unidos": "us",
+  Francia: "fr",
+  Holanda: "nl",
+  Inglaterra: "gb-eng",
+  Italia: "it",
+  México: "mx",
+  Noruega: "no",
+  Portugal: "pt",
+  Suecia: "se",
+  Suiza: "ch",
+  Turquía: "tr",
 };
 
 function agruparPorPaisLiga(partidos) {
@@ -56,11 +68,70 @@ function agruparPorPaisLiga(partidos) {
   return [...mapa.values()];
 }
 
+// Orden de los grupos País · Liga pedido explícitamente (antes salían en
+// el orden que dejaba agruparPorPaisLiga, que a su vez depende de qué
+// partido de cada grupo cae primero por hora — no de ningún criterio
+// fijo, así que un día España podía salir después de Turquía sin más
+// motivo que su hora de inicio). Tres bloques, en este orden:
+// 1) Grandes ligas: España/Inglaterra/Alemania/Italia/Francia, cada una
+//    con su liga principal, segunda división y copa en ese orden.
+// 2) Competición Europea: Champions/Europa/Conference League.
+// 3) El resto de países conectados, alfabético.
+const ORDEN_GRANDES_LIGAS = [
+  { pais: "España", competiciones: ["La Liga", "Segunda División", "Copa del Rey"] },
+  { pais: "Inglaterra", competiciones: ["Premier League", "Championship", "FA Cup", "EFL Cup"] },
+  { pais: "Alemania", competiciones: ["Bundesliga", "2. Bundesliga", "DFB Pokal"] },
+  { pais: "Italia", competiciones: ["Serie A", "Serie B", "Coppa Italia"] },
+  { pais: "Francia", competiciones: ["Ligue 1", "Ligue 2", "Coupe de France"] },
+];
+const ORDEN_COMPETICION_EUROPEA = ["Champions League", "Europa League", "Conference League"];
+
+// (nivel, posición dentro del nivel, país para desempatar) por grupo —
+// nivel 0 = grandes ligas (en su orden fijo), 1 = Competición Europea (en
+// su orden fijo), 2 = el resto (alfabético por país). Cualquier liga que
+// no esté en las listas de arriba (una recién conectada y aún no
+// clasificada aquí, p.ej. la Supercopa de Europa, "temporal" en
+// api/partidos.js) cae al final de su bloque en vez de desaparecer u
+// ordenarse al azar.
+function posicionOrden(g) {
+  const indicePais = ORDEN_GRANDES_LIGAS.findIndex((l) => l.pais === g.pais);
+  if (indicePais !== -1) {
+    const indiceCompeticion = ORDEN_GRANDES_LIGAS[indicePais].competiciones.indexOf(g.competicion);
+    return [0, indicePais, indiceCompeticion === -1 ? 99 : indiceCompeticion, g.pais];
+  }
+  if (g.pais === "Competición Europea") {
+    const indiceCompeticion = ORDEN_COMPETICION_EUROPEA.indexOf(g.competicion);
+    return [1, indiceCompeticion === -1 ? 99 : indiceCompeticion, 0, g.pais];
+  }
+  return [2, 0, 0, g.pais];
+}
+
+function ordenarGrupos(grupos) {
+  return [...grupos].sort((a, b) => {
+    const [na, ...restoA] = posicionOrden(a);
+    const [nb, ...restoB] = posicionOrden(b);
+    if (na !== nb) return na - nb;
+    for (let i = 0; i < restoA.length; i++) {
+      if (typeof restoA[i] === "string") return restoA[i].localeCompare(restoB[i]);
+      if (restoA[i] !== restoB[i]) return restoA[i] - restoB[i];
+    }
+    return 0;
+  });
+}
+
 export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, contarSelecciones }) {
   const { partidos: partidosApi } = usePartidos(fecha);
   const usandoDemo = partidosApi.length === 0;
   const partidos = usandoDemo ? PARTIDOS_DEMO : partidosApi;
   const [busqueda, setBusqueda] = useState("");
+  // Acordeón (petición directa, para no tener una lista larguísima de
+  // partidos de golpe): un único grupo País · Liga abierto a la vez. Sin
+  // tocar nada, empieza abierto el PRIMERO de la lista ya ordenada (con
+  // el orden de arriba, normalmente España · La Liga) — "null" es ese
+  // estado inicial "sin elegir todavía", no "todo cerrado"; en cuanto el
+  // usuario toca cualquier cabecera, esa pasa a mandar (aunque sea la
+  // misma que ya estaba abierta, la vuelve a cerrar).
+  const [grupoAbierto, setGrupoAbierto] = useState(null);
 
   const objetivo = normalizarTexto(busqueda.trim());
   const filtrados = objetivo
@@ -68,7 +139,8 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
         (p) => normalizarTexto(p.evento).includes(objetivo) || normalizarTexto(p.competicion).includes(objetivo)
       )
     : partidos;
-  const grupos = agruparPorPaisLiga(filtrados);
+  const grupos = ordenarGrupos(agruparPorPaisLiga(filtrados));
+  const claveAbierta = grupoAbierto ?? (grupos[0] ? `${grupos[0].pais}|${grupos[0].competicion}` : null);
 
   return (
     <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col lg:max-h-[70vh]">
@@ -98,18 +170,31 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
       </div>
 
       <div className="lg:overflow-y-auto lg:flex-1 scrollbar-oculto">
-        {grupos.map((g) => (
-          <div key={`${g.pais}|${g.competicion}`}>
-            <div className="sticky top-0 z-10 bg-felt text-paper px-3 py-2 flex items-center gap-2">
-              {BANDERAS[g.pais] && (
-                <span className="w-6 h-5 shrink-0 flex items-center justify-center rounded bg-paper/10 text-xs">
-                  {BANDERAS[g.pais]}
-                </span>
+        {grupos.map((g) => {
+          const clave = `${g.pais}|${g.competicion}`;
+          const abierta = clave === claveAbierta;
+          return (
+          <div key={clave} className="border-t border-gold/30 first:border-t-0">
+            <button
+              type="button"
+              onClick={() => setGrupoAbierto(abierta ? "" : clave)}
+              className="w-full sticky top-0 z-10 bg-felt text-paper px-3 py-2 flex items-center gap-2 text-left"
+            >
+              {CODIGOS_BANDERA[g.pais] && (
+                <img
+                  src={`https://flagcdn.com/${CODIGOS_BANDERA[g.pais]}.svg`}
+                  alt=""
+                  className="w-6 h-4 shrink-0 rounded-sm object-cover bg-paper/10"
+                />
               )}
               <span className="text-sm font-semibold truncate">{g.pais}</span>
               <span className="text-sm text-paper/70 truncate">· {g.competicion}</span>
-            </div>
-            {g.partidos.map((p) => {
+              <ChevronDown
+                size={16}
+                className={`shrink-0 transition-transform ${abierta ? "rotate-180" : ""}`}
+              />
+            </button>
+            {abierta && g.partidos.map((p) => {
               const { local, visitante } = equiposDesdeEvento(p.evento);
               const activo = matchIdActivo === p.id;
               const n = contarSelecciones?.(p.id) ?? 0;
@@ -138,7 +223,8 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
               );
             })}
           </div>
-        ))}
+          );
+        })}
         {grupos.length === 0 && (
           <p className="p-4 text-sm text-slate text-center">Sin partidos para ese filtro.</p>
         )}

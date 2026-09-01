@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Ticket, Trash2, ChevronLeft, Plus, PieChart } from "lucide-react";
+import { Ticket, Trash2, Plus, PieChart } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
@@ -17,7 +17,6 @@ import { calcularBankrollPorCasa } from "./utils/movimientos";
 import PantallaLogin from "./components/PantallaLogin";
 import PantallaInicio from "./components/PantallaInicio";
 import Historial from "./components/Historial";
-import FormularioApuesta from "./components/FormularioApuesta";
 import ListaApuestas from "./components/ListaApuestas";
 import PanelLateral from "./components/PanelLateral";
 import FiltrosApuestas from "./components/FiltrosApuestas";
@@ -64,7 +63,9 @@ function seccionActivaInicial() {
 export default function App() {
   // Se lee aquí arriba (y no dentro de AppAutenticada) para que el tema
   // también se aplique en la pantalla de login, antes de identificarse.
-  const { oscuro, alternar } = useModoOscuro();
+  // Fijo en oscuro (petición directa, sin selector) — "oscuro" se sigue
+  // pasando porque las gráficas (recharts, colores hex) lo necesitan.
+  const { oscuro } = useModoOscuro();
   const { sesion, comprobandoSesion, iniciarSesion, cerrarSesion } = useAuth();
 
   if (comprobandoSesion) return null;
@@ -76,25 +77,20 @@ export default function App() {
   return (
     <div style={{ animation: "app-entrada 1.5s ease-out" }}>
       {!sesion ? (
-        <PantallaLogin
-          onIniciarSesion={iniciarSesion}
-          oscuro={oscuro}
-          onAlternarModoOscuro={alternar}
-        />
+        <PantallaLogin onIniciarSesion={iniciarSesion} />
       ) : (
         <AppAutenticada
           userId={sesion.user.id}
           fechaAltaCuenta={sesion.user.created_at}
           onCerrarSesion={cerrarSesion}
           oscuro={oscuro}
-          onAlternarModoOscuro={alternar}
         />
       )}
     </div>
   );
 }
 
-function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlternarModoOscuro }) {
+function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
   const {
     apuestas,
     agregarApuesta,
@@ -124,11 +120,14 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState(seccionActivaInicial);
-  // "Editar apuesta" en la vista previa de Nueva apuesta v3 (petición
-  // directa): null = modo crear de siempre; con una apuesta, el asistente
-  // arranca ya cargado con sus partidos/mercados para corregirla — ver
-  // Ajustes.jsx (único sitio que ofrece elegir una apuesta para esto).
+  // "Nueva apuesta v3" es el formulario real de crear/editar (sustituye a
+  // FormularioApuesta.jsx): null = modo crear; con una apuesta, el
+  // asistente arranca ya cargado con sus partidos/mercados para
+  // corregirla (botón "Modificar" de ApuestaItem.jsx). "seccionAnterior"
+  // recuerda a qué sección volver al cancelar o terminar, ya que
+  // "nueva-apuesta" es una sección más, no un panel superpuesto.
   const [apuestaEditandoV3, setApuestaEditandoV3] = useState(null);
+  const [seccionAnterior, setSeccionAnterior] = useState("inicio");
   // Filtro con el que debe arrancar Historial la próxima vez que se monte
   // (ver AvisoPendientes.jsx en Inicio: su botón "Ver pendientes" pone
   // "pendientes" aquí antes de cambiar de sección) — se limpia solo al
@@ -140,17 +139,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const [verArchivadas, setVerArchivadas] = useState(false);
   const [periodo, setPeriodo] = useState("todo");
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
-  // Solo tienen efecto visual en móvil (ver BarraInferiorMovil.jsx): en
-  // escritorio el formulario está siempre visible y "More" no existe.
-  const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);
-  // "+ Añadir apuesta" del panel lateral (solo escritorio, ver
-  // SidebarNavegacion.jsx): primero se elige el bankroll en un diálogo
-  // pequeño, luego se abre el formulario ya con esa categoría fijada —
-  // independiente de mostrandoFormulario, que sigue siendo solo para el
-  // "+" de la barra inferior en móvil.
-  const [eligiendoCategoriaNueva, setEligiendoCategoriaNueva] = useState(false);
-  const [categoriaNuevaApuesta, setCategoriaNuevaApuesta] = useState(null);
   // Panel "Estadísticas" (experimento estilo Bet Analytix, ver
   // PanelEstadisticas.jsx): botón propio en la cabecera, independiente de la
   // sección activa — no sustituye la página de Estadísticas del menú.
@@ -241,17 +230,21 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     ? casas.reduce((suma, c) => suma + c[campoFreebetCategoria], 0)
     : 0;
 
-  // Al crear una apuesta con fondos Freebet, se descuenta el stake del
-  // saldo de esa casa al momento — gane, pierda o quede pendiente (ver
-  // Fase A: el freebet se da por gastado en cuanto se juega).
-  function manejarAgregar(datos, categoria = seccionActiva) {
-    agregarApuesta({ ...datos, categoria });
-    if (datos.tipoFondos === "freebet") {
-      ajustarSaldoFreebet(datos.casa, -Number(datos.stake), categoria);
-    } else if (datos.tipoFondos === "mixta") {
-      ajustarSaldoFreebet(datos.casa, -Number(datos.stakeFreebet), categoria);
-    }
-    setMostrandoFormulario(false);
+  // "+ Añadir apuesta" (cabecera de escritorio y el "+" central de la
+  // barra inferior en móvil) y "Modificar" (ApuestaItem.jsx) abren los
+  // dos la misma sección "nueva-apuesta" — se recuerda de dónde se venía
+  // para volver ahí al cancelar o al terminar (ver onCancelar de
+  // NuevaApuestaV3 más abajo).
+  function abrirNuevaApuesta() {
+    setSeccionAnterior(seccionActiva);
+    setApuestaEditandoV3(null);
+    setSeccionActiva("nueva-apuesta");
+  }
+
+  function abrirEdicionApuesta(apuesta) {
+    setSeccionAnterior(seccionActiva);
+    setApuestaEditandoV3(apuesta);
+    setSeccionActiva("nueva-apuesta");
   }
 
   function manejarBorrarTodo() {
@@ -364,17 +357,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
     }
   }
 
-  // "Bets" y "+" de la barra inferior móvil: si no se estaba ya en un
-  // bankroll, se entra en "apuestas" por defecto (mismo criterio que tenía
-  // antes la pestaña "Registro").
+  // "Bets" de la barra inferior móvil: si no se estaba ya en un bankroll,
+  // se entra en "apuestas" por defecto (mismo criterio que tenía antes la
+  // pestaña "Registro"). El "+" (central) abre Nueva apuesta v3.
   function irABets() {
     if (!esBankroll) setSeccionActiva("apuestas");
-    setMostrandoFormulario(false);
-  }
-
-  function irANuevaApuesta() {
-    if (!esBankroll) setSeccionActiva("apuestas");
-    setMostrandoFormulario(true);
   }
 
   return (
@@ -385,9 +372,9 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
           "sticky" para que se quede fija arriba al hacer scroll, igual que
           el menú lateral. */}
       {/* z-[60]: por encima de los overlays de modales (ConfirmDialog,
-          ApuestaItem, CashOutDialog... todos a z-50), para que el modo
-          oscuro/claro y cerrar sesión de aquí se puedan seguir pulsando
-          con un modal abierto, sin tener que cerrarlo primero. */}
+          ApuestaItem, CashOutDialog... todos a z-50), para que "cerrar
+          sesión" (panel lateral) se pueda seguir pulsando con un modal
+          abierto, sin tener que cerrarlo primero. */}
       <div className="sticky top-0 z-[60] bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
         <div className="flex items-center md:justify-between">
           <button
@@ -440,7 +427,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 claro, también en modo claro (petición directa). */}
             <button
               type="button"
-              onClick={() => setEligiendoCategoriaNueva(true)}
+              onClick={abrirNuevaApuesta}
               className="flex items-center gap-1.5 bg-[rgb(216,179,120)] text-feltDark px-3.5 py-1.5 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity"
             >
               <Plus size={16} />
@@ -454,8 +441,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
         <SidebarNavegacion
           activa={seccionActiva}
           onCambiar={setSeccionActiva}
-          oscuro={oscuro}
-          onAlternarModoOscuro={onAlternarModoOscuro}
           onCerrarSesion={onCerrarSesion}
         />
 
@@ -466,11 +451,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
               queda igual hasta que se aborde en una fase futura. */}
           <div
             className={`mx-auto py-10 pb-24 md:pb-10 space-y-6 ${
-              // Vista previa de "Nueva apuesta" v3 (temporal): necesita todo
-              // el ancho posible para que Partidos/Mercados/Confirmación no
-              // se aprieten — menos margen lateral que el resto de
-              // secciones anchas y sin tope de ancho máximo.
-              seccionActiva === "preview-nueva-apuesta"
+              // Nueva apuesta v3 necesita todo el ancho posible para que
+              // Partidos/Mercados/Confirmación no se aprieten — menos
+              // margen lateral que el resto de secciones anchas y sin
+              // tope de ancho máximo.
+              seccionActiva === "nueva-apuesta"
                 ? "max-w-none px-2 sm:px-3"
                 : seccionActiva === "inicio" ||
                   seccionActiva === "historial" ||
@@ -493,7 +478,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
-                onEditar={editarApuesta}
+                onAbrirEdicion={abrirEdicionApuesta}
                 onVerPendientes={irAPendientesEnHistorial}
               />
             ) : esBankroll ? (
@@ -517,10 +502,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                   ))}
                 </div>
 
-                {/* Visible siempre, en las dos vistas de móvil (Bets y "+")
-                    y en escritorio — por eso vive fuera de los dos bloques
-                    de abajo, que se ocultan el uno al otro según
-                    mostrandoFormulario. */}
                 <TarjetaBankroll
                   etiqueta={`Bankroll ${ETIQUETAS_SECCION[seccionActiva]}`}
                   dineroReal={bankrollCategoria}
@@ -528,33 +509,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                   grande
                 />
 
-                {/* Bloque formulario: en escritorio siempre visible (como
-                    antes); en móvil solo cuando se entra desde el "+" de la
-                    barra inferior (ver BarraInferiorMovil.jsx). */}
-                <div className={mostrandoFormulario ? "space-y-4" : "hidden md:block space-y-4"}>
-                  {mostrandoFormulario && (
-                    <button
-                      type="button"
-                      onClick={() => setMostrandoFormulario(false)}
-                      className="md:hidden flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
-                    >
-                      <ChevronLeft size={16} />
-                      Volver
-                    </button>
-                  )}
-                  <FormularioApuesta
-                    onGuardar={manejarAgregar}
-                    casas={casas}
-                    movimientos={movimientos}
-                    apuestas={apuestas}
-                    categoria={seccionActiva}
-                  />
-                </div>
-
-                {/* Bloque lista: en móvil, lo que se ve al entrar por "Bets";
-                    se oculta mientras se está en el formulario ("+"). En
-                    escritorio siempre visible, junto al formulario. */}
-                <div className={mostrandoFormulario ? "hidden md:block space-y-6" : "space-y-6"}>
+                <div className="space-y-6">
                   <FiltrosApuestas
                     casas={casas}
                     filtroCasa={filtroCasa}
@@ -597,7 +552,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                     onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                     onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                     onBorrar={manejarBorrarApuesta}
-                    onEditar={editarApuesta}
+                    onAbrirEdicion={abrirEdicionApuesta}
                   />
                 </div>
 
@@ -618,7 +573,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
-                onEditar={editarApuesta}
+                onAbrirEdicion={abrirEdicionApuesta}
                 filtroInicial={filtroHistorialInicial}
               />
             ) : seccionActiva === "trofeos" ? (
@@ -649,18 +604,10 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onArchivarMovimientos={archivarMovimientosPorRango}
                 ultimaCopia={ultimaCopia}
                 onCopiaRealizada={registrarCopiaRealizada}
-                onVerPreviewNuevaApuesta={() => {
-                  setApuestaEditandoV3(null);
-                  setSeccionActiva("preview-nueva-apuesta");
-                }}
-                onEditarPreviewNuevaApuesta={(apuesta) => {
-                  setApuestaEditandoV3(apuesta);
-                  setSeccionActiva("preview-nueva-apuesta");
-                }}
               />
             ) : seccionActiva === "academia" ? (
               <Academia />
-            ) : seccionActiva === "preview-nueva-apuesta" ? (
+            ) : seccionActiva === "nueva-apuesta" ? (
               <NuevaApuestaV3
                 key={apuestaEditandoV3?.id ?? "nueva"}
                 casas={casas}
@@ -670,9 +617,9 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onAjustarSaldoFreebet={ajustarSaldoFreebet}
                 apuestaInicial={apuestaEditandoV3}
                 onEditarApuesta={editarApuesta}
-                onCancelarEdicion={() => {
+                onCancelar={() => {
                   setApuestaEditandoV3(null);
-                  setSeccionActiva("ajustes");
+                  setSeccionActiva(seccionAnterior);
                 }}
               />
             ) : (
@@ -685,7 +632,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
-                onEditar={editarApuesta}
               />
             )}
           </div>
@@ -700,8 +646,6 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
           onCerrar={() => setMasAbierto(false)}
           activa={seccionActiva}
           onCambiar={setSeccionActiva}
-          oscuro={oscuro}
-          onAlternarModoOscuro={onAlternarModoOscuro}
           onCerrarSesion={onCerrarSesion}
           botonRef={masBotonRef}
         />
@@ -711,70 +655,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
         activa={seccionActiva}
         onCambiar={setSeccionActiva}
         onIrABets={irABets}
-        onIrANuevaApuesta={irANuevaApuesta}
-        mostrandoFormulario={mostrandoFormulario}
+        onIrANuevaApuesta={abrirNuevaApuesta}
         onAbrirMas={() => setMasAbierto((actual) => !actual)}
         masAbierto={masAbierto}
         masBotonRef={masBotonRef}
       />
-
-      {/* "+ Añadir apuesta" del panel lateral (solo escritorio): primero
-          elegir el bankroll, mismo patrón de overlay que ConfirmDialog.jsx
-          con dos botones en vez de confirmar/cancelar. */}
-      {eligiendoCategoriaNueva && (
-        <div
-          className="hidden md:flex fixed inset-0 bg-black/50 items-center justify-center px-4 z-50"
-          onClick={() => setEligiendoCategoriaNueva(false)}
-        >
-          <div
-            className="bg-surface border border-line rounded-xl p-6 max-w-sm w-full space-y-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-display text-lg font-semibold text-ink">Añadir apuesta</h3>
-            <p className="text-sm text-slate">¿En qué bankroll la registramos?</p>
-            <div className="space-y-2">
-              {Object.entries(ETIQUETAS_SECCION).map(([id, etiqueta]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setCategoriaNuevaApuesta(id);
-                    setEligiendoCategoriaNueva(false);
-                  }}
-                  className="w-full px-4 py-2.5 rounded-lg border-2 border-line text-left text-sm font-semibold text-ink hover:border-gold hover:bg-gold/5 transition-colors"
-                >
-                  {etiqueta}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setEligiendoCategoriaNueva(false)}
-              className="w-full px-4 py-2 rounded-lg text-sm font-medium text-slate hover:text-ink transition-colors"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      <PanelLateral abierto={!!categoriaNuevaApuesta} onCerrar={() => setCategoriaNuevaApuesta(null)}>
-        {categoriaNuevaApuesta && (
-          <div className="p-4 sm:p-5">
-            <FormularioApuesta
-              casas={casas}
-              movimientos={movimientos}
-              apuestas={apuestas}
-              categoria={categoriaNuevaApuesta}
-              onGuardar={(datos) => {
-                manejarAgregar(datos, categoriaNuevaApuesta);
-                setCategoriaNuevaApuesta(null);
-              }}
-              onCancelar={() => setCategoriaNuevaApuesta(null)}
-            />
-          </div>
-        )}
-      </PanelLateral>
 
       <PanelLateral abierto={verEstadisticasPanel} onCerrar={() => setVerEstadisticasPanel(false)}>
         <PanelEstadisticas

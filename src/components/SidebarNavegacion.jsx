@@ -8,7 +8,6 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import SelectorModoOscuro from "./SelectorModoOscuro";
 
 // "Apuestas"/"Entretenimiento" se quitaron de aquí (petición directa, ya
 // con "+ Añadir apuesta" cubriendo el alta y "Historial" el listado de
@@ -44,8 +43,6 @@ const ITEMS = [
 export default function SidebarNavegacion({
   activa,
   onCambiar,
-  oscuro,
-  onAlternarModoOscuro,
   onCerrarSesion,
 }) {
   return (
@@ -68,21 +65,20 @@ export default function SidebarNavegacion({
         ))}
       </nav>
 
-      {/* Modo oscuro/cerrar sesión: antes vivían en la cabecera, ahora aquí
-          abajo del todo — solo icono, sin etiqueta, para que se lean como
-          acciones sueltas y no como un destino más de la lista de arriba
-          (petición directa). "mt-auto" los deja pegados abajo del todo
-          cuando el <aside> no es más alto que la pantalla; "md:sticky
-          md:bottom-4" es lo que de verdad los mantiene a la vista cuando
-          SÍ lo es — el <aside> se estira tanto como la columna de
-          contenido a su lado (a propósito, para que el verde cubra toda la
-          altura), así que sin esto quedaban "abajo del todo" de una
-          columna mucho más alta que la pantalla, invisibles sin hacer
-          scroll hasta el final (bug real, detectado por el usuario). Con
-          fondo propio (bg-felt) porque, al quedar fijo, el contenido del
-          menú puede seguir desplazándose por debajo. */}
+      {/* Cerrar sesión: antes vivía en la cabecera, ahora aquí abajo del
+          todo — solo icono, sin etiqueta, para que se lea como una acción
+          suelta y no como un destino más de la lista de arriba (petición
+          directa). "mt-auto" lo deja pegado abajo del todo cuando el
+          <aside> no es más alto que la pantalla; "md:sticky md:bottom-4"
+          es lo que de verdad lo mantiene a la vista cuando SÍ lo es — el
+          <aside> se estira tanto como la columna de contenido a su lado
+          (a propósito, para que el verde cubra toda la altura), así que
+          sin esto quedaba "abajo del todo" de una columna mucho más alta
+          que la pantalla, invisible sin hacer scroll hasta el final (bug
+          real, detectado por el usuario). Con fondo propio (bg-felt)
+          porque, al quedar fijo, el contenido del menú puede seguir
+          desplazándose por debajo. */}
       <div className="mt-auto md:sticky md:bottom-4 flex items-center justify-center gap-2 pt-4 bg-felt">
-        <SelectorModoOscuro oscuro={oscuro} onAlternar={onAlternarModoOscuro} />
         <button
           type="button"
           onClick={onCerrarSesion}

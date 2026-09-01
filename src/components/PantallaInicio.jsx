@@ -17,7 +17,7 @@ export default function PantallaInicio({
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
-  onEditar,
+  onAbrirEdicion,
   onVerPendientes,
 }) {
   const stats = calcularEstadisticas(apuestas);
@@ -109,7 +109,7 @@ export default function PantallaInicio({
           onMarcarResultadoPartido={onMarcarResultadoPartido}
           onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
           onBorrar={onBorrar}
-          onEditar={onEditar}
+          onAbrirEdicion={onAbrirEdicion}
           agrupada={false}
           denso
         />

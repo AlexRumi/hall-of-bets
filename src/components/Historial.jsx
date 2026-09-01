@@ -23,7 +23,7 @@ export default function Historial({
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
-  onEditar,
+  onAbrirEdicion,
   filtroInicial = null,
 }) {
   const [filtroCategoria, setFiltroCategoria] = useState(filtroInicial);
@@ -88,7 +88,7 @@ export default function Historial({
         onMarcarResultadoPartido={onMarcarResultadoPartido}
         onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
         onBorrar={onBorrar}
-        onEditar={onEditar}
+        onAbrirEdicion={onAbrirEdicion}
         agrupada
         denso
       />

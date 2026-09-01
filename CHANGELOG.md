@@ -4838,3 +4838,46 @@ separadas, probando cada una antes de pasar a la siguiente.
     patrón que ya tenía el 4º nivel) y a `rutaEnArbol` (para poder abrir
     el árbol ya posicionado al editar una apuesta con este mercado) —
     antes el selector solo llegaba a 4 niveles de profundidad.
+
+- **Nueva apuesta v3 deja de ser vista previa: sustituye a
+  `FormularioApuesta.jsx` en toda la app** (petición directa — se
+  construyó por fases, probada aparte desde Ajustes hasta tener el
+  catálogo de mercados completo y "Editar apuesta" confirmado; esta
+  entrada es el cambio de verdad). Los tres sitios que creaban/editaban
+  con el formulario antiguo pasan a abrir `NuevaApuestaV3.jsx`:
+  - **"+ Añadir apuesta"** (cabecera de escritorio): ya no muestra el
+    modal "¿En qué bankroll?" — Nueva apuesta v3 ya pregunta el bankroll
+    dentro de su propio primer paso, así que el modal sobraba.
+  - **El "+" central de la barra inferior (móvil)**: en vez de mostrar
+    el formulario embebido dentro de la sección Apuestas/
+    Entretenimiento (`mostrandoFormulario`, ahora eliminado), navega a
+    una sección nueva y propia, `"nueva-apuesta"` (antes
+    `"preview-nueva-apuesta"`, solo alcanzable desde Ajustes).
+  - **"Modificar"** en una apuesta ya guardada (`ApuestaItem.jsx`): antes
+    transformaba la ficha entera en el formulario, en el mismo sitio.
+    Se decidió con el usuario (`AskUserQuestion`) que en vez de intentar
+    embeber el asistente completo — pensado para ocupar toda la
+    pantalla — dentro de una ficha estrecha, se sale de la ficha y se
+    abre la pantalla completa (mismo mecanismo que ya funcionaba en
+    Ajustes). Nuevo estado `seccionAnterior` en `App.jsx` recuerda a qué
+    sección volver al cancelar o al terminar de editar, en vez de un
+    `setSeccionActiva("ajustes")` fijo. El prop que disparaba esto se
+    renombró de `onEditar` (que antes recibía `(id, datos)` para
+    guardar) a `onAbrirEdicion` (recibe la apuesta entera y navega) —
+    cambiado en toda la cadena (`PantallaInicio`, `ListaApuestas`,
+    `Historial`, `App.jsx`); en `EstadisticasDashboard.jsx` se quitó sin
+    más, porque su ficha se abre con `soloLectura` y el botón
+    "Modificar" nunca llegaba a existir ahí (prop ya muerta).
+  - `NuevaApuestaV3.jsx` gana un botón "Cancelar" en modo crear (antes
+    solo existía al editar, con `onCancelarEdicion`) — sin él, la
+    pantalla inicial no tenía forma de salir sin guardar. Se renombró a
+    `onCancelar`, usado ahora en los dos modos.
+  - **Borrados por completo** (código muerto tras el cambio, comprobado
+    con grep que ya no los importaba nadie): `FormularioApuesta.jsx`,
+    `ConstructorPartido.jsx`, `SelectorMercado.jsx`, `BuscadorEvento.jsx`
+    (el buscador de partidos por texto libre del formulario antiguo —
+    Nueva apuesta v3 usa el buscador de partidos real de la API,
+    `PanelPartidos.jsx`, no este). También se quitó `manejarAgregar`
+    (`App.jsx`, el envoltorio de guardar+ajustar freebet del formulario
+    antiguo — Nueva apuesta v3 ya hace las dos cosas por su cuenta) y el
+    bloque "🧪 Vista previa" de `Ajustes.jsx`.

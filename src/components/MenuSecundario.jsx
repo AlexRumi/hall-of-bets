@@ -5,8 +5,6 @@ import {
   Trophy,
   Settings,
   GraduationCap,
-  Sun,
-  Moon,
   LogOut,
 } from "lucide-react";
 
@@ -31,8 +29,6 @@ export default function MenuSecundario({
   onCerrar,
   activa,
   onCambiar,
-  oscuro,
-  onAlternarModoOscuro,
   onCerrarSesion,
   botonRef,
 }) {
@@ -86,14 +82,6 @@ export default function MenuSecundario({
             {etiqueta}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={onAlternarModoOscuro}
-          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-t border-line text-ink hover:bg-paperDim transition-colors"
-        >
-          {oscuro ? <Sun size={16} /> : <Moon size={16} />}
-          {oscuro ? "Modo claro" : "Modo oscuro"}
-        </button>
         <button
           type="button"
           onClick={() => {
