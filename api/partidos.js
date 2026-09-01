@@ -154,8 +154,21 @@ export default async function handler(req, res) {
 
     // Deja que Vercel cachee esta respuesta un rato (misma fecha = mismo
     // resultado): así, aunque dos pestañas o dos visitas distintas pidan el
-    // mismo día, no hace falta llamar otra vez a API-Football.
-    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+    // mismo día, no hace falta llamar otra vez a API-Football. Bug real: con
+    // 1h de caché fija, un partido de HOY que empieza/termina a media
+    // mañana podía quedarse "por jugar" en el buscador de partidos durante
+    // toda esa hora (el usuario lo vio con Argentina, partidos ya acabados
+    // por la madrugada seguían enseñando la hora en vez del resultado). Los
+    // días que NO son hoy (ayer/mañana, lo único que deja consultar el plan
+    // gratuito) nunca cambian de estado, así que esos sí pueden cachearse
+    // largo sin perder nada.
+    const hoyMadrid = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(new Date());
+    res.setHeader(
+      "Cache-Control",
+      fecha === hoyMadrid
+        ? "s-maxage=120, stale-while-revalidate=300"
+        : "s-maxage=3600, stale-while-revalidate=86400"
+    );
     res.status(200).json({ partidos });
   } catch {
     res.status(502).json({ error: "No se pudo consultar API-Football" });

@@ -3,6 +3,7 @@ import { Search, ChevronDown } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
 import { normalizarTexto } from "../utils/texto";
 import { equiposDesdeEvento } from "../utils/mercados";
+import { ESTADOS_TERMINADOS_PARTIDO } from "../utils/apuestas";
 
 // Fase 2 del rediseño de "Nueva apuesta" (ver PROMPT_NUEVA_APUESTA_V3.md):
 // lista de partidos del día, agrupados por País · Liga, con cabecera de
@@ -212,6 +213,10 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
               const { local, visitante } = equiposDesdeEvento(p.evento);
               const activo = matchIdActivo === p.id;
               const n = contarSelecciones?.(p.id) ?? 0;
+              // Partidos de ejemplo (PARTIDOS_DEMO) no traen "estado", así
+              // que nunca se marcan como terminados — no hay marcador de
+              // verdad que enseñar ahí.
+              const terminado = ESTADOS_TERMINADOS_PARTIDO.has(p.estado);
               return (
                 <button
                   key={p.id}
@@ -224,17 +229,27 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
                   }`}
                 >
                   <span className="flex-1 min-w-0 space-y-0.5">
-                    <span className="flex items-center gap-1.5">
-                      {escudoUrl(p.equipoLocalId) && (
-                        <img src={escudoUrl(p.equipoLocalId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                    <span className="flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        {escudoUrl(p.equipoLocalId) && (
+                          <img src={escudoUrl(p.equipoLocalId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                        )}
+                        <span className="text-sm font-medium text-ink truncate">{local}</span>
+                      </span>
+                      {terminado && (
+                        <span className="font-mono text-sm font-semibold text-ink shrink-0">{p.golesLocal}</span>
                       )}
-                      <span className="text-sm font-medium text-ink truncate">{local}</span>
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      {escudoUrl(p.equipoVisitanteId) && (
-                        <img src={escudoUrl(p.equipoVisitanteId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                    <span className="flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        {escudoUrl(p.equipoVisitanteId) && (
+                          <img src={escudoUrl(p.equipoVisitanteId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                        )}
+                        <span className="text-sm font-medium text-ink truncate">{visitante}</span>
+                      </span>
+                      {terminado && (
+                        <span className="font-mono text-sm font-semibold text-ink shrink-0">{p.golesVisitante}</span>
                       )}
-                      <span className="text-sm font-medium text-ink truncate">{visitante}</span>
                     </span>
                   </span>
                   {n > 0 && (
@@ -242,7 +257,13 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
                       {n}
                     </span>
                   )}
-                  <span className="font-mono text-xs text-slate shrink-0">{p.hora}</span>
+                  {terminado ? (
+                    <span className="text-[10px] font-semibold text-slate uppercase tracking-wide shrink-0">
+                      Final
+                    </span>
+                  ) : (
+                    <span className="font-mono text-xs text-slate shrink-0">{p.hora}</span>
+                  )}
                 </button>
               );
             })}
