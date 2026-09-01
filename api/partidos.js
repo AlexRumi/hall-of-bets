@@ -68,6 +68,24 @@ const LIGAS = {
   71: { pais: "Brasil", competicion: "Brasileirão Série A" },
   262: { pais: "México", competicion: "Liga MX" },
   253: { pais: "Estados Unidos", competicion: "MLS" },
+  // Ampliación del 2026-09-01 ("Otras competiciones" del buscador de
+  // partidos, ver PanelPartidos.jsx): 12 ligas más, elegidas a mano y
+  // verificadas una a una con GET /leagues?id=X (no hace falta una fecha
+  // concreta para este endpoint, solo confirmar que el id de verdad
+  // corresponde a esa liga/país) — cada country/name de la respuesta
+  // coincidió con lo esperado antes de añadirla aquí.
+  179: { pais: "Escocia", competicion: "Premiership" },
+  197: { pais: "Grecia", competicion: "Super League" },
+  106: { pais: "Polonia", competicion: "Ekstraklasa" },
+  210: { pais: "Croacia", competicion: "HNL" },
+  345: { pais: "República Checa", competicion: "Czech Liga" },
+  98: { pais: "Japón", competicion: "J1 League" },
+  292: { pais: "Corea del Sur", competicion: "K League 1" },
+  307: { pais: "Arabia Saudí", competicion: "Pro League" },
+  188: { pais: "Australia", competicion: "A-League" },
+  239: { pais: "Colombia", competicion: "Primera A" },
+  265: { pais: "Chile", competicion: "Primera División" },
+  268: { pais: "Uruguay", competicion: "Primera División" },
 };
 
 export default async function handler(req, res) {
