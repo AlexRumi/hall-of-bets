@@ -124,6 +124,22 @@ const OPCIONES_DESCANSO = [
   { id: "ht-x", texto: () => "Empate al descanso" },
 ];
 
+// "Resultado" ampliado (petición directa, panel nuevo): además del
+// encuentro completo y la 1ª mitad (que ya era "Descanso", mismos ids de
+// siempre — el resultado al descanso ES el resultado de la 1ª mitad), dos
+// filas nuevas: quién gana la 2ª mitad (comparando el marcador del
+// descanso con el final) y quién va ganando a los 10 minutos.
+const OPCIONES_RESULTADO_2T = [
+  { id: "2t-1", texto: (eq) => `${eq.local} gana la 2ª mitad` },
+  { id: "2t-2", texto: (eq) => `${eq.visitante} gana la 2ª mitad` },
+  { id: "2t-x", texto: () => "Empate en la 2ª mitad" },
+];
+const OPCIONES_RESULTADO_10MIN = [
+  { id: "10min-1", texto: (eq) => `${eq.local} gana a los 10 minutos` },
+  { id: "10min-2", texto: (eq) => `${eq.visitante} gana a los 10 minutos` },
+  { id: "10min-x", texto: () => "Empate a los 10 minutos" },
+];
+
 // Notación estándar de este mercado (descanso/final): no se sustituye por
 // nombres de equipo, "Local/Visitante" es la forma habitual de escribirlo
 // en un ticket, igual que "1X2" tampoco lleva nombres.
@@ -204,6 +220,9 @@ function plantillasLinea(prefijoId, generarSufijo) {
 const PLANTILLAS_JUGADOR = [
   { id: "gol", sufijo: " anota un gol" },
   { id: "gol-2", sufijo: " anota 2+ goles" },
+  // Fase 3 del rediseño v3 (PROMPT_NUEVA_APUESTA_V3.md): "Hat-trick" es
+  // columna nueva de la tabla de Jugador, no existía todavía.
+  { id: "gol-3", sufijo: " anota 3+ goles" },
   { id: "asistencia", sufijo: " asistirá" },
   { id: "anota-o-asiste", sufijo: " anota o asiste" },
   ...plantillasLinea("remates-puerta", (l) => `: +${l} remates a puerta`),
@@ -214,10 +233,23 @@ const PLANTILLAS_JUGADOR = [
   ...plantillasLinea("remates-puerta-cabeza", (l) => `: +${l} remates a puerta de cabeza`),
   ...plantillasLinea("remates-puerta-fuera-area", (l) => `: +${l} remates a puerta fuera del área`),
   ...plantillasLinea("remates-totales", (l) => `: +${l} remates totales`),
+  // Remates/Remates a puerta del jugador por mitad (petición directa,
+  // ampliar el panel nuevo con un desplegable Encuentro/1ª mitad/2ª
+  // mitad) — mismo patrón que ya existe a nivel de equipo (Goles 1t/2t),
+  // ahora también a nivel de jugador.
+  ...plantillasLinea("remates-totales-1t", (l) => ` (1ª mitad): +${l} remates`),
+  ...plantillasLinea("remates-totales-2t", (l) => ` (2ª mitad): +${l} remates`),
+  ...plantillasLinea("remates-puerta-1t", (l) => ` (1ª mitad): +${l} remates a puerta`),
+  ...plantillasLinea("remates-puerta-2t", (l) => ` (2ª mitad): +${l} remates a puerta`),
   ...plantillasLinea("falta-cometida", (l) => ` comete +${l} faltas`),
   ...plantillasLinea("falta-recibida", (l) => ` recibe +${l} faltas`),
   ...plantillasLinea("entrada", (l) => ` comete +${l} entradas`),
   { id: "tarjeta", sufijo: " será amonestado" },
+  // Dos mercados nuevos de tarjeta de jugador (petición directa, junto a
+  // "será amonestado"): quién ve la primera tarjeta del partido, y si acaba
+  // expulsado (roja directa o segunda amarilla).
+  { id: "primera-tarjeta-jugador", sufijo: " verá la primera tarjeta" },
+  { id: "expulsado", sufijo: " será expulsado" },
   // Paradas del portero: sin línea "under" a propósito (pedido así:
   // "1+, 2+, 3+..."), números enteros del 1 al 7.
   ...[1, 2, 3, 4, 5, 6, 7].map((n) => ({ id: `paradas-${n}`, sufijo: `: ${n}+ paradas` })),
@@ -250,7 +282,18 @@ const OPCIONES_JUGADOR_FALTAS_COMETE = opcionesJugador(LINEAS_JUGADOR.map((l) =>
 const OPCIONES_JUGADOR_FALTAS_RECIBE = opcionesJugador(LINEAS_JUGADOR.map((l) => `falta-recibida-${l}`));
 const OPCIONES_JUGADOR_ENTRADAS = opcionesJugador(LINEAS_JUGADOR.map((l) => `entrada-${l}`));
 const OPCIONES_JUGADOR_TARJETAS = opcionesJugador(["tarjeta"]);
+// "Tarjeta" del jugador ampliada (petición directa): Amonestado, 1ª
+// tarjeta del partido, Expulsado — tres columnas en vez de una.
+const OPCIONES_JUGADOR_PRIMERA_TARJETA = opcionesJugador(["primera-tarjeta-jugador"]);
+const OPCIONES_JUGADOR_EXPULSADO = opcionesJugador(["expulsado"]);
 const OPCIONES_JUGADOR_PARADAS = opcionesJugador([1, 2, 3, 4, 5, 6, 7].map((n) => `paradas-${n}`));
+// Remates/Remates a puerta del jugador con desplegable de periodo
+// (Encuentro/1ª mitad/2ª mitad) — "encuentro" reutiliza las opciones ya
+// existentes de siempre.
+const OPCIONES_JUGADOR_REMATES_1T = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-totales-1t-${l}`));
+const OPCIONES_JUGADOR_REMATES_2T = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-totales-2t-${l}`));
+const OPCIONES_JUGADOR_REMATES_PUERTA_1T = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-puerta-1t-${l}`));
+const OPCIONES_JUGADOR_REMATES_PUERTA_2T = opcionesJugador(LINEAS_JUGADOR.map((l) => `remates-puerta-2t-${l}`));
 
 // Si el texto ya guardado de una selección termina en el sufijo de alguna
 // plantilla de jugador, separa el nombre del jugador del resto —
@@ -698,6 +741,826 @@ const ESPECIALES_SUBCATS = [
   },
   { id: "anota-penalti", etiqueta: "Anotará un penalti", opciones: OPCIONES_ANOTA_PENALTI },
   { id: "penalti-encuentro", etiqueta: "Penalti en el encuentro", opciones: OPCIONES_PENALTI_ENCUENTRO },
+];
+
+// ---------------------------------------------------------------------
+// Fase 3 del rediseño v3 de "Nueva apuesta" (PROMPT_NUEVA_APUESTA_V3.md,
+// PanelMercados.jsx): empieza por los 9 mercados de la demo (Resultado,
+// Ambos marcan, Doble oportunidad, Portería a cero, Total de goles,
+// Córners, Tarjetas, Jugador, Otro mercado) — el resto del catálogo real
+// (Favor/Contra, Marcador exacto, Hándicap, Especiales...) se añade en un
+// paso posterior, mismo patrón ya validado. Mismas opciones/ids de
+// siempre, solo reorganizadas en tablas — nunca chips sueltos (petición
+// directa del prompt).
+// ---------------------------------------------------------------------
+
+function opcionPorId(lista, id) {
+  return lista.find((o) => o.id === id) ?? null;
+}
+
+const COLUMNAS_1X2 = [
+  { clave: "local", etiqueta: "Local" },
+  { clave: "empate", etiqueta: "Empate" },
+  { clave: "visitante", etiqueta: "Visitante" },
+];
+const COLUMNAS_SI_NO = [
+  { clave: "si", etiqueta: "Sí" },
+  { clave: "no", etiqueta: "No" },
+];
+const COLUMNAS_DOBLE_OPORTUNIDAD = [
+  { clave: "1x", etiqueta: "1X" },
+  { clave: "12", etiqueta: "12" },
+  { clave: "x2", etiqueta: "X2" },
+];
+
+// Fusiona 1X2 (Partido completo) y Descanso en una sola tabla, columna
+// central "Empate" — antes eran dos categorías sueltas.
+// Petición directa: "Partido completo" → "Encuentro", se quita "Descanso"
+// como tal (pasa a llamarse "1ª mitad" — mismos ids de siempre, el
+// resultado al descanso ES el resultado de la 1ª mitad) y se añaden "2ª
+// mitad" y "10 minutos".
+const TABLA_RESULTADO = {
+  columnas: COLUMNAS_1X2,
+  filas: [
+    {
+      etiqueta: "Encuentro",
+      celdas: {
+        local: opcionPorId(OPCIONES_1X2, "1"),
+        empate: opcionPorId(OPCIONES_1X2, "x"),
+        visitante: opcionPorId(OPCIONES_1X2, "2"),
+      },
+    },
+    {
+      etiqueta: "1ª mitad",
+      celdas: {
+        local: opcionPorId(OPCIONES_DESCANSO, "ht-1"),
+        empate: opcionPorId(OPCIONES_DESCANSO, "ht-x"),
+        visitante: opcionPorId(OPCIONES_DESCANSO, "ht-2"),
+      },
+    },
+    {
+      etiqueta: "2ª mitad",
+      celdas: {
+        local: opcionPorId(OPCIONES_RESULTADO_2T, "2t-1"),
+        empate: opcionPorId(OPCIONES_RESULTADO_2T, "2t-x"),
+        visitante: opcionPorId(OPCIONES_RESULTADO_2T, "2t-2"),
+      },
+    },
+    {
+      etiqueta: "10 minutos",
+      celdas: {
+        local: opcionPorId(OPCIONES_RESULTADO_10MIN, "10min-1"),
+        empate: opcionPorId(OPCIONES_RESULTADO_10MIN, "10min-x"),
+        visitante: opcionPorId(OPCIONES_RESULTADO_10MIN, "10min-2"),
+      },
+    },
+  ],
+};
+
+const TABLA_AMBOS_MARCAN = {
+  columnas: COLUMNAS_SI_NO,
+  filas: [
+    {
+      etiqueta: "Encuentro",
+      celdas: { si: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-si"), no: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-no") },
+    },
+    {
+      etiqueta: "1ª mitad",
+      celdas: {
+        si: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-1t-si"),
+        no: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-1t-no"),
+      },
+    },
+    {
+      etiqueta: "2ª mitad",
+      celdas: {
+        si: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-2t-si"),
+        no: opcionPorId(OPCIONES_AMBOS_MARCAN, "btts-2t-no"),
+      },
+    },
+  ],
+};
+
+const TABLA_DOBLE_OPORTUNIDAD = {
+  columnas: COLUMNAS_DOBLE_OPORTUNIDAD,
+  filas: [
+    {
+      etiqueta: "Partido completo",
+      celdas: {
+        "1x": opcionPorId(OPCIONES_DOBLE_OPORTUNIDAD, "1x"),
+        "12": opcionPorId(OPCIONES_DOBLE_OPORTUNIDAD, "12"),
+        x2: opcionPorId(OPCIONES_DOBLE_OPORTUNIDAD, "x2"),
+      },
+    },
+  ],
+};
+
+// Filas = equipo (nombre real, "equipoClave" le dice al componente qué
+// nombre de "equipos" mostrar en esa fila, igual que ya se hizo antes).
+const TABLA_PORTERIA_CERO = {
+  columnas: COLUMNAS_SI_NO,
+  filas: [
+    {
+      equipoClave: "local",
+      celdas: {
+        si: opcionPorId(OPCIONES_PORTERIA_CERO_LOCAL, "porteria-cero-local-si"),
+        no: opcionPorId(OPCIONES_PORTERIA_CERO_LOCAL, "porteria-cero-local-no"),
+      },
+    },
+    {
+      equipoClave: "visitante",
+      celdas: {
+        si: opcionPorId(OPCIONES_PORTERIA_CERO_VISITANTE, "porteria-cero-visitante-si"),
+        no: opcionPorId(OPCIONES_PORTERIA_CERO_VISITANTE, "porteria-cero-visitante-no"),
+      },
+    },
+  ],
+};
+
+// Fase posterior (petición directa, ampliar el catálogo del panel nuevo
+// más allá de los 9 mercados iniciales): el resto de tablas, con las
+// MISMAS opciones/ids de siempre (nunca se inventa texto nuevo aquí, solo
+// se reorganizan en filas/columnas — igual que ya se hizo con las cuatro
+// de arriba).
+const COLUMNAS_LOCAL_VISITANTE = [
+  { clave: "local", etiqueta: "Local" },
+  { clave: "visitante", etiqueta: "Visitante" },
+];
+
+const TABLA_FAVOR_CONTRA = {
+  columnas: [
+    { clave: "favor", etiqueta: "Favor" },
+    { clave: "contra", etiqueta: "Contra" },
+  ],
+  filas: [
+    {
+      etiqueta: "Local",
+      celdas: {
+        favor: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-1-favor"),
+        contra: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-1-contra"),
+      },
+    },
+    {
+      etiqueta: "Empate",
+      celdas: {
+        favor: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-x-favor"),
+        contra: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-x-contra"),
+      },
+    },
+    {
+      etiqueta: "Visitante",
+      celdas: {
+        favor: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-2-favor"),
+        contra: opcionPorId(OPCIONES_FAVOR_CONTRA, "exchange-2-contra"),
+      },
+    },
+  ],
+};
+
+// Descanso/Final combinado (9 celdas) — notación "Local/Local" de
+// siempre, sin sustituir nombres de equipo (igual que OPCIONES_DESCANSO_FINAL).
+// Petición directa: en vez de la rejilla 3×3 con "Local/Empate/Visitante"
+// de cabecera, notación corta "1/X/2" directamente en cada botón (p.ej.
+// "1/X" = 1ª mitad ganaba el Local, resultado final Empate) — se entiende
+// mejor de un vistazo, sin tener que cruzar fila+columna. Devuelve los 9
+// combos ya en orden de rejilla (3 filas de 3), para un componente propio
+// (TarjetaDescansoFinal en PanelMercados.jsx) en vez del TarjetaTabla
+// genérico.
+export function tablaDescansoFinal() {
+  const codigos = ["1", "x", "2"];
+  return codigos.flatMap((filaCodigo) =>
+    codigos.map((colCodigo) => ({
+      etiqueta: `${filaCodigo.toUpperCase()}/${colCodigo.toUpperCase()}`,
+      opcion: opcionPorId(OPCIONES_DESCANSO_FINAL, `${filaCodigo}-${colCodigo}`),
+    }))
+  );
+}
+
+const TABLA_EMPATE_NO_VALIDO = {
+  columnas: COLUMNAS_LOCAL_VISITANTE,
+  filas: [
+    {
+      etiqueta: "Empate no válido",
+      celdas: {
+        local: opcionPorId(OPCIONES_EMPATE_NO_VALIDO, "dnb-1"),
+        visitante: opcionPorId(OPCIONES_EMPATE_NO_VALIDO, "dnb-2"),
+      },
+    },
+  ],
+};
+
+const TABLA_EQUIPO_CLASIFICA = {
+  columnas: COLUMNAS_LOCAL_VISITANTE,
+  filas: [
+    {
+      etiqueta: "Clasifica",
+      celdas: {
+        local: opcionPorId(OPCIONES_EQUIPO_CLASIFICA, "clasifica-local"),
+        visitante: opcionPorId(OPCIONES_EQUIPO_CLASIFICA, "clasifica-visitante"),
+      },
+    },
+  ],
+};
+
+const COLUMNAS_METODO_CLASIFICACION = [
+  { clave: "90", etiqueta: "90 min" },
+  { clave: "prorroga", etiqueta: "Prórroga" },
+  { clave: "penaltis", etiqueta: "Penaltis" },
+];
+const TABLA_METODO_CLASIFICACION = {
+  columnas: COLUMNAS_METODO_CLASIFICACION,
+  filas: [
+    {
+      equipoClave: "local",
+      celdas: {
+        "90": opcionPorId(OPCIONES_METODO_CLASIFICACION_LOCAL, "metodo-local-90"),
+        prorroga: opcionPorId(OPCIONES_METODO_CLASIFICACION_LOCAL, "metodo-local-prorroga"),
+        penaltis: opcionPorId(OPCIONES_METODO_CLASIFICACION_LOCAL, "metodo-local-penaltis"),
+      },
+    },
+    {
+      equipoClave: "visitante",
+      celdas: {
+        "90": opcionPorId(OPCIONES_METODO_CLASIFICACION_VISITANTE, "metodo-visitante-90"),
+        prorroga: opcionPorId(OPCIONES_METODO_CLASIFICACION_VISITANTE, "metodo-visitante-prorroga"),
+        penaltis: opcionPorId(OPCIONES_METODO_CLASIFICACION_VISITANTE, "metodo-visitante-penaltis"),
+      },
+    },
+  ],
+};
+
+const TABLA_GANADOR_TROFEO = {
+  columnas: COLUMNAS_LOCAL_VISITANTE,
+  filas: [
+    {
+      etiqueta: "Ganador",
+      celdas: {
+        local: opcionPorId(OPCIONES_GANADOR_TROFEO, "trofeo-local"),
+        visitante: opcionPorId(OPCIONES_GANADOR_TROFEO, "trofeo-visitante"),
+      },
+    },
+  ],
+};
+
+const TABLA_PRIMERA_TARJETA = {
+  columnas: COLUMNAS_LOCAL_VISITANTE,
+  filas: [
+    {
+      etiqueta: "Primera tarjeta",
+      celdas: {
+        local: opcionPorId(OPCIONES_PRIMERA_TARJETA, "primera-tarjeta-local"),
+        visitante: opcionPorId(OPCIONES_PRIMERA_TARJETA, "primera-tarjeta-visitante"),
+      },
+    },
+  ],
+};
+
+// "Ambos reciben tarjeta"/"Ambos reciben 2 tarjetas"/"Tarjeta roja": las
+// tres son Sí/No de todo el partido (sin equipo), mismo patrón que
+// TABLA_AMBOS_MARCAN — se agrupan en una sola tarjeta para no abrir tres
+// acordeones distintos por un Sí/No cada uno.
+// Petición directa: se separa en dos tarjetas — "Ambos reciben tarjeta"
+// (las dos filas de Sí/No de equipo) y, aparte, "Tarjeta roja"
+// (Expulsión) en su propia tarjeta "Tarjeta - Especiales". "Tarjeta por
+// mitad" (antes aquí debajo) se elimina del panel nuevo — sus opciones
+// (OPCIONES_TARJETA_EQUIPO_1T/2T) se quedan sin usar por esta tarjeta,
+// pero el árbol antiguo (ARBOL_MERCADOS, SelectorMercado.jsx) las sigue
+// usando tal cual.
+// Petición directa (responsive): filas más cortas ("1 tarjeta"/"2 o más
+// tarjetas" en vez de "Ambos equipos reciben tarjeta"/"Ambos reciben dos
+// tarjetas") — se quedaban partidas en dos líneas en móvil. Solo cambia
+// la etiqueta de la fila (lo que se ve en la tabla); el texto real que se
+// guarda en la apuesta (opcion.texto) no cambia.
+const TABLA_AMBOS_RECIBEN_TARJETA = {
+  columnas: COLUMNAS_SI_NO,
+  filas: [
+    {
+      etiqueta: "1 tarjeta",
+      celdas: {
+        si: opcionPorId(OPCIONES_AMBOS_TARJETA, "ambos-tarjeta-si"),
+        no: opcionPorId(OPCIONES_AMBOS_TARJETA, "ambos-tarjeta-no"),
+      },
+    },
+    {
+      etiqueta: "2 o más tarjetas",
+      celdas: {
+        si: opcionPorId(OPCIONES_AMBOS_DOS_TARJETAS, "ambos-2-tarjetas-si"),
+        no: opcionPorId(OPCIONES_AMBOS_DOS_TARJETAS, "ambos-2-tarjetas-no"),
+      },
+    },
+  ],
+};
+
+const TABLA_TARJETA_ROJA = {
+  columnas: COLUMNAS_SI_NO,
+  filas: [
+    {
+      etiqueta: "Tarjeta roja",
+      celdas: {
+        si: opcionPorId(OPCIONES_EXPULSION, "expulsion-si"),
+        no: opcionPorId(OPCIONES_EXPULSION, "expulsion-no"),
+      },
+    },
+  ],
+};
+
+const COLUMNAS_MITAD_MAS_GOLES = [
+  { clave: "1t", etiqueta: "1ª mitad" },
+  { clave: "2t", etiqueta: "2ª mitad" },
+  { clave: "igual", etiqueta: "Empate" },
+];
+const TABLA_MITAD_MAS_GOLES = {
+  columnas: COLUMNAS_MITAD_MAS_GOLES,
+  filas: [
+    {
+      etiqueta: "Mitad con más goles",
+      celdas: {
+        "1t": opcionPorId(OPCIONES_MITAD_MAS_GOLES, "mitad-1"),
+        "2t": opcionPorId(OPCIONES_MITAD_MAS_GOLES, "mitad-2"),
+        igual: opcionPorId(OPCIONES_MITAD_MAS_GOLES, "mitad-igual"),
+      },
+    },
+  ],
+};
+
+const COLUMNAS_MARGEN_VICTORIA = [
+  { clave: "2", etiqueta: "+2" },
+  { clave: "3", etiqueta: "+3" },
+  { clave: "4", etiqueta: "+4" },
+  { clave: "5", etiqueta: "+5" },
+];
+const TABLA_MARGEN_VICTORIA = {
+  columnas: COLUMNAS_MARGEN_VICTORIA,
+  filas: [
+    {
+      equipoClave: "local",
+      celdas: Object.fromEntries(
+        COLUMNAS_MARGEN_VICTORIA.map((c) => [c.clave, opcionPorId(OPCIONES_MARGEN_VICTORIA, `margen-local-${c.clave}`)])
+      ),
+    },
+    {
+      equipoClave: "visitante",
+      celdas: Object.fromEntries(
+        COLUMNAS_MARGEN_VICTORIA.map((c) => [
+          c.clave,
+          opcionPorId(OPCIONES_MARGEN_VICTORIA, `margen-visitante-${c.clave}`),
+        ])
+      ),
+    },
+  ],
+};
+
+const TABLA_PENALTI_ENCUENTRO = {
+  columnas: COLUMNAS_SI_NO,
+  filas: [
+    {
+      etiqueta: "Penalti en el encuentro",
+      celdas: {
+        si: opcionPorId(OPCIONES_PENALTI_ENCUENTRO, "penalti-encuentro-si"),
+        no: opcionPorId(OPCIONES_PENALTI_ENCUENTRO, "penalti-encuentro-no"),
+      },
+    },
+  ],
+};
+
+// "Especiales": las 6 categorías Local/Visitante de ESPECIALES_SUBCATS +
+// "Anotará un penalti" (mismo patrón Local/Visitante) — todas comparten
+// exactamente forma de fila (Local/Visitante), así que caben en una sola
+// tarjeta con 7 filas en vez de 7 acordeones sueltos.
+const TABLA_ESPECIALES = {
+  columnas: COLUMNAS_LOCAL_VISITANTE,
+  filas: [
+    ...ESPECIALES_SUBCATS.filter((s) => s.id !== "anota-penalti" && s.id !== "penalti-encuentro").map((s) => ({
+      etiqueta: s.etiqueta,
+      celdas: {
+        local: s.opciones.find((o) => o.id.endsWith("-local")),
+        visitante: s.opciones.find((o) => o.id.endsWith("-visitante")),
+      },
+    })),
+    {
+      etiqueta: "Anotará un penalti",
+      celdas: {
+        local: opcionPorId(OPCIONES_ANOTA_PENALTI, "penalti-anota-local"),
+        visitante: opcionPorId(OPCIONES_ANOTA_PENALTI, "penalti-anota-visitante"),
+      },
+    },
+  ],
+};
+
+const COLUMNAS_EQUIPO_MAS = [
+  { clave: "local", etiqueta: "Local" },
+  { clave: "igualados", etiqueta: "Empate" },
+  { clave: "visitante", etiqueta: "Visitante" },
+];
+const TABLA_EQUIPO_MAS = {
+  columnas: COLUMNAS_EQUIPO_MAS,
+  filas: EQUIPO_MAS_SUBCATS.map((sub) => ({
+    etiqueta: sub.etiqueta,
+    celdas: {
+      local: sub.opciones.find((o) => o.id.endsWith("-local")),
+      igualados: sub.opciones.find((o) => o.id.endsWith("-igualados")),
+      visitante: sub.opciones.find((o) => o.id.endsWith("-visitante")),
+    },
+  })),
+};
+
+// Marcador exacto: rejilla 5×5 (0-4 goles cada equipo) + "Otro resultado"
+// como fila propia de una sola celda — se expone como función (no una
+// tabla fija) porque PanelMercados.jsx la renderiza con un componente a
+// medida (TarjetaMarcadorExacto), no con el TarjetaTabla genérico.
+// Petición directa: en vez de una rejilla 5×5, tres columnas (Local/
+// Empate/Visitante) con los marcadores agrupados por quién gana —
+// ordenados por goles del ganador (y del perdedor dentro de cada empate a
+// goles del ganador), que es como se lee en cualquier casa real. Reutiliza
+// las 25 combinaciones que ya existían (0-4 cada equipo) — el ejemplo del
+// usuario se quedaba en "4-2"/"2-4" sin el margen máximo "4-3"/"3-4", que
+// sí existe en el catálogo, así que se incluye también en vez de
+// descartar una combinación válida sin motivo.
+export function tablaMarcadorExacto() {
+  const item = (local, visitante) => ({
+    etiqueta: `${local}-${visitante}`,
+    opcion: opcionPorId(OPCIONES_MARCADOR_EXACTO, `exacto-${local}-${visitante}`),
+  });
+  const local = [];
+  const visitante = [];
+  for (let ganador = 1; ganador <= 4; ganador++) {
+    for (let perdedor = 0; perdedor < ganador; perdedor++) {
+      local.push(item(ganador, perdedor));
+      visitante.push(item(perdedor, ganador));
+    }
+  }
+  const empate = [0, 1, 2, 3, 4].map((n) => item(n, n));
+  return { local, empate, visitante, otro: opcionPorId(OPCIONES_MARCADOR_EXACTO, "exacto-otro") };
+}
+
+// Hándicap asiático: no es un Over/Under (no hay "línea opuesta" en la
+// misma fila) — tres columnas (negativas/0/positivas) en vez de una lista
+// plana, elegido con un desplegable Local/Visitante (ver TarjetaHandicap
+// en PanelMercados.jsx). Clasificado por el propio id ("-n"/"-p" ya
+// distinguen negativo/positivo, ver opcionesHandicapEquipo).
+export function opcionesHandicap(equipoClave) {
+  const opciones = equipoClave === "visitante" ? OPCIONES_HANDICAP_VISITANTE : OPCIONES_HANDICAP_LOCAL;
+  return {
+    negativos: opciones.filter((o) => /-n\d/.test(o.id)),
+    cero: opciones.filter((o) => o.id.endsWith("-0")),
+    positivos: opciones.filter((o) => /-p\d/.test(o.id)),
+  };
+}
+
+export const TABLAS_MERCADO = {
+  resultado: TABLA_RESULTADO,
+  "ambos-marcan": TABLA_AMBOS_MARCAN,
+  "doble-oportunidad": TABLA_DOBLE_OPORTUNIDAD,
+  "porteria-cero": TABLA_PORTERIA_CERO,
+  "favor-contra": TABLA_FAVOR_CONTRA,
+  "empate-no-valido": TABLA_EMPATE_NO_VALIDO,
+  "equipo-clasifica": TABLA_EQUIPO_CLASIFICA,
+  "metodo-clasificacion": TABLA_METODO_CLASIFICACION,
+  "ganador-trofeo": TABLA_GANADOR_TROFEO,
+  "primera-tarjeta": TABLA_PRIMERA_TARJETA,
+  "ambos-reciben-tarjeta": TABLA_AMBOS_RECIBEN_TARJETA,
+  "tarjeta-roja": TABLA_TARJETA_ROJA,
+  "mitad-mas-goles": TABLA_MITAD_MAS_GOLES,
+  "margen-victoria": TABLA_MARGEN_VICTORIA,
+  "penalti-encuentro": TABLA_PENALTI_ENCUENTRO,
+  especiales: TABLA_ESPECIALES,
+  "equipo-mas": TABLA_EQUIPO_MAS,
+};
+
+// Over/Under (Total de goles/Córners/Tarjetas): dos desplegables Ámbito +
+// Periodo alimentando una única tabla — mismas líneas/opciones de
+// siempre, solo reorganizadas. Devuelve {over, under} o null si esa
+// combinación no existe (de momento Córners/Tarjetas solo tienen ámbito
+// "ambos", igual que la demo — Local/Visitante ya existen en el catálogo
+// y se pueden añadir aquí sin tocar nada más el día que se pidan).
+function separarPorId(lista, marcaOver, marcaUnder) {
+  return {
+    over: lista.filter((o) => o.id.includes(`-${marcaOver}-`)),
+    under: lista.filter((o) => o.id.includes(`-${marcaUnder}-`)),
+  };
+}
+
+// Petición directa: 1ª/2ª mitad para Córners (combinado), Tarjetas y
+// Remates/Remates a puerta (combinado y por equipo) — no existían en el
+// catálogo (solo Goles tenía líneas de mitad de antes). Líneas nuevas,
+// estimadas a ojo escalando ~a la mitad el rango del partido completo del
+// mismo mercado (mismo criterio de redondeo a .5 que el resto del
+// archivo) — no vienen verificadas contra una casa real, revisar si se
+// prefieren otras.
+const LINEAS_CORNERS_AMBOS_MEDIO = lineasDesde(2.5, 7.5, 1);
+const LINEAS_TARJETAS_MEDIO = lineasDesde(0.5, 3.5, 1);
+const LINEAS_REMATES_AMBOS_MEDIO = lineasDesde(7.5, 16.5, 1);
+const LINEAS_REMATES_LADO_MEDIO = lineasDesde(2.5, 11.5, 1);
+const LINEAS_REMATES_PUERTA_AMBOS_MEDIO = lineasDesde(2.5, 6.5, 1);
+const LINEAS_REMATES_PUERTA_LADO_MEDIO = lineasDesde(0.5, 4.5, 1);
+
+// "Ambos equipos combinados" por mitad — mismo patrón que
+// opcionesGolesMedioTiempo (sin nombre de equipo, prefijo de mitad en el
+// id para no chocar con el partido completo).
+function opcionesAmbosMedioTiempo(lineas, prefijoId, etiquetaMitad, etiquetaMercado) {
+  return {
+    over: lineas.map((l) => ({ id: `${prefijoId}-over-${l}`, texto: () => `${etiquetaMitad}: +${l} ${etiquetaMercado}` })),
+    under: lineas.map((l) => ({ id: `${prefijoId}-under-${l}`, texto: () => `${etiquetaMitad}: -${l} ${etiquetaMercado}` })),
+  };
+}
+const CORNERS_AMBOS_1T = opcionesAmbosMedioTiempo(LINEAS_CORNERS_AMBOS_MEDIO, "corners-ambos-1t", "1ª mitad", "córners");
+const CORNERS_AMBOS_2T = opcionesAmbosMedioTiempo(LINEAS_CORNERS_AMBOS_MEDIO, "corners-ambos-2t", "2ª mitad", "córners");
+const TARJETAS_AMBOS_1T = opcionesAmbosMedioTiempo(LINEAS_TARJETAS_MEDIO, "tarjetas-ambos-1t", "1ª mitad", "tarjetas");
+const TARJETAS_AMBOS_2T = opcionesAmbosMedioTiempo(LINEAS_TARJETAS_MEDIO, "tarjetas-ambos-2t", "2ª mitad", "tarjetas");
+const REMATES_AMBOS_1T = opcionesAmbosMedioTiempo(LINEAS_REMATES_AMBOS_MEDIO, "remates-ambos-1t", "1ª mitad", "remates");
+const REMATES_AMBOS_2T = opcionesAmbosMedioTiempo(LINEAS_REMATES_AMBOS_MEDIO, "remates-ambos-2t", "2ª mitad", "remates");
+const REMATES_PUERTA_AMBOS_1T = opcionesAmbosMedioTiempo(
+  LINEAS_REMATES_PUERTA_AMBOS_MEDIO,
+  "remates-puerta-ambos-1t",
+  "1ª mitad",
+  "remates a puerta"
+);
+const REMATES_PUERTA_AMBOS_2T = opcionesAmbosMedioTiempo(
+  LINEAS_REMATES_PUERTA_AMBOS_MEDIO,
+  "remates-puerta-ambos-2t",
+  "2ª mitad",
+  "remates a puerta"
+);
+
+// Por equipo y por mitad — mismo patrón que opcionesGolesEquipoMedioTiempo
+// (nombre de equipo + mitad en el texto para no chocar con el partido
+// completo).
+function opcionesEquipoMedioTiempoGenerico(lineas, clave, prefijoId, etiquetaMitad, etiquetaMercado) {
+  return {
+    over: lineas.map((l) => ({
+      id: `${prefijoId}-${clave}-over-${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Over ${l} ${etiquetaMercado}`,
+    })),
+    under: lineas.map((l) => ({
+      id: `${prefijoId}-${clave}-under-${l}`,
+      texto: (eq) => `${eq[clave]} ${etiquetaMitad}: Under ${l} ${etiquetaMercado}`,
+    })),
+  };
+}
+const TARJETAS_EQUIPO_LOCAL_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_TARJETAS_MEDIO,
+  "local",
+  "tarjetas-eq-1t",
+  "1ª mitad",
+  "tarjetas"
+);
+const TARJETAS_EQUIPO_LOCAL_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_TARJETAS_MEDIO,
+  "local",
+  "tarjetas-eq-2t",
+  "2ª mitad",
+  "tarjetas"
+);
+const TARJETAS_EQUIPO_VISITANTE_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_TARJETAS_MEDIO,
+  "visitante",
+  "tarjetas-eq-1t",
+  "1ª mitad",
+  "tarjetas"
+);
+const TARJETAS_EQUIPO_VISITANTE_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_TARJETAS_MEDIO,
+  "visitante",
+  "tarjetas-eq-2t",
+  "2ª mitad",
+  "tarjetas"
+);
+const REMATES_EQUIPO_LOCAL_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_LADO_MEDIO,
+  "local",
+  "remates-eq-1t",
+  "1ª mitad",
+  "remates"
+);
+const REMATES_EQUIPO_LOCAL_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_LADO_MEDIO,
+  "local",
+  "remates-eq-2t",
+  "2ª mitad",
+  "remates"
+);
+const REMATES_EQUIPO_VISITANTE_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_LADO_MEDIO,
+  "visitante",
+  "remates-eq-1t",
+  "1ª mitad",
+  "remates"
+);
+const REMATES_EQUIPO_VISITANTE_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_LADO_MEDIO,
+  "visitante",
+  "remates-eq-2t",
+  "2ª mitad",
+  "remates"
+);
+const REMATES_PUERTA_EQUIPO_LOCAL_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_PUERTA_LADO_MEDIO,
+  "local",
+  "remates-puerta-eq-1t",
+  "1ª mitad",
+  "remates a puerta"
+);
+const REMATES_PUERTA_EQUIPO_LOCAL_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_PUERTA_LADO_MEDIO,
+  "local",
+  "remates-puerta-eq-2t",
+  "2ª mitad",
+  "remates a puerta"
+);
+const REMATES_PUERTA_EQUIPO_VISITANTE_1T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_PUERTA_LADO_MEDIO,
+  "visitante",
+  "remates-puerta-eq-1t",
+  "1ª mitad",
+  "remates a puerta"
+);
+const REMATES_PUERTA_EQUIPO_VISITANTE_2T = opcionesEquipoMedioTiempoGenerico(
+  LINEAS_REMATES_PUERTA_LADO_MEDIO,
+  "visitante",
+  "remates-puerta-eq-2t",
+  "2ª mitad",
+  "remates a puerta"
+);
+
+export function tablaOverUnder(mercadoId, ambito, periodo) {
+  const porMercado = {
+    goles: {
+      ambos: {
+        encuentro: { over: OPCIONES_GOLES_OVER, under: OPCIONES_GOLES_UNDER },
+        "1t": separarPorId(OPCIONES_GOLES_1T, "over", "under"),
+        "2t": separarPorId(OPCIONES_GOLES_2T, "over", "under"),
+      },
+      local: {
+        encuentro: separarPorId(OPCIONES_GOLES_EQUIPO_LOCAL, "mas", "menos"),
+        "1t": GOLES_EQUIPO_LOCAL_1T,
+        "2t": GOLES_EQUIPO_LOCAL_2T,
+      },
+      visitante: {
+        encuentro: separarPorId(OPCIONES_GOLES_EQUIPO_VISITANTE, "mas", "menos"),
+        "1t": GOLES_EQUIPO_VISITANTE_1T,
+        "2t": GOLES_EQUIPO_VISITANTE_2T,
+      },
+    },
+    corners: {
+      ambos: {
+        encuentro: { over: OPCIONES_CORNERS_OVER, under: OPCIONES_CORNERS_UNDER },
+        "1t": CORNERS_AMBOS_1T,
+        "2t": CORNERS_AMBOS_2T,
+      },
+      local: {
+        encuentro: separarPorId(OPCIONES_CORNERS_EQUIPO_LOCAL, "mas", "menos"),
+        "1t": CORNERS_EQUIPO_LOCAL_1T,
+        "2t": CORNERS_EQUIPO_LOCAL_2T,
+      },
+      visitante: {
+        encuentro: separarPorId(OPCIONES_CORNERS_EQUIPO_VISITANTE, "mas", "menos"),
+        "1t": CORNERS_EQUIPO_VISITANTE_1T,
+        "2t": CORNERS_EQUIPO_VISITANTE_2T,
+      },
+    },
+    tarjetas: {
+      ambos: {
+        encuentro: { over: OPCIONES_TARJETAS_OVER, under: OPCIONES_TARJETAS_UNDER },
+        "1t": TARJETAS_AMBOS_1T,
+        "2t": TARJETAS_AMBOS_2T,
+      },
+      local: {
+        encuentro: separarPorId(OPCIONES_TARJETAS_EQUIPO_LOCAL, "mas", "menos"),
+        "1t": TARJETAS_EQUIPO_LOCAL_1T,
+        "2t": TARJETAS_EQUIPO_LOCAL_2T,
+      },
+      visitante: {
+        encuentro: separarPorId(OPCIONES_TARJETAS_EQUIPO_VISITANTE, "mas", "menos"),
+        "1t": TARJETAS_EQUIPO_VISITANTE_1T,
+        "2t": TARJETAS_EQUIPO_VISITANTE_2T,
+      },
+    },
+    remates: {
+      ambos: { encuentro: REMATES_EQUIPO_TOTAL, "1t": REMATES_AMBOS_1T, "2t": REMATES_AMBOS_2T },
+      local: { encuentro: REMATES_EQUIPO_LOCAL, "1t": REMATES_EQUIPO_LOCAL_1T, "2t": REMATES_EQUIPO_LOCAL_2T },
+      visitante: {
+        encuentro: REMATES_EQUIPO_VISITANTE,
+        "1t": REMATES_EQUIPO_VISITANTE_1T,
+        "2t": REMATES_EQUIPO_VISITANTE_2T,
+      },
+    },
+    "remates-puerta": {
+      ambos: {
+        encuentro: REMATES_PUERTA_EQUIPO_TOTAL,
+        "1t": REMATES_PUERTA_AMBOS_1T,
+        "2t": REMATES_PUERTA_AMBOS_2T,
+      },
+      local: {
+        encuentro: REMATES_PUERTA_EQUIPO_LOCAL,
+        "1t": REMATES_PUERTA_EQUIPO_LOCAL_1T,
+        "2t": REMATES_PUERTA_EQUIPO_LOCAL_2T,
+      },
+      visitante: {
+        encuentro: REMATES_PUERTA_EQUIPO_VISITANTE,
+        "1t": REMATES_PUERTA_EQUIPO_VISITANTE_1T,
+        "2t": REMATES_PUERTA_EQUIPO_VISITANTE_2T,
+      },
+    },
+  };
+  return porMercado[mercadoId]?.[ambito]?.[periodo] ?? null;
+}
+
+// Jugador: tabla con nombre de jugador en la primera columna — de momento
+// solo Marca/2 o más/Hat-trick (igual que la demo); Tarjetas/Paradas/
+// Método del gol se añaden después como sub-pestañas del mismo mercado.
+export const COLUMNAS_JUGADOR_BASICO = [
+  { clave: "marca", etiqueta: "Marca", plantillaId: "gol" },
+  { clave: "2mas", etiqueta: "2 o más", plantillaId: "gol-2" },
+  { clave: "hattrick", etiqueta: "Hat-trick", plantillaId: "gol-3" },
+];
+
+export function textoJugador(plantillaId, nombreJugador) {
+  const plantilla = PLANTILLAS_JUGADOR.find((p) => p.id === plantillaId);
+  return plantilla ? `${nombreJugador}${plantilla.sufijo}` : "";
+}
+
+// Fase posterior (petición directa, ampliar "Jugador" más allá de Marca/
+// 2+/Hat-trick): sub-pestañas dentro de la misma tarjeta, cada una con su
+// propia tabla pequeña (misma tabla con nombre STICKY de siempre) en vez
+// de amontonar todas las columnas en una sola — con 5 líneas de Remates +
+// 5 de Remates a puerta + el resto, una tabla única habría quedado
+// enorme e ilegible en móvil. Solo las sub-pestañas pedidas explícitamente
+// (Anotará, Asistirá, Anota o asiste, Remates, Remates a puerta,
+// Tarjetas) — Faltas/Entradas/Paradas del portero se quedan fuera por
+// ahora, no se pidieron.
+// Petición directa: "sacar todo" — cada mercado de Jugador es ahora su
+// propia tarjeta suelta en el panel (antes eran sub-pestañas dentro de
+// una única tarjeta "Jugador"). "columnas" es fijo; los dos con "periodos"
+// (Remates/Remates a puerta) ganan además un desplegable Encuentro/1ª
+// mitad/2ª mitad que cambia qué juego de columnas se usa (ver
+// TarjetaJugadorMercado en PanelMercados.jsx). Las columnas "1,2,3,4,5"
+// (antes "+0.5,+1.5"...) representan la misma línea de siempre, solo con
+// una etiqueta más simple de leer.
+function columnasEnteras(prefijoId) {
+  return LINEAS_JUGADOR.map((l, i) => ({ clave: String(l), etiqueta: String(i + 1), plantillaId: `${prefijoId}-${l}` }));
+}
+export const TARJETAS_JUGADOR = [
+  {
+    clave: "anota-o-asiste",
+    etiqueta: "Jugador - Anotará o asistirá",
+    columnas: [{ clave: "si", etiqueta: "Anota o asiste", plantillaId: "anota-o-asiste" }],
+  },
+  { clave: "jugador-goles", etiqueta: "Jugador - Anotará", columnas: COLUMNAS_JUGADOR_BASICO },
+  {
+    clave: "jugador-asistencias",
+    etiqueta: "Jugador - Asistirá",
+    columnas: [{ clave: "asiste", etiqueta: "Asistirá", plantillaId: "asistencia" }],
+  },
+  {
+    clave: "jugador-tarjetas",
+    etiqueta: "Jugador - Tarjetas",
+    columnas: [
+      { clave: "amonestado", etiqueta: "Amonestado", plantillaId: "tarjeta" },
+      { clave: "primera", etiqueta: "1ª tarjeta", plantillaId: "primera-tarjeta-jugador" },
+      { clave: "expulsado", etiqueta: "Expulsado", plantillaId: "expulsado" },
+    ],
+  },
+  {
+    clave: "jugador-remates-puerta",
+    etiqueta: "Jugador - Remates a puerta",
+    periodos: {
+      encuentro: columnasEnteras("remates-puerta"),
+      "1t": columnasEnteras("remates-puerta-1t"),
+      "2t": columnasEnteras("remates-puerta-2t"),
+    },
+  },
+  {
+    clave: "jugador-remates",
+    etiqueta: "Jugador - Remates",
+    periodos: {
+      encuentro: columnasEnteras("remates-totales"),
+      "1t": columnasEnteras("remates-totales-1t"),
+      "2t": columnasEnteras("remates-totales-2t"),
+    },
+  },
+  { clave: "jugador-faltas-cometidas", etiqueta: "Jugador - Faltas cometidas", columnas: columnasEnteras("falta-cometida") },
+  { clave: "jugador-faltas-recibidas", etiqueta: "Jugador - Faltas recibidas", columnas: columnasEnteras("falta-recibida") },
+  { clave: "jugador-entradas", etiqueta: "Jugador - Entradas", columnas: columnasEnteras("entrada") },
+  {
+    clave: "jugador-remates-puerta-cabeza",
+    etiqueta: "Jugador - Remates a puerta de cabeza",
+    columnas: columnasEnteras("remates-puerta-cabeza"),
+  },
+  {
+    clave: "jugador-remates-puerta-fuera-area",
+    etiqueta: "Jugador - Remates a puerta fuera del área",
+    columnas: columnasEnteras("remates-puerta-fuera-area"),
+  },
+  {
+    clave: "jugador-paradas",
+    etiqueta: "Jugador - Paradas del portero",
+    columnas: [1, 2, 3, 4, 5].map((n) => ({ clave: String(n), etiqueta: String(n), plantillaId: `paradas-${n}` })),
+    // Único mercado de jugador que es SOLO de porteros — el resto excluye
+    // porteros y ofrece el desplegable de Posición (Defensas/
+    // Centrocampistas/Delanteros); aquí no aporta nada (ya son todo
+    // porteros), mismo criterio que ya usaba SelectorMercado.jsx.
+    soloPorteros: true,
+  },
 ];
 
 // ---------------------------------------------------------------------

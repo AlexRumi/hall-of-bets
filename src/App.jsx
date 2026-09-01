@@ -33,6 +33,7 @@ import InformeProfesional from "./components/InformeProfesional";
 import EstadisticasDashboard from "./components/EstadisticasDashboard";
 import PanelEstadisticas from "./components/PanelEstadisticas";
 import Ajustes from "./components/Ajustes";
+import NuevaApuestaV3 from "./components/NuevaApuestaV3";
 import Academia from "./components/Academia";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
@@ -123,6 +124,11 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
   const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState(seccionActivaInicial);
+  // "Editar apuesta" en la vista previa de Nueva apuesta v3 (petición
+  // directa): null = modo crear de siempre; con una apuesta, el asistente
+  // arranca ya cargado con sus partidos/mercados para corregirla — ver
+  // Ajustes.jsx (único sitio que ofrece elegir una apuesta para esto).
+  const [apuestaEditandoV3, setApuestaEditandoV3] = useState(null);
   // Filtro con el que debe arrancar Historial la próxima vez que se monte
   // (ver AvisoPendientes.jsx en Inicio: su botón "Ver pendientes" pone
   // "pendientes" aquí antes de cambiar de sección) — se limpia solo al
@@ -459,17 +465,23 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
               rediseño de escritorio, pantalla a pantalla; el resto se
               queda igual hasta que se aborde en una fase futura. */}
           <div
-            className={`mx-auto px-4 sm:px-6 py-10 pb-24 md:pb-10 space-y-6 ${
-              seccionActiva === "inicio" ||
-              seccionActiva === "historial" ||
-              seccionActiva === "estadisticas" ||
-              seccionActiva === "casas" ||
-              seccionActiva === "informe" ||
-              seccionActiva === "trofeos" ||
-              seccionActiva === "academia" ||
-              seccionActiva === "ajustes"
-                ? "max-w-6xl"
-                : "max-w-3xl"
+            className={`mx-auto py-10 pb-24 md:pb-10 space-y-6 ${
+              // Vista previa de "Nueva apuesta" v3 (temporal): necesita todo
+              // el ancho posible para que Partidos/Mercados/Confirmación no
+              // se aprieten — menos margen lateral que el resto de
+              // secciones anchas y sin tope de ancho máximo.
+              seccionActiva === "preview-nueva-apuesta"
+                ? "max-w-none px-2 sm:px-3"
+                : seccionActiva === "inicio" ||
+                  seccionActiva === "historial" ||
+                  seccionActiva === "estadisticas" ||
+                  seccionActiva === "casas" ||
+                  seccionActiva === "informe" ||
+                  seccionActiva === "trofeos" ||
+                  seccionActiva === "academia" ||
+                  seccionActiva === "ajustes"
+                ? "max-w-6xl px-4 sm:px-6"
+                : "max-w-3xl px-4 sm:px-6"
             }`}
           >
             {seccionActiva === "inicio" ? (
@@ -637,9 +649,32 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro, onAlt
                 onArchivarMovimientos={archivarMovimientosPorRango}
                 ultimaCopia={ultimaCopia}
                 onCopiaRealizada={registrarCopiaRealizada}
+                onVerPreviewNuevaApuesta={() => {
+                  setApuestaEditandoV3(null);
+                  setSeccionActiva("preview-nueva-apuesta");
+                }}
+                onEditarPreviewNuevaApuesta={(apuesta) => {
+                  setApuestaEditandoV3(apuesta);
+                  setSeccionActiva("preview-nueva-apuesta");
+                }}
               />
             ) : seccionActiva === "academia" ? (
               <Academia />
+            ) : seccionActiva === "preview-nueva-apuesta" ? (
+              <NuevaApuestaV3
+                key={apuestaEditandoV3?.id ?? "nueva"}
+                casas={casas}
+                apuestas={apuestas}
+                movimientos={movimientos}
+                onGuardarApuesta={agregarApuesta}
+                onAjustarSaldoFreebet={ajustarSaldoFreebet}
+                apuestaInicial={apuestaEditandoV3}
+                onEditarApuesta={editarApuesta}
+                onCancelarEdicion={() => {
+                  setApuestaEditandoV3(null);
+                  setSeccionActiva("ajustes");
+                }}
+              />
             ) : (
               <EstadisticasDashboard
                 apuestas={apuestas}

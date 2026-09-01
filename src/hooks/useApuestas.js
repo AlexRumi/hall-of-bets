@@ -2,6 +2,19 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { desdeFila } from "../utils/apuestas";
 
+// Bug real: "crypto.randomUUID()" solo existe en contextos seguros
+// (localhost o HTTPS) — entrando desde el móvil por IP local
+// (http://192.168.x.x:5173, ni localhost ni HTTPS) no existe, y guardar
+// una apuesta explotaba con "crypto.randomUUID is not a function" (en
+// escritorio, localhost, sí funcionaba). Este id solo identifica cada
+// selección dentro del jsonb (no tiene ninguna relevancia de seguridad),
+// así que un id de repuesto con Math.random vale igual cuando no está
+// disponible el de verdad.
+function idSeleccion() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `sel-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 // Los datos viven en Supabase (tabla "apuestas"), no en localStorage: así
 // PC y móvil ven siempre lo mismo. Al cargar se leen todas las apuestas del
 // usuario, y una suscripción de Realtime mantiene la lista al día si se
@@ -78,7 +91,7 @@ export function useApuestas(userId) {
         aumento_pct: aumentoPct,
         cuota_total_manual: cuotaTotalManual,
         selecciones: selecciones.map((seleccion) => ({
-          id: crypto.randomUUID(),
+          id: idSeleccion(),
           evento: seleccion.evento,
           apuesta: seleccion.apuesta,
           cuota: Number(seleccion.cuota),
@@ -100,11 +113,19 @@ export function useApuestas(userId) {
       .select()
       .single();
 
+    // Bug real: un error de Supabase aquí (RLS, columna inválida...) se
+    // tragaba en silencio — el resto de la app no comprueba el resultado
+    // de esta función, así que "no pasaba nada" sin ninguna pista de por
+    // qué. Se registra y se relanza para que quien SÍ pueda reaccionar
+    // (NuevaApuestaV3.jsx, con try/catch) muestre el motivo real.
+    if (error) {
+      console.error("Error al guardar la apuesta:", error);
+      throw error;
+    }
+
     // Se añade también en local al momento (no hay que esperar al eco de
     // Realtime), que igualmente llegará después y no duplicará nada.
-    if (!error) {
-      setApuestas((actuales) => [desdeFila(data), ...actuales]);
-    }
+    setApuestas((actuales) => [desdeFila(data), ...actuales]);
   }
 
   // Actualiza los datos de una apuesta ya creada (para corregir errores al
@@ -139,7 +160,7 @@ export function useApuestas(userId) {
         aumento_pct: aumentoPct,
         cuota_total_manual: cuotaTotalManual,
         selecciones: selecciones.map((seleccion) => ({
-          id: crypto.randomUUID(),
+          id: idSeleccion(),
           evento: seleccion.evento,
           apuesta: seleccion.apuesta,
           cuota: Number(seleccion.cuota),
