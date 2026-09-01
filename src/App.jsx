@@ -4,6 +4,7 @@ import { useAuth } from "./hooks/useAuth";
 import { useApuestas } from "./hooks/useApuestas";
 import { useCasas } from "./hooks/useCasas";
 import { useTrofeos } from "./hooks/useTrofeos";
+import { useNovedades } from "./hooks/useNovedades";
 import { useMovimientos } from "./hooks/useMovimientos";
 import { useObjetivos } from "./hooks/useObjetivos";
 import { useAjustes } from "./hooks/useAjustes";
@@ -34,6 +35,7 @@ import PanelEstadisticas from "./components/PanelEstadisticas";
 import Ajustes from "./components/Ajustes";
 import NuevaApuestaV3 from "./components/NuevaApuestaV3";
 import Academia from "./components/Academia";
+import Novedades from "./components/Novedades";
 import ConfirmDialog from "./components/ConfirmDialog";
 import NotificacionTrofeo from "./components/NotificacionTrofeo";
 import MenuSecundario from "./components/MenuSecundario";
@@ -110,6 +112,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
   // sección que se esté viendo, para que la notificación de un trofeo nuevo
   // pueda saltar aunque no estés en la pestaña de Trofeos.
   const { trofeos, notificacion, cerrarNotificacion } = useTrofeos(apuestas);
+  const { novedades, noVistas: novedadesSinVer, marcarTodoVisto: marcarNovedadesVistas } = useNovedades();
   const {
     movimientos,
     agregarMovimiento,
@@ -453,6 +456,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
           activa={seccionActiva}
           onCambiar={setSeccionActiva}
           onCerrarSesion={onCerrarSesion}
+          noVistas={novedadesSinVer}
         />
 
         {/* El "main" de verdad: en escritorio es el único que hace scroll
@@ -478,6 +482,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                   seccionActiva === "informe" ||
                   seccionActiva === "trofeos" ||
                   seccionActiva === "academia" ||
+                  seccionActiva === "novedades" ||
                   seccionActiva === "ajustes"
                 ? "max-w-6xl px-4 sm:px-6"
                 : "max-w-3xl px-4 sm:px-6"
@@ -624,6 +629,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
               />
             ) : seccionActiva === "academia" ? (
               <Academia />
+            ) : seccionActiva === "novedades" ? (
+              <Novedades novedades={novedades} onVisto={marcarNovedadesVistas} />
             ) : seccionActiva === "nueva-apuesta" ? (
               <NuevaApuestaV3
                 key={apuestaEditandoV3?.id ?? "nueva"}
@@ -668,6 +675,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
           onCambiar={setSeccionActiva}
           onCerrarSesion={onCerrarSesion}
           botonRef={masBotonRef}
+          noVistas={novedadesSinVer}
         />
       </div>
 
@@ -679,6 +687,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
         onAbrirMas={() => setMasAbierto((actual) => !actual)}
         masAbierto={masAbierto}
         masBotonRef={masBotonRef}
+        hayNovedades={novedadesSinVer > 0}
       />
 
       <PanelLateral abierto={verEstadisticasPanel} onCerrar={() => setVerEstadisticasPanel(false)}>

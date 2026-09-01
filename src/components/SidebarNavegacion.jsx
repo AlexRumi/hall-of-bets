@@ -6,6 +6,7 @@ import {
   Trophy,
   GraduationCap,
   Settings,
+  Bell,
   LogOut,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ const ITEMS = [
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
   { id: "academia", etiqueta: "Academia", Icono: GraduationCap },
+  { id: "novedades", etiqueta: "Novedades", Icono: Bell },
   { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
 ];
 
@@ -44,6 +46,10 @@ export default function SidebarNavegacion({
   activa,
   onCambiar,
   onCerrarSesion,
+  // Nº de novedades sin leer (ver useNovedades.js) — pastilla roja junto
+  // a "Novedades", igual que el aviso de "Pendientes" en otros sitios de
+  // la app, para que se note que hay algo nuevo sin tener que entrar.
+  noVistas = 0,
 }) {
   return (
     <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 md:overflow-y-auto bg-felt px-3 py-6 print:hidden">
@@ -61,6 +67,11 @@ export default function SidebarNavegacion({
           >
             <Icono size={20} />
             {etiqueta}
+            {id === "novedades" && noVistas > 0 && (
+              <span className="ml-auto min-w-[20px] text-center font-mono text-[11px] font-bold text-paper bg-lose rounded-full px-1.5 py-0.5">
+                {noVistas}
+              </span>
+            )}
           </button>
         ))}
 

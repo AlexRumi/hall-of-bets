@@ -1,16 +1,23 @@
 import { Home, Wallet, Plus, PieChart, MoreHorizontal } from "lucide-react";
 
-function BotonBarra({ activa, Icono, etiqueta, onClick, botonRef }) {
+function BotonBarra({ activa, Icono, etiqueta, onClick, botonRef, conAviso = false }) {
   return (
     <button
       ref={botonRef}
       type="button"
       onClick={onClick}
-      className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
+      className={`relative flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors ${
         activa ? "text-gold" : "text-paper/70"
       }`}
     >
-      <Icono size={20} />
+      <span className="relative">
+        <Icono size={20} />
+        {/* Puntito rojo (p.ej. novedades sin leer, ver App.jsx) — solo
+            avisa de que hay algo, el número en sí se ve al abrir "Más". */}
+        {conAviso && (
+          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-lose ring-2 ring-felt" />
+        )}
+      </span>
       {etiqueta}
     </button>
   );
@@ -31,6 +38,9 @@ export default function BarraInferiorMovil({
   onAbrirMas,
   masAbierto,
   masBotonRef,
+  // Nº de novedades sin leer (ver useNovedades.js / App.jsx) — solo hace
+  // falta saber si hay alguna, no cuántas, para el puntito de "Más".
+  hayNovedades = false,
 }) {
   const enBankroll = activa === "apuestas" || activa === "entretenimiento";
   const enNuevaApuesta = activa === "nueva-apuesta";
@@ -83,6 +93,7 @@ export default function BarraInferiorMovil({
         etiqueta="Más"
         onClick={onAbrirMas}
         botonRef={masBotonRef}
+        conAviso={hayNovedades}
       />
     </nav>
   );

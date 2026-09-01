@@ -5,6 +5,7 @@ import {
   Trophy,
   Settings,
   GraduationCap,
+  Bell,
   LogOut,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ const OPCIONES = [
   { id: "casas", etiqueta: "Casas de apuestas", Icono: Landmark },
   { id: "trofeos", etiqueta: "Trofeos", Icono: Trophy },
   { id: "academia", etiqueta: "Academia", Icono: GraduationCap },
+  { id: "novedades", etiqueta: "Novedades", Icono: Bell },
   { id: "ajustes", etiqueta: "Ajustes", Icono: Settings },
 ];
 
@@ -31,6 +33,8 @@ export default function MenuSecundario({
   onCambiar,
   onCerrarSesion,
   botonRef,
+  // Nº de novedades sin leer (ver useNovedades.js / App.jsx).
+  noVistas = 0,
 }) {
   const contenedorRef = useRef(null);
 
@@ -80,6 +84,11 @@ export default function MenuSecundario({
           >
             <Icono size={16} />
             {etiqueta}
+            {id === "novedades" && noVistas > 0 && (
+              <span className="ml-auto min-w-[20px] text-center font-mono text-[11px] font-bold text-paper bg-lose rounded-full px-1.5 py-0.5">
+                {noVistas}
+              </span>
+            )}
           </button>
         ))}
         <button
