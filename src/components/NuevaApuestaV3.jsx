@@ -95,6 +95,8 @@ export default function NuevaApuestaV3({
   // como al salir de crear sin guardar.
   apuestaInicial = null,
   onEditarApuesta,
+  ligasFijadas,
+  onAlternarLigaFijada,
   onCancelar,
 }) {
   const esEdicion = apuestaInicial !== null;
@@ -650,6 +652,8 @@ export default function NuevaApuestaV3({
               matchIdActivo={matchActivo?.id}
               onElegirPartido={elegirPartido}
               contarSelecciones={contarSeleccionesDelPartido}
+              ligasFijadas={ligasFijadas}
+              onAlternarLigaFijada={onAlternarLigaFijada}
             />
           </div>
           {matchActivo ? (

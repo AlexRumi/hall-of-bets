@@ -683,7 +683,7 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
     : ORDERED_CARDS;
 
   return (
-    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col lg:max-h-[70vh]">
+    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col">
       {/* En móvil esta cabecera se oculta — se sustituye por la barra
           superior compartida (NuevaApuestaV3.jsx) para no repetir el
           nombre del partido dos veces (petición directa, Fase 6). */}
@@ -714,7 +714,7 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
         </div>
       </div>
 
-      <div className="lg:overflow-y-auto lg:flex-1 p-3 space-y-2 scrollbar-oculto">
+      <div className="p-3 space-y-2">
         {visibles.map((c) => {
           if (c.tipo === "tabla") {
             return (

@@ -148,42 +148,22 @@ function ordenarGrupos(grupos, ligasFijadas) {
   });
 }
 
-// Ligas fijadas con la estrellita — guardado en este dispositivo
-// (localStorage), no en Supabase: la app es de un solo usuario/cuenta,
-// así que no hay "preferencias por usuario" de verdad — esto es más
-// bien "preferencia de este navegador", igual que "trofeos-vistos"
-// (ver CLAUDE.md). Así, si otra persona usa la app desde su propio
-// móvil u ordenador con el mismo login, puede fijar sus propias ligas
-// sin pisar las de nadie más.
-const CLAVE_LIGAS_FIJADAS = "hall-of-bets:ligas-fijadas";
-
-function cargarLigasFijadas() {
-  try {
-    const guardado = localStorage.getItem(CLAVE_LIGAS_FIJADAS);
-    return guardado ? new Set(JSON.parse(guardado)) : new Set();
-  } catch {
-    // localStorage no disponible: sin ligas fijadas, sin romper nada.
-    return new Set();
-  }
-}
-
-export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, contarSelecciones }) {
+// Ligas fijadas con la estrellita: petición directa, sincronizado entre
+// dispositivos (tabla "ajustes" de Supabase, ver useAjustes.js) — antes
+// vivía en localStorage de cada navegador, así que fijar una liga en el
+// móvil no se veía en el PC y viceversa. "ligasFijadas"/
+// "onAlternarLigaFijada" llegan como props desde App.jsx (mismo patrón
+// que "casas"/"apuestas": el estado de verdad vive arriba, este
+// componente no gestiona su propia copia).
+export default function PanelPartidos({
+  fecha,
+  matchIdActivo,
+  onElegirPartido,
+  contarSelecciones,
+  ligasFijadas,
+  onAlternarLigaFijada,
+}) {
   const { partidos: partidosApi, cargando } = usePartidos(fecha);
-  const [ligasFijadas, setLigasFijadas] = useState(cargarLigasFijadas);
-
-  function alternarFijada(clave) {
-    setLigasFijadas((actuales) => {
-      const siguiente = new Set(actuales);
-      if (siguiente.has(clave)) siguiente.delete(clave);
-      else siguiente.add(clave);
-      try {
-        localStorage.setItem(CLAVE_LIGAS_FIJADAS, JSON.stringify([...siguiente]));
-      } catch {
-        // Sin localStorage, la estrellita solo dura lo que dure esta pestaña.
-      }
-      return siguiente;
-    });
-  }
   // Mientras "cargando" es true todavía no se sabe si habrá agenda real
   // o no — enseñar ya los partidos de ejemplo aquí sería el "flash" de
   // partidos que no son del día (bug real, visto en la app desplegada:
@@ -231,7 +211,7 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
         <div className="w-full sticky top-0 z-10 bg-felt text-paper px-3 py-2 flex items-center gap-2">
           <button
             type="button"
-            onClick={() => alternarFijada(clave)}
+            onClick={() => onAlternarLigaFijada(clave)}
             aria-label={fijada ? "Quitar de favoritas" : "Añadir a favoritas"}
             className="shrink-0 p-0.5 -m-0.5"
           >
@@ -327,7 +307,7 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
   }
 
   return (
-    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col lg:max-h-[70vh]">
+    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col">
       <div className="p-3 border-b border-line space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-ink">Partidos de hoy</p>
@@ -364,7 +344,7 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
         </div>
       </div>
 
-      <div className="lg:overflow-y-auto lg:flex-1 scrollbar-oculto">
+      <div>
         {gruposFavoritos.length > 0 && (
           <p className="px-3 py-1.5 text-[11px] font-bold text-gold uppercase tracking-wide bg-gold/15 border-y border-gold/30">
             Competiciones favoritas

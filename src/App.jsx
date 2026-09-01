@@ -118,7 +118,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
     archivarPorRango: archivarMovimientosPorRango,
   } = useMovimientos(userId);
   const { objetivos, guardarObjetivo, borrarObjetivo } = useObjetivos(userId);
-  const { ultimaCopia, registrarCopiaRealizada } = useAjustes(userId);
+  const { ultimaCopia, registrarCopiaRealizada, ligasFijadas, alternarLigaFijada } = useAjustes(userId);
   const [seccionActiva, setSeccionActiva] = useState(seccionActivaInicial);
   // "Nueva apuesta v3" es el formulario real de crear/editar (sustituye a
   // FormularioApuesta.jsx): null = modo crear; con una apuesta, el
@@ -630,6 +630,8 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                 onAjustarSaldoFreebet={ajustarSaldoFreebet}
                 apuestaInicial={apuestaEditandoV3}
                 onEditarApuesta={editarApuesta}
+                ligasFijadas={ligasFijadas}
+                onAlternarLigaFijada={alternarLigaFijada}
                 onCancelar={() => {
                   setApuestaEditandoV3(null);
                   setSeccionActiva(seccionAnterior);

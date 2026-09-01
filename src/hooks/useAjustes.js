@@ -14,11 +14,14 @@ function masReciente(a, b) {
 }
 
 // Una sola fila por usuario, sincronizada entre dispositivos (a diferencia
-// de "trofeos-vistos", que es solo local): por ahora solo guarda la fecha
-// de la última copia de seguridad exportada (Fase D), para que el aviso en
-// Ajustes se vea igual en el móvil y en el PC.
+// de "trofeos-vistos", que es solo local): la fecha de la última copia de
+// seguridad exportada (Fase D) y, desde que se pidió unificar escritorio y
+// móvil, qué ligas se han fijado con la estrellita en el buscador de
+// partidos (antes vivía solo en localStorage de cada navegador — petición
+// directa, para que fijar una liga en el móvil también se vea en el PC).
 export function useAjustes(userId) {
   const [ultimaCopia, setUltimaCopia] = useState(null);
+  const [ligasFijadas, setLigasFijadas] = useState(() => new Set());
 
   useEffect(() => {
     if (!userId) return;
@@ -26,11 +29,12 @@ export function useAjustes(userId) {
     let vivo = true;
     supabase
       .from("ajustes")
-      .select("ultima_copia")
+      .select("ultima_copia, ligas_fijadas")
       .maybeSingle()
       .then(({ data, error }) => {
         if (vivo && !error) {
           setUltimaCopia((actual) => masReciente(actual, data?.ultima_copia ?? null));
+          if (data?.ligas_fijadas) setLigasFijadas(new Set(data.ligas_fijadas));
         }
       });
 
@@ -40,9 +44,14 @@ export function useAjustes(userId) {
         "postgres_changes",
         { event: "*", schema: "public", table: "ajustes", filter: `user_id=eq.${userId}` },
         (payload) => {
-          const valor =
-            payload.eventType === "DELETE" ? null : payload.new.ultima_copia ?? null;
+          if (payload.eventType === "DELETE") {
+            setUltimaCopia(null);
+            setLigasFijadas(new Set());
+            return;
+          }
+          const valor = payload.new.ultima_copia ?? null;
           setUltimaCopia((actual) => masReciente(actual, valor));
+          setLigasFijadas(new Set(payload.new.ligas_fijadas ?? []));
         }
       )
       .subscribe();
@@ -64,5 +73,20 @@ export function useAjustes(userId) {
     if (!error) setUltimaCopia((actual) => masReciente(actual, ahora));
   }
 
-  return { ultimaCopia, registrarCopiaRealizada };
+  // Optimista (actualiza el estado local antes de esperar la respuesta):
+  // tocar la estrellita se nota al instante, sin esperar al viaje de ida y
+  // vuelta a Supabase; si la escritura fallara, el canal realtime del otro
+  // dispositivo simplemente no vería el cambio, pero este sigue mostrando
+  // lo que el usuario acaba de marcar.
+  async function alternarLigaFijada(clave) {
+    const siguiente = new Set(ligasFijadas);
+    if (siguiente.has(clave)) siguiente.delete(clave);
+    else siguiente.add(clave);
+    setLigasFijadas(siguiente);
+    await supabase
+      .from("ajustes")
+      .upsert({ user_id: userId, ligas_fijadas: [...siguiente] }, { onConflict: "user_id" });
+  }
+
+  return { ultimaCopia, registrarCopiaRealizada, ligasFijadas, alternarLigaFijada };
 }

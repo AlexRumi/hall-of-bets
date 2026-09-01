@@ -51,7 +51,7 @@ export default function PanelConfirmacion({
   }
 
   return (
-    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col lg:max-h-[70vh]">
+    <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col">
       {/* En móvil se oculta — misma barra superior compartida que ya
           esconde la cabecera de PanelMercados.jsx (Fase 6). */}
       <div className="hidden lg:block p-3.5 border-b border-line bg-paperDim">
@@ -64,7 +64,7 @@ export default function PanelConfirmacion({
         <p className="font-mono text-xs text-slate mt-1">Hoy {matchActivo.hora}</p>
       </div>
 
-      <div className="lg:overflow-y-auto lg:flex-1 scrollbar-oculto divide-y divide-line">
+      <div className="divide-y divide-line">
         {pendientes.map((p) => (
           <div key={p.label} className="flex items-start gap-2 px-3.5 py-2.5">
             <span className="flex-1 min-w-0 text-sm text-ink">
