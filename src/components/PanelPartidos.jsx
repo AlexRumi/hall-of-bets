@@ -58,6 +58,20 @@ const CODIGOS_BANDERA = {
   Turquía: "tr",
 };
 
+// Escudo de equipo: petición directa, mismo criterio que la bandera de
+// país (imagen en vez de emoji) — pero aquí ni hace falta un servicio
+// aparte tipo flagcdn.com. API-Football ya da el escudo de cada equipo
+// en su propio servidor de imágenes público (no cuenta contra la cuota
+// diaria de la API, que solo limita las consultas a /fixtures), así que
+// basta con construir la URL a partir del id de equipo que ya se trae
+// en api/partidos.js (equipoLocalId/equipoVisitanteId) — verificado con
+// curl que responde 200 sin api key. Sin id real (partidos de ejemplo de
+// PARTIDOS_DEMO, ids negativos) no se pinta nada, en vez de una imagen
+// rota.
+function escudoUrl(equipoId) {
+  return equipoId > 0 ? `https://media.api-sports.io/football/teams/${equipoId}.png` : null;
+}
+
 function agruparPorPaisLiga(partidos) {
   const mapa = new Map();
   for (const p of partidos) {
@@ -209,9 +223,19 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
                       : "border-l-[3px] border-l-transparent hover:bg-paperDim/60"
                   }`}
                 >
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium text-ink truncate">{local}</span>
-                    <span className="block text-sm font-medium text-ink truncate">{visitante}</span>
+                  <span className="flex-1 min-w-0 space-y-0.5">
+                    <span className="flex items-center gap-1.5">
+                      {escudoUrl(p.equipoLocalId) && (
+                        <img src={escudoUrl(p.equipoLocalId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                      )}
+                      <span className="text-sm font-medium text-ink truncate">{local}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {escudoUrl(p.equipoVisitanteId) && (
+                        <img src={escudoUrl(p.equipoVisitanteId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                      )}
+                      <span className="text-sm font-medium text-ink truncate">{visitante}</span>
+                    </span>
                   </span>
                   {n > 0 && (
                     <span className="font-mono text-xs text-gold bg-gold/10 border border-gold/40 rounded-full px-2 py-0.5 shrink-0">
