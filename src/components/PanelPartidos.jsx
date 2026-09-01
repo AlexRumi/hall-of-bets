@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Search, ChevronDown, Star } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
 import { normalizarTexto } from "../utils/texto";
-import { equiposDesdeEvento } from "../utils/mercados";
+import { equiposDesdeEvento, escudoUrl } from "../utils/mercados";
 import { ESTADOS_TERMINADOS_PARTIDO } from "../utils/apuestas";
 
 // Fase 2 del rediseño de "Nueva apuesta" (ver PROMPT_NUEVA_APUESTA_V3.md):
@@ -77,20 +77,6 @@ const CODIGOS_BANDERA = {
   Turquía: "tr",
   Uruguay: "uy",
 };
-
-// Escudo de equipo: petición directa, mismo criterio que la bandera de
-// país (imagen en vez de emoji) — pero aquí ni hace falta un servicio
-// aparte tipo flagcdn.com. API-Football ya da el escudo de cada equipo
-// en su propio servidor de imágenes público (no cuenta contra la cuota
-// diaria de la API, que solo limita las consultas a /fixtures), así que
-// basta con construir la URL a partir del id de equipo que ya se trae
-// en api/partidos.js (equipoLocalId/equipoVisitanteId) — verificado con
-// curl que responde 200 sin api key. Sin id real (partidos de ejemplo de
-// PARTIDOS_DEMO, ids negativos) no se pinta nada, en vez de una imagen
-// rota.
-function escudoUrl(equipoId) {
-  return equipoId > 0 ? `https://media.api-sports.io/football/teams/${equipoId}.png` : null;
-}
 
 function agruparPorPaisLiga(partidos) {
   const mapa = new Map();

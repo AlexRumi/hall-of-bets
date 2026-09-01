@@ -26,6 +26,17 @@ export function equiposDesdeEvento(evento) {
     : { local: "Equipo Local", visitante: "Equipo Visitante" };
 }
 
+// Escudo de equipo (mismo criterio que la bandera de país en
+// PanelPartidos.jsx: imagen en vez de emoji). API-Football sirve el
+// escudo de cada equipo en su propio servidor de imágenes público
+// (media.api-sports.io), sin api key y sin contar contra la cuota diaria
+// (verificado con curl) — basta con construir la URL a partir del id de
+// equipo que ya trae api/partidos.js. Sin id real (partidos de ejemplo,
+// ids negativos) no hay imagen que pintar.
+export function escudoUrl(equipoId) {
+  return equipoId > 0 ? `https://media.api-sports.io/football/teams/${equipoId}.png` : null;
+}
+
 // A diferencia de equiposDesdeEvento (siempre da un nombre, genérico si
 // hace falta, para generar texto de mercado), esto dice si de verdad
 // merece la pena partir "evento" en dos líneas (un equipo encima del

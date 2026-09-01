@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Pencil, ChevronDown, Check, X } from "lucide-react";
+import { Pencil, ChevronDown, Check, X, ArrowLeft, Clock } from "lucide-react";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import { agruparSeleccionesPorPartido } from "../utils/apuestas";
-import { equiposDesdeEvento } from "../utils/mercados";
+import { equiposDesdeEvento, escudoUrl } from "../utils/mercados";
 import CampoCasa from "./CampoCasa";
 import SelectorFecha from "./SelectorFecha";
 import PanelPartidos from "./PanelPartidos";
@@ -620,28 +620,53 @@ export default function NuevaApuestaV3({
         {/* Barra superior compartida (solo móvil, pasos Mercados/Confirmar):
             sustituye la ficha de cabecera que Mercados/Confirmación ya
             tienen en escritorio, para no repetir el nombre del partido dos
-            veces (petición directa del prompt). */}
+            veces (petición directa del prompt). Rediseñada con escudos +
+            "VS" (petición directa, mismo criterio que la cabecera de
+            escritorio de PanelMercados.jsx) — antes era una fila con solo
+            texto pequeño. */}
         {matchActivo && paso !== 0 && (
-          <div className="lg:hidden mt-3 flex items-center gap-2 bg-paperDim border border-line rounded-lg px-3 py-2">
+          <div className="lg:hidden mt-3 relative bg-paperDim border border-gold/30 rounded-xl px-3 py-3">
             <button
               type="button"
               onClick={() => setPaso(0)}
               aria-label="Volver a partidos"
-              className="text-slate hover:text-ink shrink-0"
+              className="absolute left-3 top-3 text-gold hover:text-goldDark"
             >
-              ←
+              <ArrowLeft size={18} />
             </button>
-            <span className="flex-1 min-w-0">
-              <span className="block font-display text-sm text-ink truncate">
-                {equiposDesdeEvento(matchActivo.evento).local} –{" "}
+            <p className="text-center text-[10px] font-semibold text-gold uppercase tracking-wide truncate px-8">
+              {matchActivo.pais} · {matchActivo.competicion}
+              {matchActivo.sede ? ` · ${matchActivo.sede}` : ""}
+            </p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              {escudoUrl(matchActivo.equipoLocalId) && (
+                <img
+                  src={escudoUrl(matchActivo.equipoLocalId)}
+                  alt=""
+                  className="w-8 h-8 shrink-0 object-contain"
+                />
+              )}
+              <span className="font-display text-sm text-ink">
+                {equiposDesdeEvento(matchActivo.evento).local}
+              </span>
+              <span className="font-display text-xs font-bold text-gold shrink-0">VS</span>
+              <span className="font-display text-sm text-ink">
                 {equiposDesdeEvento(matchActivo.evento).visitante}
               </span>
-              <span className="block text-[11px] text-slate truncate">
-                {matchActivo.pais} · {matchActivo.competicion}
-                {matchActivo.sede ? ` · ${matchActivo.sede}` : ""}
+              {escudoUrl(matchActivo.equipoVisitanteId) && (
+                <img
+                  src={escudoUrl(matchActivo.equipoVisitanteId)}
+                  alt=""
+                  className="w-8 h-8 shrink-0 object-contain"
+                />
+              )}
+            </div>
+            <div className="mt-2 flex justify-center">
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-gold border border-gold/40 rounded-full px-2.5 py-0.5">
+                <Clock size={11} />
+                Hoy {matchActivo.hora}
               </span>
-            </span>
-            <span className="font-mono text-xs text-slate shrink-0">{matchActivo.hora}</span>
+            </div>
           </div>
         )}
 

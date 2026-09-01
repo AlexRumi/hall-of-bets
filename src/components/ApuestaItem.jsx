@@ -6,6 +6,7 @@ import {
   agruparSeleccionesPorPartido,
   ESTADOS_TERMINADOS_PARTIDO as ESTADOS_TERMINADOS_API,
 } from "../utils/apuestas";
+import { escudoUrl } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
 import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
@@ -296,9 +297,33 @@ export default function ApuestaItem({
                   hace falta (sin "truncate"); cuota y estado bajan a una
                   segunda fila, alineados a la derecha. */}
               <div className="flex items-start gap-2.5">
-                <span className="shrink-0 w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-base">
-                  {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
-                </span>
+                {/* Petición directa: escudos de los dos equipos (mismo
+                    criterio que Nueva apuesta v3) en vez del emoji de
+                    deporte, cuando el partido tiene id real de equipo —
+                    las apuestas manuales/antiguas (sin esos ids) siguen
+                    con el emoji, sin hueco roto. */}
+                {escudoUrl(grupo.equipoLocalId) || escudoUrl(grupo.equipoVisitanteId) ? (
+                  <span className="shrink-0 flex items-center -space-x-2">
+                    {escudoUrl(grupo.equipoLocalId) && (
+                      <img
+                        src={escudoUrl(grupo.equipoLocalId)}
+                        alt=""
+                        className="w-6 h-6 rounded-full bg-surface border border-line object-contain"
+                      />
+                    )}
+                    {escudoUrl(grupo.equipoVisitanteId) && (
+                      <img
+                        src={escudoUrl(grupo.equipoVisitanteId)}
+                        alt=""
+                        className="w-6 h-6 rounded-full bg-surface border border-line object-contain"
+                      />
+                    )}
+                  </span>
+                ) : (
+                  <span className="shrink-0 w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-base">
+                    {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
+                  </span>
+                )}
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <p className="text-sm font-semibold text-ink leading-snug break-words">{grupo.evento}</p>
                   <div className="flex items-center gap-2">

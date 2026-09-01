@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search, Clock } from "lucide-react";
 import {
   TABLAS_MERCADO,
   tablaOverUnder,
@@ -8,6 +8,7 @@ import {
   tablaDescansoFinal,
   opcionesHandicap,
   TARJETAS_JUGADOR,
+  escudoUrl,
 } from "../utils/mercados";
 import { usePlantilla } from "../hooks/usePlantilla";
 import { normalizarTexto } from "../utils/texto";
@@ -687,18 +688,31 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
       {/* En móvil esta cabecera se oculta — se sustituye por la barra
           superior compartida (NuevaApuestaV3.jsx) para no repetir el
           nombre del partido dos veces (petición directa, Fase 6). */}
-      <div className="hidden lg:block p-3.5 border-b border-line bg-paperDim">
-        <p className="text-xs text-slate">
+      {/* Petición directa: escudos + "VS" en vez de solo texto — mismo
+          criterio que la barra móvil equivalente (NuevaApuestaV3.jsx). */}
+      <div className="hidden lg:block p-4 border-b border-line bg-paperDim">
+        <p className="text-center text-xs font-semibold text-gold uppercase tracking-wide">
           {partido.pais} · {partido.competicion}
           {partido.jornada ? ` · ${partido.jornada}` : ""}
         </p>
-        <h3 className="font-display text-lg text-ink mt-0.5">
-          {equipos.local} – {equipos.visitante}
-        </h3>
-        <p className="font-mono text-xs text-slate mt-1">
-          Hoy {partido.hora}
-          {partido.sede ? ` · ${partido.sede}` : ""}
-        </p>
+        <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
+          {escudoUrl(partido.equipoLocalId) && (
+            <img src={escudoUrl(partido.equipoLocalId)} alt="" className="w-11 h-11 shrink-0 object-contain" />
+          )}
+          <h3 className="font-display text-lg text-ink text-center">{equipos.local}</h3>
+          <span className="font-display text-sm font-bold text-gold shrink-0">VS</span>
+          <h3 className="font-display text-lg text-ink text-center">{equipos.visitante}</h3>
+          {escudoUrl(partido.equipoVisitanteId) && (
+            <img src={escudoUrl(partido.equipoVisitanteId)} alt="" className="w-11 h-11 shrink-0 object-contain" />
+          )}
+        </div>
+        <div className="mt-3 flex justify-center">
+          <span className="inline-flex items-center gap-1.5 text-xs font-mono text-gold border border-gold/40 rounded-full px-3 py-1">
+            <Clock size={12} />
+            Hoy {partido.hora}
+            {partido.sede ? ` · ${partido.sede}` : ""}
+          </span>
+        </div>
       </div>
 
       <div className="p-3 border-b border-line">
