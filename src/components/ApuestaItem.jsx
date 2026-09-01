@@ -291,70 +291,65 @@ export default function ApuestaItem({
               key={grupo.indiceLider}
               className={`border border-line rounded-xl p-3 bg-paperDim transition-opacity ${esNula ? "opacity-55" : ""}`}
             >
-              {/* Petición directa: el nombre del partido se cortaba en móvil
-                  compartiendo fila con el icono + la cuota + la pastilla de
-                  estado. Ahora va en su propia línea, con salto de línea si
-                  hace falta (sin "truncate"); cuota y estado bajan a una
-                  segunda fila, alineados a la derecha. */}
-              <div className="flex items-start gap-2.5">
-                {/* Petición directa: escudos de los dos equipos (mismo
-                    criterio que Nueva apuesta v3) en vez del emoji de
-                    deporte, cuando el partido tiene id real de equipo —
-                    las apuestas manuales/antiguas (sin esos ids) siguen
-                    con el emoji, sin hueco roto. */}
-                {escudoUrl(grupo.equipoLocalId) || escudoUrl(grupo.equipoVisitanteId) ? (
-                  <span className="shrink-0 flex items-center -space-x-2">
-                    {escudoUrl(grupo.equipoLocalId) && (
-                      <img
-                        src={escudoUrl(grupo.equipoLocalId)}
-                        alt=""
-                        className="w-6 h-6 rounded-full bg-surface border border-line object-contain"
-                      />
-                    )}
-                    {escudoUrl(grupo.equipoVisitanteId) && (
-                      <img
-                        src={escudoUrl(grupo.equipoVisitanteId)}
-                        alt=""
-                        className="w-6 h-6 rounded-full bg-surface border border-line object-contain"
-                      />
-                    )}
+              {/* Rediseñado (petición directa, mismo criterio que la
+                  cabecera de partido en Nueva apuesta v3): escudos a los
+                  lados del nombre, cuota y pastilla de resultado debajo,
+                  centrados y algo más grandes — antes iban en una columna
+                  a la derecha del icono, apretados. Sin escudos reales
+                  (apuestas manuales o de antes de esta función), se queda
+                  el emoji de deporte a la izquierda, sin hueco roto. */}
+              <div className="flex items-center justify-center gap-2">
+                {escudoUrl(grupo.equipoLocalId) ? (
+                  <img
+                    src={escudoUrl(grupo.equipoLocalId)}
+                    alt=""
+                    className="w-9 h-9 shrink-0 object-contain"
+                  />
+                ) : (
+                  !escudoUrl(grupo.equipoVisitanteId) && (
+                    <span className="shrink-0 w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-base">
+                      {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
+                    </span>
+                  )
+                )}
+                <p className="flex-1 min-w-0 text-sm font-semibold text-ink text-center leading-snug break-words">
+                  {grupo.evento}
+                </p>
+                {escudoUrl(grupo.equipoVisitanteId) && (
+                  <img
+                    src={escudoUrl(grupo.equipoVisitanteId)}
+                    alt=""
+                    className="w-9 h-9 shrink-0 object-contain"
+                  />
+                )}
+              </div>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span
+                  className={`font-mono text-sm font-bold px-3 py-2 rounded-lg border border-line bg-surface text-ink ${esNula ? "line-through opacity-70" : ""}`}
+                >
+                  {grupo.cuota.toFixed(2)}
+                </span>
+                {soloLectura ? (
+                  <span
+                    className={`text-sm font-bold px-3 py-2 rounded-lg ${ESTILOS_BARRA_ESTADO[grupo.resultado]}`}
+                  >
+                    {ETIQUETAS_RESULTADO[grupo.resultado]}
                   </span>
                 ) : (
-                  <span className="shrink-0 w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-base">
-                    {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => ciclarPartido(grupo)}
+                    disabled={apuesta.resultado === "cashout"}
+                    className={`min-w-[92px] text-sm font-bold px-3 py-2 rounded-lg transition-opacity ${ESTILOS_BARRA_ESTADO[grupo.resultado]} ${
+                      apuesta.resultado === "cashout" ? "opacity-60" : "hover:opacity-80"
+                    }`}
+                  >
+                    {ETIQUETAS_RESULTADO[grupo.resultado]}
+                  </button>
                 )}
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <p className="text-sm font-semibold text-ink leading-snug break-words">{grupo.evento}</p>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`shrink-0 font-mono text-xs font-bold px-2 py-1.5 rounded-lg border border-line bg-surface text-ink ${esNula ? "line-through opacity-70" : ""}`}
-                    >
-                      {grupo.cuota.toFixed(2)}
-                    </span>
-                    {soloLectura ? (
-                      <span
-                        className={`shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg ${ESTILOS_BARRA_ESTADO[grupo.resultado]}`}
-                      >
-                        {ETIQUETAS_RESULTADO[grupo.resultado]}
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => ciclarPartido(grupo)}
-                        disabled={apuesta.resultado === "cashout"}
-                        className={`shrink-0 min-w-[76px] text-xs font-bold px-2.5 py-1.5 rounded-lg transition-opacity ${ESTILOS_BARRA_ESTADO[grupo.resultado]} ${
-                          apuesta.resultado === "cashout" ? "opacity-60" : "hover:opacity-80"
-                        }`}
-                      >
-                        {ETIQUETAS_RESULTADO[grupo.resultado]}
-                      </button>
-                    )}
-                  </div>
-                </div>
               </div>
 
-              <div className="mt-2 ml-[42px] flex items-center gap-3 flex-wrap">
+              <div className="mt-2 flex items-center justify-center gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={() => alternarVerApuesta(grupo.indiceLider)}
@@ -383,7 +378,7 @@ export default function ApuestaItem({
                   abrir "Modificar" — el formulario entero — solo para
                   mirarlo, y volver a confirmar sin querer cambiar nada. */}
               {verAbierta && (
-                <ul className="mt-2 ml-[42px] space-y-1 text-xs text-ink list-disc list-inside">
+                <ul className="mt-2 space-y-1 text-xs text-ink list-disc list-inside">
                   {grupo.selecciones.map((seleccion) => (
                     <li key={seleccion.id ?? seleccion.indice}>{seleccion.apuesta}</li>
                   ))}
@@ -391,7 +386,7 @@ export default function ApuestaItem({
               )}
 
               {!soloLectura && promptAbierto && (
-                <div className="mt-2.5 ml-[42px] p-2.5 rounded-lg border border-gold/40 bg-gold/5 space-y-1.5">
+                <div className="mt-2.5 p-2.5 rounded-lg border border-gold/40 bg-gold/5 space-y-1.5">
                   <p className="text-xs text-gold">
                     Introduce la cuota recalculada por la casa para este partido:
                   </p>
