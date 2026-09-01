@@ -147,12 +147,19 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
   // Se comparte con MenuSecundario.jsx para que su "click fuera" no
   // confunda un click en este mismo botón con un click fuera del panel.
   const masBotonRef = useRef(null);
+  // El "main" de escritorio (ver más abajo, "md:overflow-y-auto"): desde
+  // que cabecera y barra lateral son fijas, es este div el que hace
+  // scroll de verdad en vez de la ventana — hay que resetear su scroll
+  // también, no solo el de "window" (que en móvil sigue siendo la propia
+  // página, sin este contenedor).
+  const mainRef = useRef(null);
 
   // Al cambiar de sección, arrancar siempre desde arriba (si no, se queda
   // con el scroll donde estaba la sección anterior) y recordarla para el
   // próximo F5 (ver seccionActivaInicial más arriba).
   useEffect(() => {
     window.scrollTo(0, 0);
+    mainRef.current?.scrollTo(0, 0);
     if (seccionActiva !== "historial") setFiltroHistorialInicial(null);
     try {
       localStorage.setItem(CLAVE_SECCION_ACTIVA, seccionActiva);
@@ -365,17 +372,20 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
   }
 
   return (
-    <div className="min-h-screen bg-fondo text-ink md:flex md:flex-col">
+    <div className="min-h-screen bg-fondo text-ink md:flex md:flex-col md:h-screen md:overflow-hidden">
       {/* Mismo verde felt en móvil y escritorio (el color del menú lateral
           también, para que no choque un blanco ahí). Móvil: banner grande,
           centrado. Escritorio: barra más fina, nombre a la izquierda.
-          "sticky" para que se quede fija arriba al hacer scroll, igual que
-          el menú lateral. */}
+          "sticky" para que se quede fija arriba al hacer scroll en móvil
+          (en escritorio, "md:h-screen md:overflow-hidden" de arriba ya
+          impide que la página entera se desplace — solo el "main" de
+          abajo lo hace, así que aquí no hace falta más que "shrink-0"
+          para que la cabecera no se encoja dentro de la columna). */}
       {/* z-[60]: por encima de los overlays de modales (ConfirmDialog,
           ApuestaItem, CashOutDialog... todos a z-50), para que "cerrar
           sesión" (panel lateral) se pueda seguir pulsando con un modal
           abierto, sin tener que cerrarlo primero. */}
-      <div className="sticky top-0 z-[60] bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
+      <div className="sticky top-0 z-[60] md:shrink-0 bg-felt px-5 sm:px-8 py-8 md:py-4 print:hidden">
         <div className="flex items-center md:justify-between">
           <button
             type="button"
@@ -437,14 +447,17 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
         </div>
       </div>
 
-      <div className="md:flex md:flex-1">
+      <div className="md:flex md:flex-1 md:overflow-hidden">
         <SidebarNavegacion
           activa={seccionActiva}
           onCambiar={setSeccionActiva}
           onCerrarSesion={onCerrarSesion}
         />
 
-        <div className="flex-1 md:min-w-0">
+        {/* El "main" de verdad: en escritorio es el único que hace scroll
+            (petición directa) — cabecera y barra lateral se quedan fijas,
+            ya no se desplazan con el contenido. */}
+        <div ref={mainRef} className="flex-1 md:min-w-0 md:h-full md:overflow-y-auto">
           {/* Inicio, Historial y Estadísticas usan un contenedor más ancho
               que el resto de secciones (max-w-6xl en vez de max-w-3xl) —
               rediseño de escritorio, pantalla a pantalla; el resto se

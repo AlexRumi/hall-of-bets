@@ -32,22 +32,22 @@ const ITEMS = [
 // Solo escritorio (ver App.jsx: en móvil la navegación va en la barra
 // inferior + el menú ☰). El nombre "Hall of Bets" va en la cabecera de
 // arriba, no aquí, para no repetirlo dos veces. Empieza justo debajo de esa
-// cabecera. La altura del <aside> la controla App.jsx (la fila
-// sidebar+contenido es "md:flex-1", así que se estira solo hasta ocupar
-// exactamente el resto de la pantalla — o más, si el contenido es largo).
-// El "sticky" va en el <nav> de dentro, no en el <aside>: así, en secciones
-// largas (p.ej. Academia) los enlaces se quedan fijos en pantalla mientras
-// se hace scroll, en vez de desaparecer hacia arriba con el contenido.
-// "md:top-20" deja hueco para que no quede tapado por la cabecera, que
-// ahora también es fija arriba (ver App.jsx).
+// cabecera. Petición directa (cabecera y barra lateral fijas, solo el
+// contenido hace scroll): App.jsx envuelve todo en "md:h-screen
+// md:overflow-hidden", así que este <aside> nunca es más alto que la
+// pantalla — se estira exactamente a la altura disponible (default de
+// flexbox, "stretch") y "md:overflow-y-auto" es solo un cinturón de
+// seguridad por si algún día la lista no cupiera entera en una ventana
+// muy baja. Ya no hace falta ningún "sticky" aquí dentro: al no
+// desplazarse la página, este panel no se mueve nunca de sitio.
 export default function SidebarNavegacion({
   activa,
   onCambiar,
   onCerrarSesion,
 }) {
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 bg-felt px-3 py-6 print:hidden">
-      <nav className="flex flex-col gap-1 md:sticky md:top-20">
+    <aside className="hidden md:flex md:flex-col md:w-64 md:shrink-0 md:overflow-y-auto bg-felt px-3 py-6 print:hidden">
+      <nav className="flex flex-col gap-1">
         {ITEMS.map(({ id, etiqueta, Icono }) => (
           <button
             key={id}
@@ -63,31 +63,25 @@ export default function SidebarNavegacion({
             {etiqueta}
           </button>
         ))}
-      </nav>
 
-      {/* Cerrar sesión: antes vivía en la cabecera, ahora aquí abajo del
-          todo — solo icono, sin etiqueta, para que se lea como una acción
-          suelta y no como un destino más de la lista de arriba (petición
-          directa). "mt-auto" lo deja pegado abajo del todo cuando el
-          <aside> no es más alto que la pantalla; "md:sticky md:bottom-4"
-          es lo que de verdad lo mantiene a la vista cuando SÍ lo es — el
-          <aside> se estira tanto como la columna de contenido a su lado
-          (a propósito, para que el verde cubra toda la altura), así que
-          sin esto quedaba "abajo del todo" de una columna mucho más alta
-          que la pantalla, invisible sin hacer scroll hasta el final (bug
-          real, detectado por el usuario). Con fondo propio (bg-felt)
-          porque, al quedar fijo, el contenido del menú puede seguir
-          desplazándose por debajo. */}
-      <div className="mt-auto md:sticky md:bottom-4 flex items-center justify-center gap-2 pt-4 bg-felt">
+        {/* Cerrar sesión: antes vivía fijada abajo del todo con
+            "sticky bottom" (solo icono) — con el <aside> estirado tanto
+            como la columna de contenido a su lado, ese "sticky" no
+            llegaba a quedar a la vista sin hacer scroll hasta el final
+            (bug real, detectado por el usuario). Ahora es un enlace más
+            de la lista de arriba (en rojo para que se note que es una
+            acción distinta, no un destino más) — con la cabecera y esta
+            barra ya fijas del todo (ver App.jsx), ni siquiera hace falta
+            "sticky" para que se quede a la vista. */}
         <button
           type="button"
           onClick={onCerrarSesion}
-          aria-label="Cerrar sesión"
-          className="p-2 rounded-full text-paper hover:bg-white/10 transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-left text-lose hover:bg-lose/10 transition-colors"
         >
-          <LogOut size={18} />
+          <LogOut size={20} />
+          Cerrar sesión
         </button>
-      </div>
+      </nav>
     </aside>
   );
 }
