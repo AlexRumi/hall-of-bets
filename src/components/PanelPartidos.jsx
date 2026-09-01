@@ -135,8 +135,14 @@ function ordenarGrupos(grupos) {
 }
 
 export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, contarSelecciones }) {
-  const { partidos: partidosApi } = usePartidos(fecha);
-  const usandoDemo = partidosApi.length === 0;
+  const { partidos: partidosApi, cargando } = usePartidos(fecha);
+  // Mientras "cargando" es true todavía no se sabe si habrá agenda real
+  // o no — enseñar ya los partidos de ejemplo aquí sería el "flash" de
+  // partidos que no son del día (bug real, visto en la app desplegada:
+  // se veían un instante los de ejemplo antes de que llegara la
+  // respuesta de verdad). Solo se cae a los de ejemplo cuando la
+  // petición YA terminó y de verdad no trajo nada.
+  const usandoDemo = !cargando && partidosApi.length === 0;
   const partidos = usandoDemo ? PARTIDOS_DEMO : partidosApi;
   const [busqueda, setBusqueda] = useState("");
   // Acordeón (petición directa, para no tener una lista larguísima de
@@ -270,7 +276,10 @@ export default function PanelPartidos({ fecha, matchIdActivo, onElegirPartido, c
           </div>
           );
         })}
-        {grupos.length === 0 && (
+        {cargando && grupos.length === 0 && (
+          <p className="p-4 text-sm text-slate text-center">Cargando partidos…</p>
+        )}
+        {!cargando && grupos.length === 0 && (
           <p className="p-4 text-sm text-slate text-center">Sin partidos para ese filtro.</p>
         )}
       </div>

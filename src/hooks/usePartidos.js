@@ -10,16 +10,30 @@ const VACIO = { partidos: [], fueraDeRango: false, cuotaAgotada: false };
 
 export function usePartidos(fecha) {
   const [resultado, setResultado] = useState(() => cache.get(fecha) ?? VACIO);
+  // Bug real: sin esto, "partidos: []" significaba dos cosas a la vez —
+  // "todavía no ha llegado la respuesta" y "ya llegó, y no hay ninguno" —
+  // y PanelPartidos.jsx no podía distinguirlas, así que enseñaba los
+  // partidos de ejemplo (pensados para cuando de verdad no hay agenda
+  // real, p.ej. en local sin "vercel dev") durante el segundo o así que
+  // tarda la petición, hasta que la respuesta de verdad los reemplazaba
+  // — un "flash" de partidos que no eran del día. "cargando" empieza en
+  // true solo si esta fecha aún no estaba en caché.
+  const [cargando, setCargando] = useState(() => !!fecha && !cache.has(fecha));
 
   useEffect(() => {
-    if (!fecha) return;
+    if (!fecha) {
+      setCargando(false);
+      return;
+    }
 
     if (cache.has(fecha)) {
       setResultado(cache.get(fecha));
+      setCargando(false);
       return;
     }
 
     let vivo = true;
+    setCargando(true);
     fetch(`/api/partidos?fecha=${fecha}`)
       .then((r) => (r.ok ? r.json() : VACIO))
       .then((datos) => {
@@ -29,14 +43,22 @@ export function usePartidos(fecha) {
           cuotaAgotada: !!datos.cuotaAgotada,
         };
         cache.set(fecha, valor);
-        if (vivo) setResultado(valor);
+        if (vivo) {
+          setResultado(valor);
+          setCargando(false);
+        }
       })
       .catch(() => {
         // Sin conexión, sin la función desplegada (p.ej. en "npm run dev"
         // normal, sin "vercel dev") o cualquier otro fallo: no pasa nada,
         // el buscador simplemente no sugiere nada y se sigue pudiendo
-        // escribir el evento a mano como siempre.
-        if (vivo) setResultado(VACIO);
+        // escribir el evento a mano como siempre. No se guarda en caché
+        // (a diferencia del éxito) — si luego SÍ hay conexión/función,
+        // que se vuelva a intentar en vez de quedarse con el fallo fijo.
+        if (vivo) {
+          setResultado(VACIO);
+          setCargando(false);
+        }
       });
 
     return () => {
@@ -44,5 +66,5 @@ export function usePartidos(fecha) {
     };
   }, [fecha]);
 
-  return resultado;
+  return { ...resultado, cargando };
 }
