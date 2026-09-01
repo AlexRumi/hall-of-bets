@@ -1143,7 +1143,9 @@ export default function NuevaApuestaV3({
           className={`transition-transform ${extrasAbiertas ? "rotate-180" : ""}`}
         />
         Opciones adicionales
-        <span className="ml-auto font-mono text-xs text-slate">{extrasActivas}</span>
+        {extrasActivas > 0 && (
+          <span className="ml-auto font-mono text-xs text-slate">{extrasActivas}</span>
+        )}
       </button>
 
       {extrasAbiertas && (

@@ -14,6 +14,7 @@ export default function PantallaInicio({
   casas,
   movimientos,
   onMarcarResultado,
+  onAjustarGanancia,
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
@@ -106,6 +107,7 @@ export default function PantallaInicio({
           movimientos={movimientos}
           todasApuestas={apuestas}
           onMarcarResultado={onMarcarResultado}
+          onAjustarGanancia={onAjustarGanancia}
           onMarcarResultadoPartido={onMarcarResultadoPartido}
           onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
           onBorrar={onBorrar}

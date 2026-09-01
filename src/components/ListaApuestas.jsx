@@ -33,6 +33,7 @@ export default function ListaApuestas({
   movimientos,
   todasApuestas,
   onMarcarResultado,
+  onAjustarGanancia,
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
@@ -220,6 +221,7 @@ export default function ListaApuestas({
               movimientos={movimientos}
               todasApuestas={todasApuestas}
               onMarcarResultado={onMarcarResultado}
+              onAjustarGanancia={onAjustarGanancia}
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
@@ -242,6 +244,7 @@ export default function ListaApuestas({
               movimientos={movimientos}
               todasApuestas={todasApuestas}
               onMarcarResultado={onMarcarResultado}
+              onAjustarGanancia={onAjustarGanancia}
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}

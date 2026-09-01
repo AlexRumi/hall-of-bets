@@ -97,6 +97,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
     editarApuesta,
     marcarResultado,
     marcarResultadoGrupo,
+    ajustarGananciaManual,
     actualizarCuotaSeleccion,
     renombrarCasaEnApuestas,
     borrarApuesta,
@@ -488,6 +489,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                 casas={casas}
                 movimientos={movimientos}
                 onMarcarResultado={manejarMarcarResultado}
+                onAjustarGanancia={ajustarGananciaManual}
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
@@ -562,6 +564,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                     movimientos={movimientos}
                     todasApuestas={apuestas}
                     onMarcarResultado={manejarMarcarResultado}
+                onAjustarGanancia={ajustarGananciaManual}
                     onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                     onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                     onBorrar={manejarBorrarApuesta}
@@ -583,6 +586,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                 casas={casas}
                 movimientos={movimientos}
                 onMarcarResultado={manejarMarcarResultado}
+                onAjustarGanancia={ajustarGananciaManual}
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}
@@ -644,6 +648,7 @@ function AppAutenticada({ userId, fechaAltaCuenta, onCerrarSesion, oscuro }) {
                 casas={casas}
                 oscuro={oscuro}
                 onMarcarResultado={manejarMarcarResultado}
+                onAjustarGanancia={ajustarGananciaManual}
                 onMarcarResultadoPartido={manejarMarcarResultadoPartido}
                 onActualizarCuotaSeleccion={actualizarCuotaSeleccion}
                 onBorrar={manejarBorrarApuesta}

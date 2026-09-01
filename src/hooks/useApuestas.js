@@ -219,6 +219,33 @@ export function useApuestas(userId) {
     }
   }
 
+  // Ajuste de ganancia (petición directa): algunas casas (Bet365, sobre
+  // todo) pagan un poco más de lo que sale con "stake × cuota" porque
+  // internamente calculan con más decimales de los que muestran. No es
+  // una promoción con un % conocido (eso ya es "aumentoPct"), así que no
+  // se puede recalcular sola — se guarda el TOTAL que de verdad pagó la
+  // casa (stake + beneficio), igual que ya se hace con Cash Out, y
+  // calcularBeneficio (utils/apuestas.js) resta el stake real para sacar
+  // el beneficio de ahí. "importeTotal = null" quita el ajuste (vuelve a
+  // calcularse solo). No toca "resultado" (sigue "ganada") ni el saldo de
+  // freebet — ese solo depende del resultado, no de cuánto se ganó.
+  async function ajustarGananciaManual(id, importeTotal) {
+    const { data, error } = await supabase
+      .from("apuestas")
+      .update({
+        ganancia_total_manual: importeTotal === null ? null : Number(importeTotal),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error) {
+      setApuestas((actuales) =>
+        actuales.map((a) => (a.id === id ? desdeFila(data) : a))
+      );
+    }
+  }
+
   // Resultado de UN PARTIDO dentro de una apuesta (Ganada/Perdida/Nula,
   // "Modificar" en ApuestaItem.jsx/TicketApuesta.jsx) — "indices" son los
   // de TODOS los picks de ese partido (un multi-mercado se marca entero
@@ -373,6 +400,7 @@ export function useApuestas(userId) {
     editarApuesta,
     marcarResultado,
     marcarResultadoGrupo,
+    ajustarGananciaManual,
     actualizarCuotaSeleccion,
     renombrarCasaEnApuestas,
     borrarApuesta,

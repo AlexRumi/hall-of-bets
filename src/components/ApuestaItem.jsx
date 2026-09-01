@@ -6,7 +6,7 @@ import {
   agruparSeleccionesPorPartido,
   ESTADOS_TERMINADOS_PARTIDO as ESTADOS_TERMINADOS_API,
 } from "../utils/apuestas";
-import { escudoUrl } from "../utils/mercados";
+import { escudoUrl, equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
 import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
@@ -38,13 +38,18 @@ const ESTILOS_BARRA_ESTADO = {
   cashout: "bg-cashout/15 text-cashout",
 };
 
-// Un partido cicla Pendiente → Ganada → Perdida → Nula → Pendiente al
-// tocar su pastilla (mismo orden que la maqueta de referencia del
-// usuario). "Nula" saca el partido entero de la combinada (no cuenta en
-// la cuota total, ver calcularCuotaTotal) — es un mecanismo DISTINTO e
-// independiente de "Ajustar cuota" (ver más abajo): anular un partido
-// entero no tiene nada que ver con que la casa recalcule la cuota de un
-// mercado suyo.
+// Cada MERCADO (pick) suelto de un partido cicla Pendiente → Ganada →
+// Perdida → Nula → Pendiente al tocar su propia pastilla — ya no se marca
+// el partido entero de una vez (cuarta vuelta del rediseño, petición
+// directa: en un bet builder de un solo partido con varios mercados
+// —"Real Madrid gana" + "Mbappé marca"—, antes marcar cualquiera de los
+// dos marcaba TODOS a la vez). El resultado del partido (derivarResultadoGrupo)
+// y el de toda la apuesta (derivarResultadoApuesta, App.jsx) se derivan
+// solos de estos resultados por mercado — "Nula" en todos los mercados de
+// un partido saca ese partido entero de la combinada (no cuenta en la
+// cuota total, ver calcularCuotaTotal). Mecanismo DISTINTO e independiente
+// de "Ajustar cuota" (ver más abajo): anular un partido no tiene nada que
+// ver con que la casa recalcule la cuota de uno de sus mercados.
 const ORDEN_CICLO = ["pendiente", "ganada", "perdida", "nula"];
 
 const EMOJI_DEPORTE = {
@@ -77,6 +82,7 @@ export default function ApuestaItem({
   casas,
   onMarcarResultado,
   onMarcarResultadoPartido,
+  onAjustarGanancia,
   onActualizarCuotaSeleccion,
   onBorrar,
   onAbrirEdicion,
@@ -88,19 +94,22 @@ export default function ApuestaItem({
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [mostrandoCashOut, setMostrandoCashOut] = useState(false);
   const [importeCashOut, setImporteCashOut] = useState("");
+  const [mostrandoAjusteGanancia, setMostrandoAjusteGanancia] = useState(false);
+  const [importeAjusteGanancia, setImporteAjusteGanancia] = useState("");
   // Aviso "¿cuál es la nueva cuota?" (Ajustar cuota) — un Set de
   // indiceLider con el aviso abierto, más el texto que se está
   // escribiendo en cada uno; cada partido lleva el suyo independiente.
   const [promptsCuota, setPromptsCuota] = useState(() => new Set());
   const [cuotasEditando, setCuotasEditando] = useState({});
-  // "Ver apuesta" (petición directa): por partido, no por toda la
-  // sección — antes, para recordar qué mercado se marcó en un partido
-  // concreto había que abrir "Modificar" (el formulario completo) y
-  // volver a confirmar. Ahora cada partido puede desplegar sus propias
-  // selecciones (grupo.selecciones[].apuesta) sin salir de esta ficha.
-  const [verApuestaAbierta, setVerApuestaAbierta] = useState(() => new Set());
-  function alternarVerApuesta(indiceLider) {
-    setVerApuestaAbierta((actuales) => {
+  // Combinadas (petición directa, con maqueta de referencia): cada
+  // partido empieza CERRADO — solo el resumen (escudo, nombre, tira de
+  // cuadraditos por mercado) — y el usuario elige cuál desplegar, uno a
+  // uno o varios a la vez. Mismo criterio que PanelPartidos.jsx (sin
+  // ninguno abierto por defecto). Solo se usa cuando hay más de un
+  // partido: con uno solo, sus mercados se ven siempre, sin acordeón.
+  const [gruposAbiertos, setGruposAbiertos] = useState(() => new Set());
+  function alternarGrupoAbierto(indiceLider) {
+    setGruposAbiertos((actuales) => {
       const siguiente = new Set(actuales);
       if (siguiente.has(indiceLider)) siguiente.delete(indiceLider);
       else siguiente.add(indiceLider);
@@ -112,6 +121,14 @@ export default function ApuestaItem({
   const beneficio = calcularBeneficio(apuesta);
   const gruposPartido = agruparSeleccionesPorPartido(apuesta.selecciones);
   const esCombinada = gruposPartido.length > 1;
+  // "En juego" (en vez de "Pendiente"): ya se ha marcado algún mercado
+  // suelto, pero la apuesta como tal sigue sin resolverse del todo.
+  const enJuego =
+    esPendiente && apuesta.selecciones.some((s) => (s.resultado ?? "pendiente") !== "pendiente");
+  // "Cuota efect." (en vez de "Cuota"): al menos un partido ha quedado
+  // anulado y ya no cuenta en el producto (ver calcularCuotaTotal) — la
+  // cuota que se ve ya no es la que tenía la combinada al crearla.
+  const hayPartidoAnulado = gruposPartido.some((g) => g.resultado === "nula");
   const casaObj = casas.find((c) => c.nombre === apuesta.casa);
   const logoCasa = casaObj?.logo;
   const colorCasa = useColorCasa(casaObj ?? { nombre: apuesta.casa, logo: null });
@@ -139,6 +156,33 @@ export default function ApuestaItem({
     setImporteCashOut("");
   }
 
+  // Ajuste de ganancia (petición directa): algunas casas (Bet365, sobre
+  // todo) pagan un poco más de lo calculado por redondeos internos, sin
+  // ser una promoción con % conocido (eso es "Aumento de cuota", en el
+  // formulario). Se pide el TOTAL que de verdad pagó la casa (stake +
+  // beneficio) — mismo dato que ya se calcula como "gananciaMostrada",
+  // que es justo con lo que se rellena el campo al abrirlo, para que
+  // solo haga falta tocar el céntimo de más, no escribir todo desde cero.
+  function alternarAjusteGanancia() {
+    setMostrandoAjusteGanancia((actual) => {
+      const siguiente = !actual;
+      if (siguiente) setImporteAjusteGanancia(gananciaMostrada.toFixed(2));
+      return siguiente;
+    });
+  }
+
+  function confirmarAjusteGanancia() {
+    if (!importeAjusteGanancia || Number(importeAjusteGanancia) < 0) return;
+    onAjustarGanancia(apuesta.id, Number(importeAjusteGanancia));
+    setMostrandoAjusteGanancia(false);
+  }
+
+  function quitarAjusteGanancia() {
+    onAjustarGanancia(apuesta.id, null);
+    setMostrandoAjusteGanancia(false);
+    setImporteAjusteGanancia("");
+  }
+
   function confirmarCashOut() {
     if (!importeCashOut || Number(importeCashOut) < 0) return;
     onMarcarResultado(apuesta.id, "cashout", Number(importeCashOut));
@@ -146,16 +190,18 @@ export default function ApuestaItem({
     setMostrandoCashOut(false);
   }
 
-  function ciclarPartido(grupo) {
+  // Marca UN SOLO mercado (no todo el partido) — de ahí se derivan solos
+  // el resultado del partido y el de la apuesta entera (ver comentario de
+  // ORDEN_CICLO). "indice" es la posición absoluta de esta selección
+  // dentro del array completo de la apuesta (agruparSeleccionesPorPartido
+  // ya se lo asigna a cada pick).
+  function ciclarPick(seleccion) {
     // Con Cash Out ya hecho, se bloquea el ciclo — mismo criterio que la
     // maqueta de referencia: la apuesta ya está cerrada.
     if (apuesta.resultado === "cashout") return;
-    const siguiente = ORDEN_CICLO[(ORDEN_CICLO.indexOf(grupo.resultado) + 1) % ORDEN_CICLO.length];
-    onMarcarResultadoPartido(
-      apuesta.id,
-      grupo.selecciones.map((s) => s.indice),
-      siguiente
-    );
+    const actual = seleccion.resultado ?? "pendiente";
+    const siguiente = ORDEN_CICLO[(ORDEN_CICLO.indexOf(actual) + 1) % ORDEN_CICLO.length];
+    onMarcarResultadoPartido(apuesta.id, [seleccion.indice], siguiente);
   }
 
   function abrirPromptCuota(grupo) {
@@ -233,14 +279,15 @@ export default function ApuestaItem({
         <span
           className={`ml-auto shrink-0 min-w-[88px] text-center text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-lg ${ESTILOS_BARRA_ESTADO[apuesta.resultado]}`}
         >
-          {ETIQUETAS_RESULTADO[apuesta.resultado]}
+          {enJuego ? "En juego" : ETIQUETAS_RESULTADO[apuesta.resultado]}
         </span>
       </div>
 
       <div className="flex border-y border-line">
         <div className="flex-1 text-center py-3">
           <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">
-            Cuota{apuesta.cuotaTotalManual ? " *" : ""}
+            {hayPartidoAnulado ? "Cuota efect." : "Cuota"}
+            {apuesta.cuotaTotalManual ? " *" : ""}
           </p>
           <p className="font-mono text-sm sm:text-base font-bold text-gold">{cuotaTotal.toFixed(2)}</p>
         </div>
@@ -251,7 +298,9 @@ export default function ApuestaItem({
           </p>
         </div>
         <div className="flex-1 text-center py-3">
-          <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">Ganancia</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wide text-slate whitespace-nowrap">
+            {esPendiente ? "Retorno pot." : "Retorno"}
+          </p>
           <p className="font-mono text-sm sm:text-base font-bold text-ink">{gananciaMostrada.toFixed(2)}€</p>
         </div>
         <div className="flex-1 text-center py-3">
@@ -284,84 +333,79 @@ export default function ApuestaItem({
       <div className="px-4 sm:px-5 pb-4 space-y-2">
         {gruposPartido.map((grupo) => {
           const esNula = grupo.resultado === "nula";
+          const colorBorde =
+            grupo.resultado === "ganada"
+              ? "border-win/50"
+              : grupo.resultado === "perdida"
+              ? "border-lose/50"
+              : "border-line";
           const promptAbierto = promptsCuota.has(grupo.indiceLider);
-          const verAbierta = verApuestaAbierta.has(grupo.indiceLider);
-          return (
-            <div
-              key={grupo.indiceLider}
-              className={`border border-line rounded-xl p-3 bg-paperDim transition-opacity ${esNula ? "opacity-55" : ""}`}
-            >
-              {/* Rediseñado (petición directa, mismo criterio que la
-                  cabecera de partido en Nueva apuesta v3): escudos a los
-                  lados del nombre, cuota y pastilla de resultado debajo,
-                  centrados y algo más grandes — antes iban en una columna
-                  a la derecha del icono, apretados. Sin escudos reales
-                  (apuestas manuales o de antes de esta función), se queda
-                  el emoji de deporte a la izquierda, sin hueco roto. */}
-              <div className="flex items-center justify-center gap-2">
-                {escudoUrl(grupo.equipoLocalId) ? (
-                  <img
-                    src={escudoUrl(grupo.equipoLocalId)}
-                    alt=""
-                    className="w-9 h-9 shrink-0 object-contain"
-                  />
-                ) : (
-                  !escudoUrl(grupo.equipoVisitanteId) && (
-                    <span className="shrink-0 w-8 h-8 rounded-full bg-surface border border-line flex items-center justify-center text-base">
-                      {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
-                    </span>
-                  )
-                )}
-                <p className="flex-1 min-w-0 text-sm font-semibold text-ink text-center leading-snug break-words">
-                  {grupo.evento}
-                </p>
-                {escudoUrl(grupo.equipoVisitanteId) && (
-                  <img
-                    src={escudoUrl(grupo.equipoVisitanteId)}
-                    alt=""
-                    className="w-9 h-9 shrink-0 object-contain"
-                  />
-                )}
-              </div>
-              <div className="mt-2 flex items-center justify-center gap-2">
-                <span
-                  className={`font-mono text-sm font-bold px-3 py-2 rounded-lg border border-line bg-surface text-ink ${esNula ? "line-through opacity-70" : ""}`}
-                >
-                  {grupo.cuota.toFixed(2)}
-                </span>
-                {soloLectura ? (
-                  <span
-                    className={`text-sm font-bold px-3 py-2 rounded-lg ${ESTILOS_BARRA_ESTADO[grupo.resultado]}`}
-                  >
-                    {ETIQUETAS_RESULTADO[grupo.resultado]}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => ciclarPartido(grupo)}
-                    disabled={apuesta.resultado === "cashout"}
-                    className={`min-w-[92px] text-sm font-bold px-3 py-2 rounded-lg transition-opacity ${ESTILOS_BARRA_ESTADO[grupo.resultado]} ${
-                      apuesta.resultado === "cashout" ? "opacity-60" : "hover:opacity-80"
-                    }`}
-                  >
-                    {ETIQUETAS_RESULTADO[grupo.resultado]}
-                  </button>
-                )}
-              </div>
+          const tieneEscudoLocal = !!escudoUrl(grupo.equipoLocalId);
+          const tieneEscudoVisitante = !!escudoUrl(grupo.equipoVisitanteId);
+          const metaTexto = [grupo.pais, grupo.competicion].filter(Boolean).join(" · ") +
+            (grupo.hora ? ` · ${grupo.hora}` : "");
+          const { local: nombreLocal, visitante: nombreVisitante } = esFormatoEquipos(grupo.evento)
+            ? equiposDesdeEvento(grupo.evento)
+            : { local: null, visitante: null };
 
-              <div className="mt-2 flex items-center justify-center gap-3 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => alternarVerApuesta(grupo.indiceLider)}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-gold hover:underline"
-                >
-                  Ver apuesta
-                  <ChevronDown
-                    size={12}
-                    className={`transition-transform ${verAbierta ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {!soloLectura && !promptAbierto && (
+          // Lista de mercados de este partido: cada uno cicla su propia
+          // pastilla — el resultado del partido (color del borde/tira de
+          // cuadraditos) se deriva solo de estos, no se marca aparte (ver
+          // ciclarPick). Compartida por las dos variantes de abajo (simple
+          // y combinada), no se repite el JSX dos veces.
+          const listaMercados = (
+            <div className="border-l-2 border-line pl-3">
+              {grupo.selecciones.map((seleccion) => {
+                const estado = seleccion.resultado ?? "pendiente";
+                const colorPunto =
+                  estado === "ganada"
+                    ? "bg-win"
+                    : estado === "perdida"
+                    ? "bg-lose"
+                    : estado === "nula"
+                    ? "bg-void"
+                    : "border-2 border-pending bg-transparent";
+                return (
+                  <div
+                    key={seleccion.id ?? seleccion.indice}
+                    className="flex items-center gap-2 py-1.5 border-t border-line first:border-t-0 first:pt-0"
+                  >
+                    <span className={`shrink-0 w-2.5 h-2.5 rounded-full ${colorPunto}`} />
+                    <p
+                      className={`flex-1 min-w-0 text-xs sm:text-sm text-ink ${
+                        estado === "nula" ? "line-through text-slate" : ""
+                      }`}
+                    >
+                      {seleccion.apuesta}
+                    </p>
+                    {soloLectura ? (
+                      <span
+                        className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-md ${ESTILOS_BARRA_ESTADO[estado]}`}
+                      >
+                        {ETIQUETAS_RESULTADO[estado]}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => ciclarPick(seleccion)}
+                        disabled={apuesta.resultado === "cashout"}
+                        className={`shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-md transition-opacity ${ESTILOS_BARRA_ESTADO[estado]} ${
+                          apuesta.resultado === "cashout" ? "opacity-60" : "hover:opacity-80"
+                        }`}
+                      >
+                        {ETIQUETAS_RESULTADO[estado]}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+
+          const bloqueAjustarCuota = (
+            <>
+              {!soloLectura && !promptAbierto && (
+                <div className="mt-2 flex justify-center">
                   <button
                     type="button"
                     onClick={() => abrirPromptCuota(grupo)}
@@ -369,20 +413,7 @@ export default function ApuestaItem({
                   >
                     ✎ Ajustar cuota (mercado anulado)
                   </button>
-                )}
-              </div>
-
-              {/* Mercados marcados en ESTE partido (petición directa): antes,
-                  para recordar qué se había puesto (sobre todo con varios
-                  mercados del mismo partido en la misma apuesta) había que
-                  abrir "Modificar" — el formulario entero — solo para
-                  mirarlo, y volver a confirmar sin querer cambiar nada. */}
-              {verAbierta && (
-                <ul className="mt-2 space-y-1 text-xs text-ink list-disc list-inside">
-                  {grupo.selecciones.map((seleccion) => (
-                    <li key={seleccion.id ?? seleccion.indice}>{seleccion.apuesta}</li>
-                  ))}
-                </ul>
+                </div>
               )}
 
               {!soloLectura && promptAbierto && (
@@ -423,6 +454,119 @@ export default function ApuestaItem({
                   </div>
                 </div>
               )}
+            </>
+          );
+
+          // Cabecera del partido, en dos filas (petición directa, misma
+          // maqueta en simple y en combinada): escudo+nombre de cada
+          // equipo, uno debajo del otro, con la cuota (y en combinada, la
+          // tira de cuadraditos + flecha) a la derecha; la meta
+          // (país·competición·hora·nº sel.) debajo de los dos nombres. Sin
+          // escudos reales de los dos equipos (apuesta manual, u otro
+          // deporte), se queda en una sola línea con el emoji del deporte
+          // — no hay nada que partir en dos filas.
+          const partidoDivisible = tieneEscudoLocal && tieneEscudoVisitante && nombreLocal;
+          const abierto = esCombinada && gruposAbiertos.has(grupo.indiceLider);
+          const cabecera = (
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0 space-y-1">
+                {partidoDivisible ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <img src={escudoUrl(grupo.equipoLocalId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                      <span className="text-sm font-semibold text-ink truncate">{nombreLocal}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img src={escudoUrl(grupo.equipoVisitanteId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                      <span className="text-sm font-semibold text-ink truncate">{nombreVisitante}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {tieneEscudoLocal ? (
+                      <img src={escudoUrl(grupo.equipoLocalId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                    ) : (
+                      <span className="shrink-0 w-7 h-7 rounded-full bg-surface border border-line flex items-center justify-center text-sm">
+                        {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}
+                      </span>
+                    )}
+                    <span className="text-sm font-semibold text-ink truncate">{grupo.evento}</span>
+                  </div>
+                )}
+                {metaTexto && <p className="text-[11px] text-slate truncate">{metaTexto}</p>}
+              </div>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <span
+                  className={`font-mono text-sm font-bold px-2.5 py-1.5 rounded-lg border border-line bg-surface text-gold ${esNula ? "line-through opacity-70" : ""}`}
+                >
+                  {grupo.cuota.toFixed(2)}
+                </span>
+                {esCombinada && (
+                  <div className="flex items-center gap-1">
+                    {grupo.selecciones.map((seleccion) => {
+                      const estado = seleccion.resultado ?? "pendiente";
+                      const colorCuadro =
+                        estado === "ganada"
+                          ? "bg-win"
+                          : estado === "perdida"
+                          ? "bg-lose"
+                          : estado === "nula"
+                          ? "bg-void"
+                          : "border border-pending bg-transparent";
+                      return (
+                        <span
+                          key={seleccion.id ?? seleccion.indice}
+                          className={`w-2 h-2 rounded-sm ${colorCuadro}`}
+                        />
+                      );
+                    })}
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 text-slate transition-transform ${abierto ? "rotate-180" : ""}`}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+
+          // Combinada (2+ partidos): la cabecera de arriba es un botón que
+          // despliega/colapsa este partido (empieza cerrado, ver
+          // gruposAbiertos) — dentro va la misma lista de mercados que en
+          // una apuesta simple. Petición directa, con maqueta de
+          // referencia: antes se veían las selecciones de todos los
+          // partidos siempre abiertas.
+          if (esCombinada) {
+            return (
+              <div
+                key={grupo.indiceLider}
+                className={`border rounded-xl bg-paperDim transition-colors overflow-hidden ${colorBorde} ${esNula ? "opacity-55" : ""}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => alternarGrupoAbierto(grupo.indiceLider)}
+                  className="w-full p-3 text-left"
+                >
+                  {cabecera}
+                </button>
+                {abierto && (
+                  <div className="px-3 pb-3">
+                    {listaMercados}
+                    {bloqueAjustarCuota}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={grupo.indiceLider}
+              className={`border rounded-xl p-3 bg-paperDim transition-colors ${colorBorde} ${esNula ? "opacity-55" : ""}`}
+            >
+              {cabecera}
+              <div className="mt-2.5">{listaMercados}</div>
+              {bloqueAjustarCuota}
             </div>
           );
         })}
@@ -430,7 +574,7 @@ export default function ApuestaItem({
 
       {!soloLectura && (
         <div className="p-4 sm:p-5 border-t border-line space-y-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {esPendiente && (
               <button
                 type="button"
@@ -444,6 +588,21 @@ export default function ApuestaItem({
                 <Wallet size={14} /> Cash Out
               </button>
             )}
+            {/* Disponible en cualquier resultado (petición directa) — el
+                ajuste solo AFECTA a la ganancia cuando la apuesta acaba
+                Ganada (ver calcularBeneficio), pero se puede dejar
+                preparado desde antes, sin esperar a marcarla. */}
+            <button
+              type="button"
+              onClick={alternarAjusteGanancia}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${
+                mostrandoAjusteGanancia
+                  ? "bg-gold text-feltDark border-gold"
+                  : "border-line text-gold hover:border-gold/50"
+              }`}
+            >
+              <Pencil size={14} /> Ajustar ganancia
+            </button>
             <button
               type="button"
               onClick={() => onAbrirEdicion(apuesta)}
@@ -484,6 +643,48 @@ export default function ApuestaItem({
               >
                 Confirmar
               </button>
+            </div>
+          )}
+
+          {/* Mismo criterio que Cash Out: importe directo en la propia
+              tarjeta — se pide el TOTAL pagado por la casa (stake +
+              beneficio), ya relleno con lo que sale calculado, para
+              corregir solo el redondeo de más sin escribir todo desde
+              cero. */}
+          {mostrandoAjusteGanancia && (
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={importeAjusteGanancia}
+                  onChange={(e) => setImporteAjusteGanancia(e.target.value)}
+                  placeholder="Total pagado por la casa (€)"
+                  autoFocus
+                  className="flex-1 border border-line rounded-lg px-3 py-2 text-sm font-mono bg-surface"
+                />
+                <button
+                  type="button"
+                  onClick={confirmarAjusteGanancia}
+                  disabled={!importeAjusteGanancia || Number(importeAjusteGanancia) < 0}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-gold text-feltDark hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </div>
+              <p className="text-xs text-slate">
+                El total que de verdad ingresó la casa (lo apostado + la ganancia), no solo la ganancia.
+              </p>
+              {apuesta.gananciaTotalManual != null && (
+                <button
+                  type="button"
+                  onClick={quitarAjusteGanancia}
+                  className="text-xs font-semibold text-slate hover:text-lose hover:underline"
+                >
+                  Quitar ajuste (volver a calcularlo solo)
+                </button>
+              )}
             </div>
           )}
         </div>

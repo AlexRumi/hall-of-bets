@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, X, AlertTriangle } from "lucide-react";
-import { equiposDesdeEvento } from "../utils/mercados";
+import { equiposDesdeEvento, escudoUrl } from "../utils/mercados";
 
 // Fase 5 del rediseño v3 de "Nueva apuesta" (ver PROMPT_NUEVA_APUESTA_V3.md):
 // ticket flotante (position: fixed, separado del fondo, borde ámbar).
@@ -218,31 +218,50 @@ export default function TicketFlotante({
                 const multi = b.items.length > 1;
                 return (
                   <div key={bi} className="m-3 border border-line rounded-lg overflow-hidden bg-paperDim">
-                    {/* Petición directa: el partido y el mercado elegido se
-                        amontonaban en dos líneas truncadas, compitiendo con
-                        Cuota/Cantidad — ahora el partido comparte fila con
-                        Cuota/Cantidad (puede truncar si el nombre es muy
-                        largo, pero esos dos campos nunca se tapan) y el
-                        mercado baja a su propia línea, con salto de línea
-                        libre en vez de cortarse con "...". */}
+                    {/* Petición directa: escudo + nombre de cada equipo en
+                        su propia fila (en vez de "Local - Visitante" en una
+                        sola línea, que se cortaba con nombres largos) —
+                        Cuota/Cantidad quedan arriba a la derecha, sin
+                        competir por sitio con el nombre. Sin la hora
+                        (redundante con el escudo/nombre ya identificando
+                        el partido). */}
                     <div className="px-3 py-2.5">
                       {multi && (
                         <span className="block text-[11px] font-semibold text-gold mb-1">
                           Creación de apuesta
                         </span>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-start gap-2">
                         <button
                           type="button"
                           onClick={() => onQuitarBloque(bi)}
                           aria-label="Quitar partido"
-                          className="text-slate hover:text-lose shrink-0"
+                          className="text-slate hover:text-lose shrink-0 mt-1"
                         >
                           <X size={14} />
                         </button>
-                        <span className="flex-1 min-w-0 text-sm text-ink truncate">
-                          {equipos.local} - {equipos.visitante}
-                        </span>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            {escudoUrl(b.partido.equipoLocalId) && (
+                              <img
+                                src={escudoUrl(b.partido.equipoLocalId)}
+                                alt=""
+                                className="w-5 h-5 shrink-0 object-contain"
+                              />
+                            )}
+                            <span className="text-sm text-ink truncate">{equipos.local}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {escudoUrl(b.partido.equipoVisitanteId) && (
+                              <img
+                                src={escudoUrl(b.partido.equipoVisitanteId)}
+                                alt=""
+                                className="w-5 h-5 shrink-0 object-contain"
+                              />
+                            )}
+                            <span className="text-sm text-ink truncate">{equipos.visitante}</span>
+                          </div>
+                        </div>
                         <CampoCuotaCantidad
                           cuota={b.cuota}
                           onCuota={(v) => onCambiarCuotaBloque(bi, v)}
@@ -253,32 +272,33 @@ export default function TicketFlotante({
                           esMixta={esMixta}
                         />
                       </div>
-                      <p className="mt-1.5 pl-[22px] text-xs text-slate leading-snug break-words">
-                        {multi ? `Hoy ${b.partido.hora}` : b.items[0].label}
-                      </p>
                     </div>
-                    {multi && (
-                      <div className="px-3 pb-2.5 space-y-2">
-                        {b.items.map((it, ii) => (
-                          <div key={ii} className="flex items-start gap-2 pl-3 relative">
-                            <span className="absolute left-0 top-0 bottom-0 w-px bg-line" />
-                            <span className="absolute -left-[3px] top-2 w-1.5 h-1.5 rounded-full bg-gold" />
-                            <span className="flex-1 min-w-0 text-xs text-ink">
-                              {it.label}
-                              <span className="block text-[11px] text-slate">{it.mercado}</span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onQuitarItem(bi, ii)}
-                              aria-label="Quitar selección"
-                              className="text-slate hover:text-lose shrink-0"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {/* Cada mercado elegido, con el mismo lenguaje visual
+                        que al elegirlo en "Mercados"/"Confirmar": puntito,
+                        el mercado en sí destacado (text-ink) y el tipo de
+                        mercado debajo, más apagado (text-slate). Antes solo
+                        se veía así con 2+ mercados del mismo partido; ahora
+                        siempre, también con uno solo. */}
+                    <div className="px-3 pb-2.5 space-y-2">
+                      {b.items.map((it, ii) => (
+                        <div key={ii} className="flex items-start gap-2 pl-3 relative">
+                          <span className="absolute left-0 top-0 bottom-0 w-px bg-line" />
+                          <span className="absolute -left-[3px] top-2 w-1.5 h-1.5 rounded-full bg-gold" />
+                          <span className="flex-1 min-w-0 text-xs text-ink">
+                            {it.label}
+                            {it.mercado && <span className="block text-[11px] text-slate">{it.mercado}</span>}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onQuitarItem(bi, ii)}
+                            aria-label="Quitar selección"
+                            className="text-slate hover:text-lose shrink-0"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })}

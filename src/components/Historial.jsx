@@ -20,6 +20,7 @@ export default function Historial({
   casas,
   movimientos,
   onMarcarResultado,
+  onAjustarGanancia,
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
@@ -85,6 +86,7 @@ export default function Historial({
         movimientos={movimientos}
         todasApuestas={apuestas}
         onMarcarResultado={onMarcarResultado}
+        onAjustarGanancia={onAjustarGanancia}
         onMarcarResultadoPartido={onMarcarResultadoPartido}
         onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
         onBorrar={onBorrar}

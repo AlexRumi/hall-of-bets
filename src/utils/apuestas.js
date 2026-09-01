@@ -120,11 +120,22 @@ export function agruparSeleccionesPorPartido(selecciones) {
 // stake puesto; con freebet, el importe recibido es ganancia entera (el stake
 // nunca fue dinero propio).
 export function calcularBeneficio(apuesta) {
-  const { resultado, stake, stakeFreebet, tipoFondos, cashoutImporte, aumentoPct } = apuesta;
+  const { resultado, stake, stakeFreebet, tipoFondos, cashoutImporte, aumentoPct, gananciaTotalManual } =
+    apuesta;
   if (resultado === "pendiente") return 0;
 
   const cuotaTotal = calcularCuotaTotal(apuesta);
   if (resultado === "ganada") {
+    // Ajuste de ganancia (petición directa): algunas casas (Bet365, sobre
+    // todo) pagan un poco más de "stake × cuota" por redondeos internos,
+    // sin ser una promoción con % conocido (eso es "aumentoPct", más
+    // abajo) — con el TOTAL real que pagó la casa ya guardado, el
+    // beneficio sale de ahí en vez de calcularlo, mismo criterio que
+    // Cash Out (resta el stake real; con freebet puro, el importe ya es
+    // ganancia entera porque el stake nunca fue dinero propio).
+    if (gananciaTotalManual != null) {
+      return tipoFondos === "freebet" ? gananciaTotalManual : gananciaTotalManual - stake;
+    }
     // "mixta": se gana sobre TODO lo apostado, parte real + parte freebet
     // (stakeFreebet es null/0 en real y freebet puras, así que sumarlo no
     // cambia nada ahí).
@@ -417,6 +428,14 @@ export function desdeFila(fila) {
     seguroFreebetImporte:
       fila.seguro_freebet_importe === null ? null : Number(fila.seguro_freebet_importe),
     aumentoPct: fila.aumento_pct === null ? null : Number(fila.aumento_pct),
+    // Ajuste de ganancia (petición directa): algunas casas pagan un poco
+    // más de lo calculado por redondeos internos, sin ser una promoción
+    // con % conocido — el total real que pagó la casa (stake + beneficio),
+    // ver calcularBeneficio. null = sin ajustar, se calcula solo.
+    gananciaTotalManual:
+      fila.ganancia_total_manual === null || fila.ganancia_total_manual === undefined
+        ? null
+        : Number(fila.ganancia_total_manual),
     archivado: fila.archivado ?? false,
     cuotaTotalManual:
       fila.cuota_total_manual === null || fila.cuota_total_manual === undefined

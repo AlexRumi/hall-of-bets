@@ -117,13 +117,25 @@ function BotonTexto({ texto, pendiente, confirmada, onClick, children, className
   );
 }
 
-function Acordeon({ etiqueta, children }) {
+// "onAbrir" (opcional): avisa la PRIMERA vez que se despliega (no en cada
+// toque) — lo usa TarjetaJugadorMercado para no pedir la plantilla del
+// equipo hasta que el usuario de verdad abre esa tarjeta, en vez de
+// pedirla ya al montar el panel de Mercados aunque la tarjeta siga
+// plegada (petición directa, tras detectar en el dashboard de
+// API-Football que las plantillas se pedían solas sin tocar nada).
+function Acordeon({ etiqueta, children, onAbrir }) {
   const [abierta, setAbierta] = useState(false);
   return (
     <div className="rounded-xl border border-line bg-surface overflow-hidden">
       <button
         type="button"
-        onClick={() => setAbierta((a) => !a)}
+        onClick={() =>
+          setAbierta((a) => {
+            const siguiente = !a;
+            if (siguiente) onAbrir?.();
+            return siguiente;
+          })
+        }
         className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left"
       >
         <span className="text-sm font-semibold text-ink">{etiqueta}</span>
@@ -315,8 +327,18 @@ function TarjetaJugadorMercado({
   // buscabas "Delanteros", tiene sentido que se quede así al mirar el
   // otro equipo.
   const [posicionFiltro, setPosicionFiltro] = useState("todas");
-  const jugadoresLocalApi = usePlantilla(equipoElegido === "local" ? partido.equipoLocalId : null);
-  const jugadoresVisitanteApi = usePlantilla(equipoElegido === "visitante" ? partido.equipoVisitanteId : null);
+  // No se pide la plantilla hasta que el usuario despliega esta tarjeta
+  // (petición directa): antes se pedía ya al montar el panel de Mercados,
+  // aunque la tarjeta siguiera plegada — con una docena de mercados de
+  // jugador por partido, eso eran hasta 12 peticiones de la MISMA
+  // plantilla con solo abrir "Mercados", nunca al usuario tocar nada.
+  const [seHaAbierto, setSeHaAbierto] = useState(false);
+  const jugadoresLocalApi = usePlantilla(
+    seHaAbierto && equipoElegido === "local" ? partido.equipoLocalId : null
+  );
+  const jugadoresVisitanteApi = usePlantilla(
+    seHaAbierto && equipoElegido === "visitante" ? partido.equipoVisitanteId : null
+  );
   const jugadoresApi = equipoElegido === "local" ? jugadoresLocalApi : jugadoresVisitanteApi;
   const usandoDemo = jugadoresApi.length === 0;
   const jugadoresSinFiltrar = usandoDemo ? JUGADORES_DEMO[equipoElegido] : jugadoresApi;
@@ -325,7 +347,7 @@ function TarjetaJugadorMercado({
   const columnasActivas = periodos ? periodos[periodo] : columnas;
 
   return (
-    <Acordeon etiqueta={etiqueta}>
+    <Acordeon etiqueta={etiqueta} onAbrir={() => setSeHaAbierto(true)}>
       {() => (
         <div className="space-y-3">
           {usandoDemo && (

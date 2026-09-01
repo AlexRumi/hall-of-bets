@@ -34,6 +34,7 @@ export default function EstadisticasDashboard({
   casas,
   oscuro,
   onMarcarResultado,
+  onAjustarGanancia,
   onMarcarResultadoPartido,
   onActualizarCuotaSeleccion,
   onBorrar,
@@ -362,6 +363,7 @@ export default function EstadisticasDashboard({
               movimientos={movimientos}
               todasApuestas={apuestas}
               onMarcarResultado={onMarcarResultado}
+              onAjustarGanancia={onAjustarGanancia}
               onMarcarResultadoPartido={onMarcarResultadoPartido}
               onActualizarCuotaSeleccion={onActualizarCuotaSeleccion}
               onBorrar={onBorrar}
