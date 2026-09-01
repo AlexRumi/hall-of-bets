@@ -535,46 +535,60 @@ export default function NuevaApuestaV3({
     return (
       <div className="bg-surface border border-line rounded-xl p-4 sm:p-5">
         {/* Carrusel horizontal en móvil (petición del prompt) — en
-            escritorio, la fila de siempre con salto de línea. */}
-        <div className="flex flex-nowrap lg:flex-wrap items-center gap-2 overflow-x-auto scrollbar-oculto lg:overflow-visible">
-          {esEdicion && (
-            <span className="shrink-0 text-xs font-semibold text-feltDark bg-gold rounded-full px-2.5 py-1">
-              Editando apuesta
+            escritorio, la fila de siempre con salto de línea. Bug real:
+            "Editar"/"Cancelar" vivían dentro del propio carrusel con
+            "ml-auto" — en pantallas estrechas con muchas pastillas
+            (bankroll/fecha/casa/fondos/opciones) el carrusel se quedaba
+            más ancho que la pantalla, y "ml-auto" los empujaba al FINAL
+            de ese contenido desbordado, no al borde de la pantalla — se
+            veían cortados ("Ed") en vez de necesitar solo deslizar para
+            llegar a ellos. Ahora son una fila aparte, siempre visible
+            entera sin deslizar nada (en escritorio, "lg:flex-row" los
+            vuelve a poner en la misma fila que las pastillas, como
+            antes). */}
+        <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+          <div className="flex-1 min-w-0 flex flex-nowrap lg:flex-wrap items-center gap-2 overflow-x-auto scrollbar-oculto lg:overflow-visible">
+            {esEdicion && (
+              <span className="shrink-0 text-xs font-semibold text-feltDark bg-gold rounded-full px-2.5 py-1">
+                Editando apuesta
+              </span>
+            )}
+            <span className="shrink-0 text-xs font-semibold text-gold border border-gold/40 bg-gold/10 rounded-full px-2.5 py-1">
+              {bankroll === "apuestas" ? "Apuestas" : "Entretenimiento"}
             </span>
-          )}
-          <span className="shrink-0 text-xs font-semibold text-gold border border-gold/40 bg-gold/10 rounded-full px-2.5 py-1">
-            {bankroll === "apuestas" ? "Apuestas" : "Entretenimiento"}
-          </span>
-          <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
-            {fecha.split("-").reverse().join("/")}
-          </span>
-          <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
-            {casa}
-          </span>
-          <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
-            {etiquetaFondos}
-          </span>
-          {extrasActivas > 0 && (
             <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
-              {extrasActivas} {extrasActivas === 1 ? "opción" : "opciones"}
+              {fecha.split("-").reverse().join("/")}
             </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setConfirmado(false)}
-            className="shrink-0 ml-auto flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
-          >
-            <Pencil size={12} />
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={onCancelar}
-            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-slate hover:text-lose hover:underline"
-          >
-            <X size={12} />
-            Cancelar
-          </button>
+            <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
+              {casa}
+            </span>
+            <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
+              {etiquetaFondos}
+            </span>
+            {extrasActivas > 0 && (
+              <span className="shrink-0 text-xs text-slate border border-line rounded-full px-2.5 py-1">
+                {extrasActivas} {extrasActivas === 1 ? "opción" : "opciones"}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 shrink-0 lg:ml-auto">
+            <button
+              type="button"
+              onClick={() => setConfirmado(false)}
+              className="shrink-0 flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
+            >
+              <Pencil size={12} />
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={onCancelar}
+              className="shrink-0 flex items-center gap-1 text-xs font-semibold text-slate hover:text-lose hover:underline"
+            >
+              <X size={12} />
+              Cancelar
+            </button>
+          </div>
         </div>
 
         {/* Indicador de pasos — solo móvil (Fase 6): en escritorio las 3
