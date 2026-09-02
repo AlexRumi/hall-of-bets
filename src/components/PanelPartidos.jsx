@@ -149,7 +149,13 @@ export default function PanelPartidos({
   ligasFijadas,
   onAlternarLigaFijada,
 }) {
-  const { partidos: partidosApi, cargando } = usePartidos(fecha);
+  const {
+    partidos: partidosApi,
+    cargando,
+    cuotaAgotada,
+    cuentaSuspendida,
+    errorApi,
+  } = usePartidos(fecha);
   // Mientras "cargando" es true todavía no se sabe si habrá agenda real
   // o no — enseñar ya los partidos de ejemplo aquí sería el "flash" de
   // partidos que no son del día (bug real, visto en la app desplegada:
@@ -312,7 +318,41 @@ export default function PanelPartidos({
             </span>
           </div>
         </div>
-        {usandoDemo && (
+        {/* Varios motivos MUY distintos para caer a los partidos de
+            ejemplo, y el mensaje tiene que decir cuál es de verdad —
+            antes siempre enseñaba el de "hace falta vercel dev", que no
+            tiene ningún sentido en la app ya desplegada. Bug real
+            (2026-09-02): la cuenta de API-Football se suspendió
+            (dashboard.api-football.com) y esto se enseñaba como "cuota
+            agotada, vuelve mañana" — mensaje que no arregla nada, porque
+            no se soluciona sola con el tiempo. */}
+        {usandoDemo && cuentaSuspendida && (
+          <p className="text-xs text-slate">
+            La cuenta de API-Football está suspendida — hay que entrar en{" "}
+            <a
+              href="https://dashboard.api-football.com"
+              target="_blank"
+              rel="noreferrer"
+              className="text-gold underline"
+            >
+              dashboard.api-football.com
+            </a>{" "}
+            para ver el motivo. Mientras tanto, partidos de ejemplo.
+          </p>
+        )}
+        {usandoDemo && cuotaAgotada && !cuentaSuspendida && (
+          <p className="text-xs text-slate">
+            Se ha agotado la cuota diaria gratuita de la API de fútbol (100 peticiones/día) — vuelve a
+            intentarlo mañana. Mientras tanto, partidos de ejemplo.
+          </p>
+        )}
+        {usandoDemo && errorApi && !cuotaAgotada && !cuentaSuspendida && (
+          <p className="text-xs text-slate">
+            La API de fútbol ha respondido con un error inesperado — inténtalo de nuevo en un rato.
+            Mientras tanto, partidos de ejemplo.
+          </p>
+        )}
+        {usandoDemo && !cuotaAgotada && !cuentaSuspendida && !errorApi && (
           <p className="text-xs text-slate">
             No se ha podido cargar la agenda real (hace falta <code>vercel dev</code>, no{" "}
             <code>vite</code> a secas) — partidos de ejemplo mientras tanto.

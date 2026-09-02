@@ -133,8 +133,29 @@ export default async function handler(req, res) {
     // aparte. Se distingue de "fueraDeRango" porque el aviso al usuario es
     // distinto (aquí no depende de la fecha elegida, mañana vuelve a
     // funcionar solo cuando la API resetee la cuota).
-    if (datos.errors && Object.keys(datos.errors).length > 0) {
+    if (datos.errors?.requests) {
       res.status(200).json({ partidos: [], cuotaAgotada: true });
+      return;
+    }
+
+    // Cuenta suspendida (bug real, 2026-09-02): esto ANTES caía en el
+    // "cualquier otro error" de abajo y se enseñaba como "cuota agotada" —
+    // mensaje equivocado, porque no depende del día ni se arregla solo
+    // mañana. Responde 200 con datos.errors.access = "Your account is
+    // suspended, check on https://dashboard.api-football.com." — hace
+    // falta entrar en el panel de API-Football a mano, no basta con
+    // esperar.
+    if (datos.errors?.access) {
+      res.status(200).json({ partidos: [], cuentaSuspendida: true });
+      return;
+    }
+
+    // Cualquier otro error no identificado todavía: se avisa como genérico
+    // en vez de mentir diciendo "cuota agotada" (que llevaba a esperar un
+    // día entero para nada si el motivo real era otro, como ya pasó).
+    if (datos.errors && Object.keys(datos.errors).length > 0) {
+      console.error("api/partidos: error no identificado de API-Football", datos.errors);
+      res.status(200).json({ partidos: [], errorApi: true });
       return;
     }
 

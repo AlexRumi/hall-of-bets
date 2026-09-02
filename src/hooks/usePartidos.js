@@ -6,7 +6,13 @@ import { useEffect, useState } from "react";
 // Guarda el objeto { partidos, fueraDeRango, cuotaAgotada } completo, no
 // solo la lista, para no tener que volver a pedirlo solo por el aviso.
 const cache = new Map();
-const VACIO = { partidos: [], fueraDeRango: false, cuotaAgotada: false };
+const VACIO = {
+  partidos: [],
+  fueraDeRango: false,
+  cuotaAgotada: false,
+  cuentaSuspendida: false,
+  errorApi: false,
+};
 
 export function usePartidos(fecha) {
   const [resultado, setResultado] = useState(() => cache.get(fecha) ?? VACIO);
@@ -41,6 +47,8 @@ export function usePartidos(fecha) {
           partidos: datos.partidos ?? [],
           fueraDeRango: !!datos.fueraDeRango,
           cuotaAgotada: !!datos.cuotaAgotada,
+          cuentaSuspendida: !!datos.cuentaSuspendida,
+          errorApi: !!datos.errorApi,
         };
         cache.set(fecha, valor);
         if (vivo) {
