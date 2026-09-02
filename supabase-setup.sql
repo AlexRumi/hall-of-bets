@@ -300,7 +300,7 @@ end;
 $$;
 
 -- Tabla de control interno pura, sin ningún dato personal — a diferencia
--- de resultados_partidos/telegram_mensajes, ni siquiera hace falta una
+-- de resultados_partidos, ni siquiera hace falta una
 -- política para "authenticated": nadie desde el navegador necesita tocarla
 -- nunca, solo las Serverless Functions con la service role key (que salta
 -- el RLS igualmente). RLS activado sin políticas = nadie más puede leerla
@@ -322,4 +322,11 @@ create table public.plantillas_equipos (
 -- (service role), nadie desde el navegador necesita leerla ni escribirla
 -- directamente.
 alter table public.plantillas_equipos enable row level security;
+
+-- Bot de Telegram eliminado por completo (2026-09-02, petición directa —
+-- no aportaba mucho más que estar pendiente del móvil, que el usuario ya
+-- hace solo). Se borra lo que ya no usa nadie: la tabla de sus mensajes y
+-- la columna que marcaba "ya avisado" en resultados_partidos.
+drop table if exists public.telegram_mensajes;
+alter table public.resultados_partidos drop column if exists notificado;
 

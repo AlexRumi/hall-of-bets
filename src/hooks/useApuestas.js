@@ -180,12 +180,6 @@ export function useApuestas(userId) {
           golesLocalManual: seleccion.golesLocalManual ?? null,
           golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
           resultado: seleccion.resultado,
-          // Marca interna del bot (api/telegram-avisos.js): si no se
-          // preserva aquí, editar la apuesta por el formulario completo la
-          // "olvidaría" en silencio y el aviso de partido terminado podría
-          // repetirse una vez para ese partido — mismo motivo que ya llevó
-          // a no perder "resultado" al editar.
-          avisoEnviado: seleccion.avisoEnviado ?? null,
         })),
       })
       .eq("id", id)
@@ -246,11 +240,10 @@ export function useApuestas(userId) {
     }
   }
 
-  // Resultado de UN PARTIDO dentro de una apuesta (Ganada/Perdida/Nula,
-  // "Modificar" en ApuestaItem.jsx/TicketApuesta.jsx) — "indices" son los
-  // de TODOS los picks de ese partido (un multi-mercado se marca entero
-  // de una vez, no mercado a mercado), así que en una sola escritura basta
-  // — "una llamada menos" que si se marcara pick a pick. Al no haber una
+  // Resultado de uno o varios picks dentro de una apuesta (Ganada/Perdida/
+  // Nula) — "indices" son las posiciones dentro del array de selecciones a
+  // marcar con el mismo resultado; ApuestaItem.jsx llama a esto con un
+  // único índice por cada mercado suelto que se cicla. Al no haber una
   // columna propia por selección (jsonb), se reescribe el array completo.
   //
   // "nuevoResultadoApuesta" (opcional): si el resultado de TODA la apuesta

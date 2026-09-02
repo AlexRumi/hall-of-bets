@@ -1,26 +1,9 @@
 import { useState } from "react";
 import { X, Pencil, Trash2, Calendar, Wallet, ChevronDown } from "lucide-react";
-import {
-  calcularBeneficio,
-  calcularCuotaTotal,
-  agruparSeleccionesPorPartido,
-  ESTADOS_TERMINADOS_PARTIDO as ESTADOS_TERMINADOS_API,
-} from "../utils/apuestas";
+import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
 import { escudoUrl, equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
-import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
-
-// Envoltorio "render prop" — se queda exportado porque TicketApuesta.jsx
-// (Mini App de Telegram) lo sigue usando para traer el resultado final del
-// partido con el mismo hook/caché que la app normal. Este archivo ya no lo
-// usa por dentro (tercera vuelta del rediseño: sin marcador de partido en
-// esta vista, ver más abajo).
-export function InfoPartido({ partidoId, horaInicioMs, children }) {
-  const info = usePartidoInfo(partidoId, horaInicioMs);
-  const terminado = !!(info && ESTADOS_TERMINADOS_API.has(info.estado));
-  return children(info, terminado);
-}
 
 const ETIQUETAS_RESULTADO = {
   pendiente: "Pendiente",
@@ -75,8 +58,8 @@ const EMOJI_DEPORTE = {
 //    mano.
 // Ya no se enseña el marcador del partido (petición directa) — con eso
 // se cae también el marcador manual de "Otras ligas": ya no hay ningún
-// sitio en la app que lo escriba (sí se sigue leyendo/enseñando en la
-// Mini App de Telegram, con datos antiguos).
+// sitio en la app que lo escriba, solo quedan datos antiguos de cuando
+// sí existía.
 export default function ApuestaItem({
   apuesta,
   casas,

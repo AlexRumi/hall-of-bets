@@ -3,10 +3,9 @@ import ListaApuestas from "./ListaApuestas";
 import { todasPendientes } from "../utils/apuestas";
 
 // Junta el listado de Apuestas + Entretenimiento en un solo sitio
-// (petición directa), con las mismas 3 pastillas y el mismo criterio de
-// "Todas" que ya usa el teclado del bot de Telegram
-// (api/telegram-webhook.js), más una cuarta pastilla "Pendientes" (solo
-// visible si hay alguna) que combina los dos bankrolls — mismo listado
+// (petición directa), con las mismas 3 pastillas, más una cuarta
+// pastilla "Pendientes" (solo visible si hay alguna) que combina los dos
+// bankrolls — mismo listado
 // agrupado por mes/día de siempre, sin ningún cálculo nuevo aparte de
 // todasPendientes: solo se filtra antes de pasarle el array a
 // ListaApuestas.

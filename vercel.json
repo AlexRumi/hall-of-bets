@@ -1,5 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/telegram/apuesta/:id", "destination": "/index.html" }
-  ]
-}

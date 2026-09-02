@@ -4881,3 +4881,52 @@ separadas, probando cada una antes de pasar a la siguiente.
     (`App.jsx`, el envoltorio de guardar+ajustar freebet del formulario
     antiguo — Nueva apuesta v3 ya hace las dos cosas por su cuenta) y el
     bloque "🧪 Vista previa" de `Ajustes.jsx`.
+
+- **Bot de Telegram eliminado por completo** (petición directa, 2026-09-02):
+  todo el subsistema (webhook, teclado personalizado, Mini App para
+  resolver apuestas, los tres avisos automáticos —registro/resuelta/
+  partido terminado—, limpieza diaria del chat) se quitó del proyecto.
+  Motivo: no aportaba mucho más que estar pendiente del móvil, algo que
+  el usuario ya hace por su cuenta, y el aviso de "partido terminado"
+  (`api/telegram-avisos.js`) era además el único proceso automático que
+  seguía llamando a la API de fútbol sin que nadie tocara la app — justo
+  el mismo día en que la cuenta de API-Football se había suspendido por
+  una ráfaga de peticiones (ver el arreglo del limitador propio, punto
+  anterior).
+  - **Borrados por completo**: `api/telegram-webhook.js`,
+    `api/telegram-avisos.js`, `api/telegram-registro.js`,
+    `api/telegram-resuelta.js`, `api/telegram-limpieza.js`,
+    `api/telegram-apuesta.js`, `api/_lib/telegram.js`,
+    `api/_lib/telegramMensajes.js`, `api/_lib/telegramInitData.js`,
+    `api/_lib/numeracion.js`, `api/_lib/apuestasResueltas.js`,
+    `src/components/TelegramMiniApp.jsx`, `src/components/TicketApuesta.jsx`
+    (+ su `.css`), y `vercel.json` (el único rewrite que tenía era para
+    la ruta de la Mini App — la app no usa router de verdad, así que sin
+    la Mini App no hace falta ningún rewrite).
+  - `src/main.jsx` vuelve a montar `<App />` sin más — se quita el
+    enrutado a mano por `window.location.pathname` que distinguía la
+    ruta `/telegram/apuesta/:id`.
+  - `ApuestaItem.jsx` pierde el export `InfoPartido` (render prop que
+    solo usaba `TicketApuesta.jsx`) y sus imports ahora muertos
+    (`usePartidoInfo`, `ESTADOS_TERMINADOS_PARTIDO`).
+  - Campo `avisoEnviado` (dentro de cada selección, jsonb) quitado de
+    `desdeFila`/`editarApuesta` (`utils/apuestas.js`/`useApuestas.js`) —
+    ya no lo escribe ni lo lee nadie. Las filas ya guardadas en Supabase
+    con ese campo de antes se quedan con esa clave de más en el JSON, sin
+    que afecte a nada (no se ha migrado el dato histórico, no compensa).
+  - Supabase: tabla `telegram_mensajes` borrada y columna
+    `resultados_partidos.notificado` quitada (ninguna de las dos las leía
+    ya nadie) — migración al final de `supabase-setup.sql`.
+  - `SUPABASE_SERVICE_ROLE_KEY` se queda (la sigue usando el limitador
+    propio y la caché de plantillas de jugador, ver punto anterior);
+    `SUPABASE_USER_ID` (y su export `USER_ID` en
+    `api/_lib/supabaseAdmin.js`) se quita, ya no lo usa nadie.
+  - Fuera del código: el webhook de Telegram se desregistró a mano
+    (`deleteWebhook`). Quedan pendientes de borrar manualmente (no
+    accesibles desde aquí): las variables de entorno en Vercel
+    (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_OWNER_ID`,
+    `AVISOS_CRON_SECRET`, `REGISTRO_WEBHOOK_SECRET`,
+    `LIMPIEZA_CRON_SECRET`, `SUPABASE_USER_ID`), los dos cron jobs
+    externos en cron-job.org (avisos cada 15 min, limpieza diaria), y los
+    dos Database Webhooks de Supabase (Integrations > Database Webhooks,
+    eventos INSERT/UPDATE en `apuestas`).

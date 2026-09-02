@@ -1,10 +1,5 @@
-// Resultado de un partido/grupo, derivado del "resultado" de sus picks.
-// Segunda vuelta del rediseño del marcado (ver CHANGELOG.md, "de un
-// resultado por apuesta a marcar por partido"): "Modificar" en
-// ApuestaItem.jsx/TicketApuesta.jsx marca TODOS los picks de un mismo
-// partido a la vez con el mismo resultado (no hay marcado mercado a
-// mercado), así que en la práctica esta función siempre encuentra o bien
-// todos los picks del grupo iguales, o bien ninguno decidido. Ganada si
+// Resultado de un partido/grupo, derivado del "resultado" de sus picks
+// (cada mercado suelto se marca por separado, ver ApuestaItem.jsx). Ganada si
 // todos los picks no anulados están Ganada; Perdida en cuanto alguno esté
 // Perdida; Nula si TODOS los picks están anulados; Pendiente en
 // cualquier otro caso.
@@ -101,11 +96,6 @@ export function agruparSeleccionesPorPartido(selecciones) {
         // ApuestaItem.jsx.
         golesLocalManual: seleccion.golesLocalManual ?? null,
         golesVisitanteManual: seleccion.golesVisitanteManual ?? null,
-        // Si el bot de Telegram ya avisó de que este partido ha terminado
-        // (api/telegram-avisos.js) — para no repetir el mismo aviso. Solo
-        // se lee/escribe desde ahí; expuesto aquí para que
-        // FormularioApuesta.jsx lo preserve al editar la apuesta.
-        avisoEnviado: seleccion.avisoEnviado ?? false,
         selecciones: [{ ...seleccion, indice }],
       });
     }
@@ -399,9 +389,9 @@ export function calcularRachaActual(apuestas) {
 
 // Fila de Supabase (snake_case) → objeto que usa el resto de la app
 // (camelCase). Vive aquí (no en useApuestas.js) porque este archivo no
-// importa nada del navegador — así api/telegram-apuesta.js (Mini App del
-// bot de Telegram, corre en Node, no en el navegador) puede reutilizarla
-// tal cual en vez de reescribir el mismo mapeo por su cuenta.
+// importa nada del navegador — así cualquier Serverless Function de
+// api/ (corre en Node, no en el navegador) puede reutilizarla tal cual
+// en vez de reescribir el mismo mapeo por su cuenta.
 export function desdeFila(fila) {
   return {
     id: fila.id,
@@ -474,18 +464,15 @@ function desfaseMadridMinutos(timestampUTC) {
 // cuándo tendría sentido pedir el resultado final. Esa hora viene siempre en
 // hora de España (api/partidos.js pide con timezone=Europe/Madrid) — pero
 // "new Date('YYYY-MM-DDTHH:mm:00')" (sin zona) se interpreta en la zona
-// horaria de donde corra el código, y Vercel (donde corre
-// api/telegram-avisos.js) va en UTC, no en hora de España.
+// horaria de donde corra el código, y Vercel va en UTC, no en hora de
+// España.
 //
-// Bug real: esto hacía que el margen de espera del aviso de Telegram
-// (api/telegram-avisos.js) se retrasara de más el desfase real entre
-// Madrid y UTC (1h en invierno, 2h en verano) — el comentario anterior de
-// esta función lo daba por "caso raro de cambio de hora a mitad de
-// consulta", pero en realidad es el desfase de TODOS los días del año, no
-// solo el momento del cambio de hora: con el margen de 2h del aviso, en
-// verano hacían falta 4h reales desde el inicio del partido para que se
-// disparara, no 2h. Detectado porque el aviso no llegaba ni esperando 2h30.
-// Se corrige calculando el desfase real de Madrid en ese instante
+// Bug real: esto hacía que el margen de espera para pedir el resultado se
+// retrasara de más el desfase real entre Madrid y UTC (1h en invierno, 2h
+// en verano) — el comentario anterior de esta función lo daba por "caso
+// raro de cambio de hora a mitad de consulta", pero en realidad es el
+// desfase de TODOS los días del año, no solo el momento del cambio de
+// hora. Se corrige calculando el desfase real de Madrid en ese instante
 // (desfaseMadridMinutos, con Intl — sin librería nueva) y restándolo, así
 // da el mismo resultado corra donde corra el código.
 export function horaInicioPartido(fecha, hora) {
@@ -496,13 +483,11 @@ export function horaInicioPartido(fecha, hora) {
 
 // Margen tras la hora de inicio para asumir que un partido ya debería
 // haber terminado (reglamentario + descanso + margen amplio para prórroga
-// o penaltis) — mismo valor que ya usaba solo usePartidoInfo.js, ahora
-// compartido también con api/telegram-avisos.js.
+// o penaltis) — usado por usePartidoInfo.js.
 export const MARGEN_RESULTADO_MS = 2.5 * 60 * 60 * 1000;
 
 // Estados "terminado" de API-Football — en cualquier otro estado (por
 // empezar o en juego) no hay resultado final fiable que mostrar ni que
-// guardar en caché para siempre. Compartido por usePartidoInfo.js,
-// ApuestaItem.jsx y api/telegram-avisos.js: los tres necesitaban
-// exactamente el mismo criterio, antes cada uno con su propia copia.
+// guardar en caché para siempre. Compartido por usePartidoInfo.js y
+// PanelPartidos.jsx.
 export const ESTADOS_TERMINADOS_PARTIDO = new Set(["FT", "AET", "PEN", "CANC", "ABD", "AWD", "WO"]);
