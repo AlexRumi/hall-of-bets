@@ -23,22 +23,47 @@ import { crearSupabaseAdmin } from "./supabaseAdmin.js";
 // Requiere la función de Postgres "reservar_llamada_api_football" (ver
 // migración en el mismo commit) — usa SELECT ... FOR UPDATE para que dos
 // invocaciones a la vez no puedan colarse las dos por encima del límite.
+//
+// Una denegación case casi siempre es por el espaciado (300ms desde la
+// anterior), no por tener ya las 8 gastadas — descartar la llamada sin
+// más ahí sería un hueco real: el usuario vería una plantilla o un
+// partido vacío por una espera de milisegundos, no por falta de cuota de
+// verdad. Por eso se reintenta unas pocas veces con una pausa corta antes
+// de rendirse, en vez de fallar a la primera — "encolar y servir en
+// cuanto haya hueco", no "descartar". El límite de reintentos acota la
+// espera a ~2s como mucho (bien dentro del tiempo de una función de
+// Vercel) — si de verdad están las 8 gastadas, esperar más no ayudaría
+// (la ventana tarda hasta 60s en liberarse), así que ahí sí se acaba
+// devolviendo denegado, como antes.
+const ESPACIADO_MS = 300;
+const REINTENTOS_MAXIMOS = 6;
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function permiteLlamadaApiFootball() {
   const supabaseAdmin = crearSupabaseAdmin();
-  const { data, error } = await supabaseAdmin.rpc("reservar_llamada_api_football", {
-    p_limite: 8,
-    p_ventana_segundos: 60,
-    p_espaciado_ms: 300,
-  });
 
-  if (error) {
-    // Si el limitador en sí falla (tabla/función no creada todavía,
-    // Supabase caído...), no se bloquea la app entera por esto — se deja
-    // pasar la llamada, confiando en el límite real de la API como red de
-    // seguridad de todos modos.
-    console.error("permiteLlamadaApiFootball: no se pudo consultar el limitador", error);
-    return true;
+  for (let intento = 0; intento < REINTENTOS_MAXIMOS; intento++) {
+    const { data, error } = await supabaseAdmin.rpc("reservar_llamada_api_football", {
+      p_limite: 8,
+      p_ventana_segundos: 60,
+      p_espaciado_ms: ESPACIADO_MS,
+    });
+
+    if (error) {
+      // Si el limitador en sí falla (tabla/función no creada todavía,
+      // Supabase caído...), no se bloquea la app entera por esto — se
+      // deja pasar la llamada, confiando en el límite real de la API
+      // como red de seguridad de todos modos.
+      console.error("permiteLlamadaApiFootball: no se pudo consultar el limitador", error);
+      return true;
+    }
+
+    if (data) return true;
+    if (intento < REINTENTOS_MAXIMOS - 1) await esperar(ESPACIADO_MS + 50);
   }
 
-  return !!data;
+  return false;
 }
