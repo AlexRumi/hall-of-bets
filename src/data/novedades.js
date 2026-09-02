@@ -11,6 +11,13 @@
 // otra en una tira horizontal (ver Novedades.jsx) — viven en public/novedades/.
 export const NOVEDADES = [
   {
+    id: "partido-a-mano",
+    fecha: "2026-09-02",
+    titulo: "Registrar apuestas aunque falle el buscador de partidos",
+    descripcion:
+      "Si alguna vez el buscador de partidos no puede cargar la agenda real (un fallo temporal del proveedor de datos), ahora aparece un aviso claro y una pastilla \"PRUEBA\" en la lista de ejemplo, para que no se confunda con partidos de verdad. Con \"escribir el partido a mano\" puedes seguir registrando la apuesta igualmente (equipo local, visitante, país, competición y hora) — eso sí, los mercados de \"Jugador\" quedan bloqueados con un candado (sin plantilla real que ofrecer), pero \"Otro mercado\" sigue disponible para escribir cualquier apuesta de jugador también a mano.",
+  },
+  {
     id: "ticket-marcado-por-mercado",
     fecha: "2026-09-02",
     titulo: "El ticket de apuesta, mercado a mercado",

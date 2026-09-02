@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ChevronDown, Star } from "lucide-react";
+import { Search, ChevronDown, Star, AlertTriangle, Pencil, X } from "lucide-react";
 import { usePartidos } from "../hooks/usePartidos";
 import { normalizarTexto } from "../utils/texto";
 import { equiposDesdeEvento, escudoUrl } from "../utils/mercados";
@@ -165,6 +165,42 @@ export default function PanelPartidos({
   const usandoDemo = !cargando && partidosApi.length === 0;
   const partidos = usandoDemo ? PARTIDOS_DEMO : partidosApi;
   const [busqueda, setBusqueda] = useState("");
+  // Escribir un partido a mano (petición directa): mientras la agenda
+  // real no cargue (cuenta suspendida, cuota agotada, cualquier error de
+  // la API...), esta es la única forma de seguir registrando apuestas de
+  // verdad sin esperar a que se arregle. El "partido" que se construye
+  // aquí tiene un id NEGATIVO (como los de PARTIDOS_DEMO) para que el
+  // resto de la app lo trate igual que uno de ejemplo: sin partidoId real
+  // (no hay marcador automático ni jugadores reales, se cae a los mismos
+  // sitios que ya usan esa gente/marcador de repuesto), pero con nombre,
+  // hora y competición de verdad, elegidos por el usuario.
+  const [mostrandoManual, setMostrandoManual] = useState(false);
+  const [manualLocal, setManualLocal] = useState("");
+  const [manualVisitante, setManualVisitante] = useState("");
+  const [manualPais, setManualPais] = useState("");
+  const [manualCompeticion, setManualCompeticion] = useState("");
+  const [manualHora, setManualHora] = useState("");
+
+  function confirmarPartidoManual() {
+    if (!manualLocal.trim() || !manualVisitante.trim()) return;
+    onElegirPartido({
+      id: -Date.now(),
+      evento: `${manualLocal.trim()} - ${manualVisitante.trim()}`,
+      pais: manualPais.trim() || "Otras ligas",
+      competicion: manualCompeticion.trim() || "Escrito a mano",
+      hora: manualHora.trim() || null,
+      fecha,
+      equipoLocalId: null,
+      equipoVisitanteId: null,
+      temporal: false,
+    });
+    setMostrandoManual(false);
+    setManualLocal("");
+    setManualVisitante("");
+    setManualPais("");
+    setManualCompeticion("");
+    setManualHora("");
+  }
   // Acordeón (petición directa, para no tener una lista larguísima de
   // partidos de golpe): un único grupo País · Liga abierto a la vez.
   // Empiezan todas cerradas (petición directa: antes se abría sola la
@@ -226,10 +262,10 @@ export default function PanelPartidos({
                 estrechas con nombres largos se cortaban) — misma bandera
                 para las dos, centrada verticalmente junto al bloque. */}
             <span className="flex-1 min-w-0">
-              <span className="block text-[10px] font-semibold text-paper/60 uppercase tracking-wide truncate">
+              <span className="block text-[10px] lg:text-xs font-semibold text-paper/60 uppercase tracking-wide truncate">
                 {g.pais}
               </span>
-              <span className="block text-sm font-semibold truncate">{g.competicion}</span>
+              <span className="block text-sm lg:text-base font-semibold truncate">{g.competicion}</span>
             </span>
             <ChevronDown
               size={16}
@@ -263,7 +299,7 @@ export default function PanelPartidos({
                       {escudoUrl(p.equipoLocalId) && (
                         <img src={escudoUrl(p.equipoLocalId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
                       )}
-                      <span className="text-sm font-medium text-ink truncate">{local}</span>
+                      <span className="text-sm lg:text-base font-medium text-ink truncate">{local}</span>
                     </span>
                     {terminado && (
                       <span className="font-mono text-sm font-semibold text-ink shrink-0">{p.golesLocal}</span>
@@ -278,7 +314,7 @@ export default function PanelPartidos({
                           className="w-4 h-4 shrink-0 object-contain"
                         />
                       )}
-                      <span className="text-sm font-medium text-ink truncate">{visitante}</span>
+                      <span className="text-sm lg:text-base font-medium text-ink truncate">{visitante}</span>
                     </span>
                     {terminado && (
                       <span className="font-mono text-sm font-semibold text-ink shrink-0">{p.golesVisitante}</span>
@@ -290,7 +326,7 @@ export default function PanelPartidos({
                     {n}
                   </span>
                 )}
-                {!terminado && <span className="font-mono text-xs text-slate shrink-0">{p.hora}</span>}
+                {!terminado && <span className="font-mono text-xs lg:text-sm text-slate shrink-0">{p.hora}</span>}
               </button>
             );
           })}
@@ -302,18 +338,31 @@ export default function PanelPartidos({
     <div className="bg-surface border border-line rounded-xl overflow-hidden flex flex-col">
       <div className="p-3 border-b border-line space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-ink">Partidos de hoy</p>
+          <p className="flex items-center gap-2 text-sm lg:text-base font-semibold text-ink">
+            Partidos de hoy
+            {/* Petición directa: con la API caída, TODA la lista de abajo
+                son partidos de ejemplo (PARTIDOS_DEMO) — un aviso solo en
+                el texto pequeño de más abajo pasaba desapercibido y se
+                podían confundir con partidos reales de hoy. Esta pastilla
+                se ve siempre que la lista es de mentira, sin depender del
+                motivo exacto (cuenta suspendida, cuota agotada...). */}
+            {usandoDemo && (
+              <span className="font-mono text-[10px] font-bold text-lose bg-lose/10 border border-lose/40 rounded-full px-2 py-0.5 uppercase tracking-wide">
+                Prueba
+              </span>
+            )}
+          </p>
           <div className="flex items-center gap-1.5">
             {/* Petición directa: cuántos de esos ya han terminado, aparte
                 del total — en rojo para que se note de un vistazo, mismo
                 criterio de color que el resto de la app para "ya resuelto/
                 cerrado" (bg-lose). */}
             {terminados > 0 && (
-              <span className="font-mono text-sm font-bold text-lose bg-lose/10 border border-lose/40 rounded-full px-2.5 py-0.5">
+              <span className="font-mono text-sm lg:text-base font-bold text-lose bg-lose/10 border border-lose/40 rounded-full px-2.5 py-0.5">
                 {terminados}
               </span>
             )}
-            <span className="font-mono text-sm font-bold text-ink bg-paperDim border border-line rounded-full px-2.5 py-0.5">
+            <span className="font-mono text-sm lg:text-base font-bold text-ink bg-paperDim border border-line rounded-full px-2.5 py-0.5">
               {partidos.length}
             </span>
           </div>
@@ -326,19 +375,40 @@ export default function PanelPartidos({
             (dashboard.api-football.com) y esto se enseñaba como "cuota
             agotada, vuelve mañana" — mensaje que no arregla nada, porque
             no se soluciona sola con el tiempo. */}
-        {usandoDemo && cuentaSuspendida && (
-          <p className="text-xs text-slate">
-            La cuenta de API-Football está suspendida — hay que entrar en{" "}
-            <a
-              href="https://dashboard.api-football.com"
-              target="_blank"
-              rel="noreferrer"
-              className="text-gold underline"
-            >
-              dashboard.api-football.com
-            </a>{" "}
-            para ver el motivo. Mientras tanto, partidos de ejemplo.
-          </p>
+        {usandoDemo && (cuentaSuspendida || errorApi) && (
+          <div className="flex items-start gap-2 p-2.5 rounded-lg border border-gold/40 bg-gold/10">
+            <AlertTriangle size={16} className="text-gold shrink-0 mt-0.5" />
+            <p className="text-xs text-ink leading-relaxed">
+              <span className="font-semibold text-gold">Los partidos reales no se pueden cargar por ahora</span>
+              {cuentaSuspendida ? (
+                <>
+                  {" "}
+                  — problema con el proveedor de datos (
+                  <a
+                    href="https://dashboard.api-football.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    cuenta suspendida
+                  </a>
+                  ).
+                </>
+              ) : (
+                " — la API de fútbol ha respondido con un error inesperado."
+              )}{" "}
+              Mientras se soluciona, puedes{" "}
+              <button
+                type="button"
+                onClick={() => setMostrandoManual(true)}
+                className="font-semibold underline"
+              >
+                escribir el partido a mano
+              </button>
+              . Los mercados de Jugador quedarán bloqueados en ese partido (sin plantilla real) — usa
+              "Otro mercado" en la pantalla siguiente para escribir esos a mano también.
+            </p>
+          </div>
         )}
         {usandoDemo && cuotaAgotada && !cuentaSuspendida && (
           <p className="text-xs text-slate">
@@ -346,17 +416,86 @@ export default function PanelPartidos({
             intentarlo mañana. Mientras tanto, partidos de ejemplo.
           </p>
         )}
-        {usandoDemo && errorApi && !cuotaAgotada && !cuentaSuspendida && (
-          <p className="text-xs text-slate">
-            La API de fútbol ha respondido con un error inesperado — inténtalo de nuevo en un rato.
-            Mientras tanto, partidos de ejemplo.
-          </p>
-        )}
         {usandoDemo && !cuotaAgotada && !cuentaSuspendida && !errorApi && (
           <p className="text-xs text-slate">
             No se ha podido cargar la agenda real (hace falta <code>vercel dev</code>, no{" "}
             <code>vite</code> a secas) — partidos de ejemplo mientras tanto.
           </p>
+        )}
+        {usandoDemo && !mostrandoManual && !(cuentaSuspendida || errorApi) && (
+          <button
+            type="button"
+            onClick={() => setMostrandoManual(true)}
+            className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-gold hover:underline py-1"
+          >
+            <Pencil size={12} /> No encuentro el partido, escribirlo a mano
+          </button>
+        )}
+        {mostrandoManual && (
+          <div className="p-2.5 rounded-lg border border-gold/40 bg-paperDim space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-ink">Escribir partido a mano</p>
+              <button
+                type="button"
+                onClick={() => setMostrandoManual(false)}
+                aria-label="Cancelar"
+                className="text-slate hover:text-ink"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={manualLocal}
+                onChange={(e) => setManualLocal(e.target.value)}
+                placeholder="Equipo local"
+                className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm bg-surface"
+              />
+              <input
+                type="text"
+                value={manualVisitante}
+                onChange={(e) => setManualVisitante(e.target.value)}
+                placeholder="Equipo visitante"
+                className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm bg-surface"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={manualPais}
+                onChange={(e) => setManualPais(e.target.value)}
+                placeholder="País (opcional)"
+                className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm bg-surface"
+              />
+              <input
+                type="text"
+                value={manualCompeticion}
+                onChange={(e) => setManualCompeticion(e.target.value)}
+                placeholder="Competición (opcional)"
+                className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm bg-surface"
+              />
+            </div>
+            <input
+              type="text"
+              value={manualHora}
+              onChange={(e) => setManualHora(e.target.value)}
+              placeholder="Hora, HH:MM (opcional)"
+              className="w-full border border-line rounded-lg px-2.5 py-1.5 text-sm bg-surface"
+            />
+            <p className="text-[11px] text-slate">
+              Sin escudos ni jugadores reales (no hay partido conectado a la API) — el resto de la
+              apuesta funciona igual.
+            </p>
+            <button
+              type="button"
+              onClick={confirmarPartidoManual}
+              disabled={!manualLocal.trim() || !manualVisitante.trim()}
+              className="w-full py-2 rounded-lg text-sm font-semibold bg-gold text-feltDark hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              Usar este partido
+            </button>
+          </div>
         )}
         <div className="flex items-center gap-2 bg-paperDim border border-line rounded-lg px-2.5 py-1.5">
           <Search size={14} className="text-slate shrink-0" />

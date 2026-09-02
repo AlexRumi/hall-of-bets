@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Search, Clock } from "lucide-react";
+import { ChevronDown, Search, Clock, Lock } from "lucide-react";
 import {
   TABLAS_MERCADO,
   tablaOverUnder,
@@ -695,8 +695,31 @@ const ORDERED_CARDS = [
   { tipo: "otro", clave: "otro", etiqueta: "Otro mercado" },
 ];
 
+// Mercados de "Jugador" bloqueados (petición directa, mientras no haya
+// plantilla real conectada a este partido — partidos de ejemplo o
+// escritos a mano, ver PanelPartidos.jsx): mostrar el desplegable con
+// nombres de jugador de mentira (JUGADORES_DEMO) podría confundirse con
+// datos reales. En vez de eso, la tarjeta queda atenuada con un candado;
+// "Otro mercado" (al final de la lista) sigue disponible para escribir
+// cualquier apuesta de jugador a mano mientras tanto.
+function TarjetaJugadorBloqueada({ etiqueta }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface overflow-hidden opacity-60">
+      <div className="w-full flex items-center justify-between gap-2 px-4 py-3">
+        <span className="text-sm font-semibold text-slate">{etiqueta}</span>
+        <Lock size={14} className="text-slate shrink-0" />
+      </div>
+    </div>
+  );
+}
+
 export default function PanelMercados({ partido, equipos, pendientes, onTogglePendiente, estaConfirmada = () => false }) {
   const [busqueda, setBusqueda] = useState("");
+  // Sin escudos de los dos equipos = sin partido real conectado (ver
+  // comentario de arriba) — mismo criterio que ya usa el resto de la app
+  // (ApuestaItem.jsx, PanelPartidos.jsx) para distinguir un partido de
+  // verdad de uno de ejemplo/escrito a mano.
+  const sinDatosReales = !partido.equipoLocalId && !partido.equipoVisitanteId;
 
   const esPendiente = (texto) => pendientes.some((p) => p.label === texto);
 
@@ -737,7 +760,17 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
         </div>
       </div>
 
-      <div className="p-3 border-b border-line">
+      <div className="p-3 border-b border-line space-y-2">
+        {sinDatosReales && (
+          <div className="flex items-start gap-2 p-2.5 rounded-lg border border-gold/40 bg-gold/10">
+            <Lock size={16} className="text-gold shrink-0 mt-0.5" />
+            <p className="text-xs text-ink leading-relaxed">
+              <span className="font-semibold text-gold">Mercados de Jugador bloqueados</span> — este
+              partido no tiene una plantilla real conectada. Usa <span className="font-semibold">"Otro
+              mercado"</span> (al final de la lista) para escribir cualquier apuesta de jugador a mano.
+            </p>
+          </div>
+        )}
         <div className="flex items-center gap-2 bg-paperDim border border-line rounded-lg px-2.5 py-1.5">
           <Search size={14} className="text-slate shrink-0" />
           <input
@@ -752,6 +785,9 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
 
       <div className="p-3 space-y-2">
         {visibles.map((c) => {
+          if (c.tipo === "jugador" && sinDatosReales) {
+            return <TarjetaJugadorBloqueada key={c.cfg.clave} etiqueta={c.cfg.etiqueta} />;
+          }
           if (c.tipo === "tabla") {
             return (
               <TarjetaTabla
