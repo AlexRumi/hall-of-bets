@@ -6,14 +6,22 @@ import { permiteLlamadaApiFootball } from "./_lib/limitadorApiFootball.js";
 // la plantilla de un equipo (players/squads) para el desplegable de
 // jugador de la categoría "Jugador" en SelectorMercado.jsx.
 //
-// Caché compartida y PERMANENTE en Supabase (tabla "plantillas_equipos",
-// ver migración) — mismo patrón que "resultados_partidos" para el
-// marcador final de un partido: una plantilla apenas cambia (2 veces al
-// año, en el mercado de fichajes), así que una vez pedida la de un equipo,
-// nadie —ni tú, ni tu amigo, ni un dispositivo nuevo— vuelve a gastar una
-// llamada real por ese mismo equipo. Antes esto solo se cacheaba en
+// Caché compartida en Supabase (tabla "plantillas_equipos") — mismo
+// patrón que "resultados_partidos" para el marcador final de un partido:
+// una vez pedida la de un equipo, nadie —ni tú, ni tu amigo, ni un
+// dispositivo nuevo— vuelve a gastar una llamada real por ese mismo
+// equipo hasta que la caché caduque. Antes esto solo se cacheaba en
 // memoria del navegador (usePlantilla.js), es decir, por PESTAÑA: cada
 // dispositivo/sesión nueva la volvía a pedir de cero.
+//
+// Caduca a los 30 días (no es permanente del todo): un equipo puede
+// fichar o vender jugadores en el mercado de invierno/verano, y una
+// plantilla desactualizada para siempre sería un problema real para
+// apostar (un jugador que ya no está en el equipo seguiría apareciendo
+// como opción). 30 días sigue siendo una llamada insignificante al mes
+// por equipo, muy lejos de cualquier límite.
+const TREINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
+
 export default async function handler(req, res) {
   const { equipo } = req.query;
 
@@ -27,11 +35,14 @@ export default async function handler(req, res) {
 
   const { data: enCache } = await supabaseAdmin
     .from("plantillas_equipos")
-    .select("jugadores")
+    .select("jugadores, actualizado_en")
     .eq("equipo_id", equipoId)
     .maybeSingle();
 
-  if (enCache) {
+  const cacheValida =
+    enCache && Date.now() - new Date(enCache.actualizado_en).getTime() < TREINTA_DIAS_MS;
+
+  if (cacheValida) {
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
     res.status(200).json({ jugadores: enCache.jugadores });
     return;
@@ -71,12 +82,16 @@ export default async function handler(req, res) {
       posicion: j.position ?? null,
     }));
 
-    // Se guarda para siempre en la caché compartida — la próxima vez que
-    // alguien pida este equipo (cualquier dispositivo, cualquier usuario),
-    // ya no hace falta ninguna llamada nueva. Si vino vacío (equipo sin
-    // datos en API-Football) no se guarda, para reintentarlo más adelante.
+    // Se guarda en la caché compartida (con la fecha de hoy, para que la
+    // caducidad de 30 días cuente desde AHORA, no desde la primera vez que
+    // se guardó) — la próxima vez que alguien pida este equipo, ya no hace
+    // falta ninguna llamada nueva hasta que vuelva a caducar. Si vino
+    // vacío (equipo sin datos en API-Football) no se guarda, para
+    // reintentarlo más adelante.
     if (jugadores.length > 0) {
-      await supabaseAdmin.from("plantillas_equipos").upsert({ equipo_id: equipoId, jugadores });
+      await supabaseAdmin
+        .from("plantillas_equipos")
+        .upsert({ equipo_id: equipoId, jugadores, actualizado_en: new Date().toISOString() });
     }
 
     res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
