@@ -65,5 +65,12 @@ export async function permiteLlamadaApiFootball() {
     if (intento < REINTENTOS_MAXIMOS - 1) await esperar(ESPACIADO_MS + 50);
   }
 
+  // Agotados los reintentos sin hueco: de verdad hay 8 llamadas gastadas
+  // en el último minuto (esperar más no ayudaría, la ventana tarda hasta
+  // 60s en liberarse). Sin este log, un partido/plantilla vacío por esto
+  // es indistinguible de "no hay datos" — con él, se puede diferenciar en
+  // los logs de Vercel "estamos realmente saturados" de "hay un bug
+  // nuevo generando llamadas de más".
+  console.warn("permiteLlamadaApiFootball: sin hueco tras agotar los reintentos, se deniega la llamada");
   return false;
 }

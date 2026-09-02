@@ -4930,3 +4930,12 @@ separadas, probando cada una antes de pasar a la siguiente.
     externos en cron-job.org (avisos cada 15 min, limpieza diaria), y los
     dos Database Webhooks de Supabase (Integrations > Database Webhooks,
     eventos INSERT/UPDATE en `apuestas`).
+
+- **Pendiente menor (`api/_lib/limitadorApiFootball.js`)**: cuando se
+  agotan los 6 reintentos sin hueco (las 8 llamadas del minuto de verdad
+  gastadas, no solo el espaciado de 300ms), el endpoint devuelve datos
+  vacíos y ya queda un `console.warn` en los logs de Vercel — pero de
+  cara al usuario sigue siendo un fallo silencioso (un partido/plantilla
+  vacío sin explicación visible). Si algún día se ve algo así sin motivo
+  aparente, ese log es el primer sitio donde mirar antes de sospechar de
+  otra cosa.
