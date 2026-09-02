@@ -1,3 +1,5 @@
+import { permiteLlamadaApiFootball } from "./_lib/limitadorApiFootball.js";
+
 // Cuotas de un partido concreto (fixture de API-Football), solo de las 5
 // casas elegidas. A diferencia de api/partidos.js (que trae todos los
 // partidos de un día de golpe), esto es una llamada por partido — se pide
@@ -16,6 +18,12 @@ export default async function handler(req, res) {
 
   if (!partido || !/^\d+$/.test(partido)) {
     res.status(400).json({ error: "Falta el parámetro partido (id del fixture)" });
+    return;
+  }
+
+  // Límite propio antes de gastar cuota real (ver _lib/limitadorApiFootball.js).
+  if (!(await permiteLlamadaApiFootball())) {
+    res.status(200).json({ cuotas: [] });
     return;
   }
 

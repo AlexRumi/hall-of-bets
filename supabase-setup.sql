@@ -249,3 +249,77 @@ alter table public.telegram_mensajes enable row level security;
 create policy "autenticados_telegram_mensajes" on public.telegram_mensajes
   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
+-- Limitador propio de llamadas a API-Football (independiente del límite
+-- real de la API): nunca deja salir más de 8 peticiones por minuto desde
+-- toda la app, sea cual sea el origen (bug, pico de visitas...) — una sola
+-- fila compartida por las 4 funciones que llaman a API-Football (ver
+-- api/_lib/limitadorApiFootball.js). Motivo: la cuenta de API-Football se
+-- suspendió el 2026-09-02 tras una ráfaga de peticiones duplicadas (bug ya
+-- corregido en usePlantilla.js) — esto es la red de seguridad para que no
+-- pueda volver a pasar por ningún otro motivo futuro.
+create table public.limitador_api_football (
+  id int primary key default 1,
+  ventana_inicio timestamptz not null default now(),
+  contador int not null default 0
+);
+insert into public.limitador_api_football (id) values (1) on conflict (id) do nothing;
+
+-- SELECT ... FOR UPDATE bloquea la fila mientras dura la función: si dos
+-- peticiones llegan a la vez, la segunda espera a que la primera termine
+-- antes de leer el contador, así nunca se cuelan las dos por encima del
+-- límite a la vez.
+create or replace function reservar_llamada_api_football(p_limite int, p_ventana_segundos int)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_ventana_inicio timestamptz;
+  v_contador int;
+  v_reiniciar boolean;
+  v_permitido boolean;
+begin
+  select ventana_inicio, contador into v_ventana_inicio, v_contador
+  from public.limitador_api_football
+  where id = 1
+  for update;
+
+  v_reiniciar := (now() - v_ventana_inicio) >= (p_ventana_segundos || ' seconds')::interval;
+
+  if v_reiniciar then
+    v_permitido := true;
+    update public.limitador_api_football set ventana_inicio = now(), contador = 1 where id = 1;
+  elsif v_contador < p_limite then
+    v_permitido := true;
+    update public.limitador_api_football set contador = v_contador + 1 where id = 1;
+  else
+    v_permitido := false;
+  end if;
+
+  return v_permitido;
+end;
+$$;
+
+-- Tabla de control interno pura, sin ningún dato personal — a diferencia
+-- de resultados_partidos/telegram_mensajes, ni siquiera hace falta una
+-- política para "authenticated": nadie desde el navegador necesita tocarla
+-- nunca, solo las Serverless Functions con la service role key (que salta
+-- el RLS igualmente). RLS activado sin políticas = nadie más puede leerla
+-- ni escribirla.
+alter table public.limitador_api_football enable row level security;
+
+-- Caché compartida y PERMANENTE de plantillas de equipo (players/squads):
+-- una vez pedida la de un equipo, se guarda para siempre — nadie vuelve a
+-- gastar una llamada a la API por ese equipo, sea cual sea el dispositivo o
+-- el usuario. Mismo patrón que resultados_partidos, pero para plantillas
+-- en vez de marcadores.
+create table public.plantillas_equipos (
+  equipo_id int primary key,
+  jugadores jsonb not null,
+  actualizado_en timestamptz not null default now()
+);
+
+-- Igual que limitador_api_football: solo la tocan las Serverless Functions
+-- (service role), nadie desde el navegador necesita leerla ni escribirla
+-- directamente.
+alter table public.plantillas_equipos enable row level security;
+

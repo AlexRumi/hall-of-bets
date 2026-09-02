@@ -29,6 +29,8 @@
 // ocultan también el mismo día en cuanto TODOS sus partidos de esa
 // edición ya han terminado, para no dejar la competición "fantasma" en el
 // desplegable el resto de la temporada hasta la próxima edición.
+import { permiteLlamadaApiFootball } from "./_lib/limitadorApiFootball.js";
+
 const LIGAS = {
   140: { pais: "España", competicion: "La Liga" },
   141: { pais: "España", competicion: "Segunda División" },
@@ -93,6 +95,14 @@ export default async function handler(req, res) {
 
   if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
     res.status(400).json({ error: "Falta el parámetro fecha (YYYY-MM-DD)" });
+    return;
+  }
+
+  // Límite propio antes de gastar cuota real (ver _lib/limitadorApiFootball.js)
+  // — nunca deja salir más de 8 peticiones/minuto a la API de verdad, pase
+  // lo que pase en el resto del código.
+  if (!(await permiteLlamadaApiFootball())) {
+    res.status(200).json({ partidos: [] });
     return;
   }
 

@@ -1,3 +1,5 @@
+import { permiteLlamadaApiFootball } from "./_lib/limitadorApiFootball.js";
+
 // Serverless Function de Vercel, mismo motivo que api/partidos.js y
 // api/jugadores.js: la key de API-Football es secreta y aquí sí se puede
 // usar sin exponerla. Da la hora/estado/resultado de UN partido concreto
@@ -17,6 +19,12 @@ export default async function handler(req, res) {
 
   if (!id || !/^\d+$/.test(id)) {
     res.status(400).json({ error: "Falta el parámetro id (numérico)" });
+    return;
+  }
+
+  // Límite propio antes de gastar cuota real (ver _lib/limitadorApiFootball.js).
+  if (!(await permiteLlamadaApiFootball())) {
+    res.status(200).json({ partido: null });
     return;
   }
 
