@@ -12,6 +12,14 @@ import { crearSupabaseAdmin } from "./supabaseAdmin.js";
 // 8, no 10: deja margen bajo el límite real de API-Football (10
 // peticiones/minuto en el plan gratuito) para no rozarlo justo.
 //
+// Además del tope por minuto, un espaciado mínimo (300ms) entre llamadas
+// permitidas consecutivas: el tope por sí solo no evita que esas 8 salgan
+// casi todas en el mismo instante (una ráfaga más pequeña, pero ráfaga) —
+// justo el patrón que más se parece a tráfico sospechoso, aparte de la
+// cantidad total. Con la caché de plantillas ya puesta, este caso (varios
+// equipos NUEVOS a la vez) debería ser rarísimo, pero de gratis, mejor
+// cubrirlo también.
+//
 // Requiere la función de Postgres "reservar_llamada_api_football" (ver
 // migración en el mismo commit) — usa SELECT ... FOR UPDATE para que dos
 // invocaciones a la vez no puedan colarse las dos por encima del límite.
@@ -20,6 +28,7 @@ export async function permiteLlamadaApiFootball() {
   const { data, error } = await supabaseAdmin.rpc("reservar_llamada_api_football", {
     p_limite: 8,
     p_ventana_segundos: 60,
+    p_espaciado_ms: 300,
   });
 
   if (error) {

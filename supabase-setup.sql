@@ -330,3 +330,53 @@ alter table public.plantillas_equipos enable row level security;
 drop table if exists public.telegram_mensajes;
 alter table public.resultados_partidos drop column if exists notificado;
 
+-- Espaciado mínimo entre llamadas permitidas a API-Football, aparte del
+-- tope por minuto ya existente: el tope por sí solo no evita que esas 8
+-- salgan casi todas en el mismo instante (una ráfaga más pequeña, pero
+-- ráfaga) — el patrón que más se parece a tráfico sospechoso. Se sustituye
+-- la función por una versión con un tercer parámetro (espaciado en ms);
+-- hace falta borrar la versión anterior (firma distinta = función
+-- distinta para Postgres, "or replace" no la sustituye sola).
+alter table public.limitador_api_football add column if not exists ultima_permitida timestamptz;
+drop function if exists reservar_llamada_api_football(int, int);
+
+create or replace function reservar_llamada_api_football(p_limite int, p_ventana_segundos int, p_espaciado_ms int)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_ventana_inicio timestamptz;
+  v_contador int;
+  v_ultima_permitida timestamptz;
+  v_reiniciar boolean;
+  v_permitido boolean;
+begin
+  select ventana_inicio, contador, ultima_permitida
+    into v_ventana_inicio, v_contador, v_ultima_permitida
+  from public.limitador_api_football
+  where id = 1
+  for update;
+
+  v_reiniciar := (now() - v_ventana_inicio) >= (p_ventana_segundos || ' seconds')::interval;
+
+  if v_ultima_permitida is not null
+     and (now() - v_ultima_permitida) < (p_espaciado_ms || ' milliseconds')::interval then
+    v_permitido := false;
+  elsif v_reiniciar then
+    v_permitido := true;
+    update public.limitador_api_football
+    set ventana_inicio = now(), contador = 1, ultima_permitida = now()
+    where id = 1;
+  elsif v_contador < p_limite then
+    v_permitido := true;
+    update public.limitador_api_football
+    set contador = v_contador + 1, ultima_permitida = now()
+    where id = 1;
+  else
+    v_permitido := false;
+  end if;
+
+  return v_permitido;
+end;
+$$;
+
