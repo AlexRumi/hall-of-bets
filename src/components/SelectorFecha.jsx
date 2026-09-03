@@ -1,6 +1,18 @@
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import SelectorDesplegable from "./SelectorDesplegable";
 
 const DIAS_SEMANA = ["DO", "LU", "MA", "MI", "JU", "VI", "SA"];
+
+// Una semana atrás, una semana adelante (15 días en total) — antes solo
+// dejaba ayer/hoy/mañana, por una restricción del plan gratuito de
+// API-Football (rango corto alrededor de hoy). Comprobado a mano contra
+// GOAL API (proveedor actual, ver CLAUDE.md) que no existe esa
+// restricción — cualquier fecha responde "success: true", nunca un
+// error de "fuera de rango". Petición directa, con la referencia visual
+// de Flashscore: escritorio con desplegable para saltar directo a
+// cualquier día, móvil con tira deslizable (hoy centrado al abrir).
+const DIAS_ATRAS_ADELANTE = 7;
 
 function formatearISO(fecha) {
   return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(
@@ -14,44 +26,44 @@ function sumarDias(fecha, dias) {
   return copia;
 }
 
-// Sustituye al <input type="date"> nativo que tenía el campo "Fecha" del
-// formulario de apuesta (petición directa): el buscador de partidos
-// (ConstructorPartido.jsx → BuscadorEvento.jsx) solo encuentra partidos en
-// ayer/hoy/mañana (límite del plan gratuito de API-Football, ver
-// api/partidos.js) — un calendario libre dejaba elegir cualquier fecha,
-// aunque estuviera garantizado que no iba a traer ningún partido. Muestra 7
-// días (3 antes de hoy, hoy, 3 después): solo esos tres centrales se pueden
-// elegir, el resto se ven pero no se pueden tocar, para que la razón sea
-// visible en vez de parecer un fallo. Al ser el único campo de fecha que
-// tiene la apuesta, se acepta perder la posibilidad de ponerle una fecha más
-// antigua a mano (petición directa, no se usa para anotar apuestas
-// atrasadas) — si "valor" ya viene de fuera de estos 7 días (editando una
-// apuesta vieja sin tocar su fecha), simplemente no se resalta ningún día,
-// sin forzar ningún cambio mientras no se toque la tira.
 export default function SelectorFecha({ valor, onCambiar }) {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-
-  const dias = Array.from({ length: 7 }, (_, i) => sumarDias(hoy, i - 3));
-  const habilitados = new Set(dias.slice(2, 5).map(formatearISO)); // ayer, hoy, mañana
   const hoyIso = formatearISO(hoy);
 
+  const dias = Array.from(
+    { length: DIAS_ATRAS_ADELANTE * 2 + 1 },
+    (_, i) => sumarDias(hoy, i - DIAS_ATRAS_ADELANTE)
+  );
+
   const indiceValor = dias.findIndex((dia) => formatearISO(dia) === valor);
-  const diaActual = indiceValor >= 0 ? dias[indiceValor] : hoy;
 
   function ir(offset) {
-    const iso = formatearISO(sumarDias(diaActual, offset));
-    if (habilitados.has(iso)) onCambiar(iso);
+    const nuevoIndice = (indiceValor === -1 ? DIAS_ATRAS_ADELANTE : indiceValor) + offset;
+    if (nuevoIndice >= 0 && nuevoIndice < dias.length) onCambiar(formatearISO(dias[nuevoIndice]));
   }
 
-  const puedeAtras = habilitados.has(formatearISO(sumarDias(diaActual, -1)));
-  const puedeAdelante = habilitados.has(formatearISO(sumarDias(diaActual, 1)));
+  const puedeAtras = indiceValor === -1 || indiceValor > 0;
+  const puedeAdelante = indiceValor === -1 || indiceValor < dias.length - 1;
+
+  // Tira deslizable en móvil: al abrir, HOY empieza centrada (mismo
+  // criterio visual que Flashscore) — solo al montar, para no pelearse
+  // con el deslizado a mano del usuario en renders siguientes.
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    const contenedor = scrollRef.current;
+    if (!contenedor) return;
+    const indiceHoy = dias.findIndex((dia) => formatearISO(dia) === hoyIso);
+    const elementoHoy = contenedor.children[indiceHoy];
+    elementoHoy?.scrollIntoView({ inline: "center", block: "nearest" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
-      {/* Escritorio: flechas compactas, mismo patrón que el navegador de
-          periodo de Informe (InformeProfesional.jsx). */}
-      <div className="hidden sm:flex items-center justify-center gap-3 border border-line rounded-lg px-3 py-2 bg-surface">
+      {/* Escritorio: flechas + desplegable para saltar directo a
+          cualquiera de los 15 días, sin tener que darle 7 veces a "›". */}
+      <div className="hidden sm:flex items-center justify-center gap-2">
         <button
           type="button"
           onClick={() => ir(-1)}
@@ -61,11 +73,27 @@ export default function SelectorFecha({ valor, onCambiar }) {
         >
           <ChevronLeft size={16} />
         </button>
-        <span className="flex items-center gap-2 text-sm font-medium text-ink font-mono">
-          <Calendar size={14} className="text-slate shrink-0" />
-          {String(diaActual.getDate()).padStart(2, "0")}/{String(diaActual.getMonth() + 1).padStart(2, "0")}{" "}
-          {formatearISO(diaActual) === hoyIso ? "HOY" : DIAS_SEMANA[diaActual.getDay()]}
-        </span>
+        <div className="w-44">
+          <SelectorDesplegable
+            valor={valor}
+            placeholder="Elegir fecha"
+            onElegir={onCambiar}
+            grupos={[
+              {
+                opciones: dias.map((dia) => {
+                  const iso = formatearISO(dia);
+                  return {
+                    valor: iso,
+                    texto: `${iso === hoyIso ? "HOY" : DIAS_SEMANA[dia.getDay()]} · ${String(
+                      dia.getDate()
+                    ).padStart(2, "0")}/${String(dia.getMonth() + 1).padStart(2, "0")}`,
+                    destacado: iso === hoyIso,
+                  };
+                }),
+              },
+            ]}
+          />
+        </div>
         <button
           type="button"
           onClick={() => ir(1)}
@@ -77,25 +105,25 @@ export default function SelectorFecha({ valor, onCambiar }) {
         </button>
       </div>
 
-      {/* Móvil: tira de 7 días (DO/LU/MA/HOY/JU/VI/SA + fecha) — sin
-          recuadro, solo texto (petición directa, según captura de
-          referencia): el día elegido se distingue en dorado con una rayita
-          debajo, el resto en un solo tono salvo los que no se pueden tocar
-          (más tenues todavía, para no parecer clicables). */}
-      <div className="grid grid-cols-7 gap-1 sm:hidden">
+      {/* Móvil: tira deslizable con el dedo, hoy centrada al abrir —
+          mismo mecanismo de scroll horizontal que TabsDesplazables.jsx,
+          pero con la celda de dos líneas (día de la semana + fecha) que
+          ya tenía esto antes, así que no se reutiliza tal cual. */}
+      <div
+        ref={scrollRef}
+        className="flex gap-1 overflow-x-auto scrollbar-oculto sm:hidden snap-x snap-mandatory"
+      >
         {dias.map((dia) => {
           const iso = formatearISO(dia);
-          const activo = habilitados.has(iso);
           const esHoy = iso === hoyIso;
           const seleccionado = iso === valor;
           return (
             <button
               key={iso}
               type="button"
-              disabled={!activo}
               onClick={() => onCambiar(iso)}
-              className={`flex flex-col items-center gap-1 py-1 text-[11px] font-bold transition-colors ${
-                !activo ? "text-slate/40 cursor-not-allowed" : seleccionado ? "text-gold" : "text-ink"
+              className={`shrink-0 snap-center flex flex-col items-center gap-1 py-1 px-2 text-[11px] font-bold transition-colors ${
+                seleccionado ? "text-gold" : "text-ink"
               }`}
             >
               <span>{esHoy ? "HOY" : DIAS_SEMANA[dia.getDay()]}</span>

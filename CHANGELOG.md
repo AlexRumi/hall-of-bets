@@ -5065,3 +5065,17 @@ separadas, probando cada una antes de pasar a la siguiente.
     rechaza cualquier id puramente numérico antes de llamar a GOAL, por
     si algún otro sitio llamara a este endpoint en el futuro sin pasar
     por ese hook.
+
+- **Selector de fecha ampliado a 15 días** (2026-09-03, petición
+  directa, referencia visual de Flashscore): antes solo dejaba elegir
+  ayer/hoy/mañana — límite heredado del plan gratuito de API-Football
+  (rango corto alrededor de hoy). Comprobado a mano contra GOAL API que
+  no existe esa restricción (cualquier fecha responde `success: true`,
+  nunca un error de "fuera de rango" — un día sin partidos en una liga
+  concreta es un hueco real del calendario, como un parón de
+  selecciones, no un límite de la API). `SelectorFecha.jsx` reescrito:
+  una semana atrás + una semana adelante (15 días), escritorio con
+  flechas + un desplegable (`SelectorDesplegable.jsx` reutilizado) para
+  saltar directo a cualquier día, móvil con una tira deslizable con el
+  dedo (scroll-snap) en vez de la rejilla fija de 7 que solo cabían
+  antes — hoy se centra sola al abrir la pantalla.
