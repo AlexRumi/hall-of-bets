@@ -26,6 +26,13 @@ export default function SelectorDesplegable({
   grupos,
   onElegir,
   disabled = false,
+  // Centrado (petición directa, para SelectorFecha.jsx en escritorio):
+  // el resto de usos (Casa, jugador) son desplegables normales, con el
+  // texto a la izquierda y la flecha en el borde derecho — aquí, en vez
+  // de "elegir un valor de una lista", es más "una fecha centrada con
+  // flechas a los lados", así que el texto va centrado junto a la
+  // flechita, no estirado hasta el borde.
+  centrado = false,
 }) {
   const [abierto, setAbierto] = useState(false);
   const contenedorRef = useRef(null);
@@ -90,7 +97,9 @@ export default function SelectorDesplegable({
         type="button"
         onClick={() => !disabled && setAbierto((actual) => !actual)}
         disabled={disabled}
-        className="w-full flex items-center justify-between gap-2 border border-line rounded-lg px-3 py-2 text-sm bg-surface text-left disabled:opacity-50"
+        className={`w-full flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-sm bg-surface disabled:opacity-50 ${
+          centrado ? "justify-center" : "justify-between text-left"
+        }`}
       >
         <span
           className={`truncate ${

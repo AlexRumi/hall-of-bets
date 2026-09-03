@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import SelectorDesplegable from "./SelectorDesplegable";
 
 const DIAS_SEMANA = ["DO", "LU", "MA", "MI", "JU", "VI", "SA"];
@@ -36,16 +35,6 @@ export default function SelectorFecha({ valor, onCambiar }) {
     (_, i) => sumarDias(hoy, i - DIAS_ATRAS_ADELANTE)
   );
 
-  const indiceValor = dias.findIndex((dia) => formatearISO(dia) === valor);
-
-  function ir(offset) {
-    const nuevoIndice = (indiceValor === -1 ? DIAS_ATRAS_ADELANTE : indiceValor) + offset;
-    if (nuevoIndice >= 0 && nuevoIndice < dias.length) onCambiar(formatearISO(dias[nuevoIndice]));
-  }
-
-  const puedeAtras = indiceValor === -1 || indiceValor > 0;
-  const puedeAdelante = indiceValor === -1 || indiceValor < dias.length - 1;
-
   // Tira deslizable en móvil: al abrir, HOY empieza centrada (mismo
   // criterio visual que Flashscore) — solo al montar, para no pelearse
   // con el deslizado a mano del usuario en renders siguientes.
@@ -61,23 +50,16 @@ export default function SelectorFecha({ valor, onCambiar }) {
 
   return (
     <div>
-      {/* Escritorio: flechas + desplegable para saltar directo a
-          cualquiera de los 15 días, sin tener que darle 7 veces a "›". */}
-      <div className="hidden sm:flex items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={() => ir(-1)}
-          disabled={!puedeAtras}
-          aria-label="Día anterior"
-          className="p-1 rounded-full text-slate hover:text-ink hover:bg-paperDim transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-        >
-          <ChevronLeft size={16} />
-        </button>
+      {/* Escritorio: solo el desplegable, para saltar directo a
+          cualquiera de los 15 días — las flechas de antes ya no
+          aportaban nada al lado de un desplegable (petición directa). */}
+      <div className="hidden sm:flex items-center justify-center">
         <div className="w-44">
           <SelectorDesplegable
             valor={valor}
             placeholder="Elegir fecha"
             onElegir={onCambiar}
+            centrado
             grupos={[
               {
                 opciones: dias.map((dia) => {
@@ -94,15 +76,6 @@ export default function SelectorFecha({ valor, onCambiar }) {
             ]}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => ir(1)}
-          disabled={!puedeAdelante}
-          aria-label="Día siguiente"
-          className="p-1 rounded-full text-slate hover:text-ink hover:bg-paperDim transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-        >
-          <ChevronRight size={16} />
-        </button>
       </div>
 
       {/* Móvil: tira deslizable con el dedo, hoy centrada al abrir —
