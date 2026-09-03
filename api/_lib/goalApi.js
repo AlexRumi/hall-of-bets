@@ -81,6 +81,10 @@ export const LIGAS = {
   "cmr77dw4s00fmrx069yvhf8ce": { pais: "Mundial", competicion: "Copa del Mundo", temporal: true },
   "cmr77dvhg001brx066q5nrpxb": { pais: "Competición Europea", competicion: "Champions League Femenina" },
   "cmr77dvmv006erx06bv7j5r71": { pais: "Sudamérica", competicion: "Clasificación Mundial" },
+  // Añadida el 2026-09-04: "CONMEBOL Copa America" tal cual la llama
+  // GOAL API (país "intl" en su respuesta) — torneo corto y no anual,
+  // igual que Mundial/Eurocopa, así que también "temporal".
+  "cmr77dvhg0018rx06z11d3k9z": { pais: "Sudamérica", competicion: "Copa América", temporal: true },
   "cmr77dvjm005brx062i1cpb4k": { pais: "Austria", competicion: "Bundesliga austríaca" },
   "cmr77dw1z00exrx062x6co26u": { pais: "Dinamarca", competicion: "Superliga" },
   "cmr77dvyx00egrx06pta3wmnc": { pais: "Suiza", competicion: "Super League" },

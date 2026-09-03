@@ -5096,3 +5096,10 @@ separadas, probando cada una antes de pasar a la siguiente.
   Uruguay). Verificado en local que las nuevas traen partidos reales
   (Segunda RFEF: 125 partidos el sábado; Primera Femenina: partido el
   domingo).
+
+- **Añadida Copa América** (2026-09-04, corrección directa): existe en
+  GOAL API tal cual, como "CONMEBOL Copa America" (país "intl" en su
+  respuesta) — no la encontré antes porque buscaba una "clasificación"
+  de Copa América que no existe (los 10 de CONMEBOL entran directos),
+  no el torneo en sí. Añadida en el bucket "Sudamérica", "temporal"
+  (torneo corto y no anual, mismo criterio que Mundial/Eurocopa).
