@@ -11,6 +11,13 @@
 // otra en una tira horizontal (ver Novedades.jsx) — viven en public/novedades/.
 export const NOVEDADES = [
   {
+    id: "marcador-final-en-ticket",
+    fecha: "2026-09-03",
+    titulo: "Marcador final en el ticket de la apuesta",
+    descripcion:
+      "Al abrir una apuesta con un partido real ya terminado, ahora se ve el resultado final junto al escudo de cada equipo. Solo disponible para partidos registrados a partir de hoy (con el nuevo proveedor de datos) — las apuestas de antes no lo traen.",
+  },
+  {
     id: "nuevo-proveedor-goal-api",
     fecha: "2026-09-03",
     titulo: "Nuevo proveedor de datos de partidos",

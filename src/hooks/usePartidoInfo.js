@@ -21,7 +21,18 @@ export function usePartidoInfo(partidoId, horaInicioMs) {
   const [partido, setPartido] = useState(() => cache.get(partidoId) ?? null);
 
   useEffect(() => {
-    if (!partidoId) {
+    // Bug real (2026-09-03, migración a GOAL API): los ids de partido de
+    // GOAL son strings; los de apuestas guardadas ANTES de la migración
+    // son números de API-Football. GOAL API reutiliza esos mismos
+    // números como su propio campo interno "apiId" — comprobado a mano:
+    // pedir /fixtures/<número al azar de formato API-Football> puede
+    // "acertar" por pura coincidencia un partido de GOAL sin relación
+    // ninguna con el real, y devolver su resultado como si fuera el
+    // bueno, sin ningún error. Para una apuesta de antes de la migración
+    // no hay forma fiable de recuperar su resultado (el proveedor
+    // antiguo sigue suspendido) — mejor no enseñar nada que enseñar un
+    // marcador falso.
+    if (!partidoId || typeof partidoId !== "string") {
       setPartido(null);
       return;
     }

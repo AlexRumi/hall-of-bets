@@ -1,9 +1,31 @@
 import { useState } from "react";
 import { X, Pencil, Trash2, Calendar, Wallet, ChevronDown } from "lucide-react";
-import { calcularBeneficio, calcularCuotaTotal, agruparSeleccionesPorPartido } from "../utils/apuestas";
+import {
+  calcularBeneficio,
+  calcularCuotaTotal,
+  agruparSeleccionesPorPartido,
+  ESTADOS_TERMINADOS_PARTIDO,
+} from "../utils/apuestas";
 import { escudoUrl, equiposDesdeEvento, esFormatoEquipos } from "../utils/mercados";
 import { useColorCasa } from "../hooks/useColorCasa";
+import { usePartidoInfo } from "../hooks/usePartidoInfo";
 import ConfirmDialog from "./ConfirmDialog";
+
+// Marcador final del partido, junto al escudo de cada equipo (petición
+// directa) — reactiva una infraestructura que ya existía desde antes de
+// la migración a GOAL API (api/partido.js, caché permanente en
+// resultados_partidos, margen de 2,5h tras el inicio para no preguntar
+// antes de tiempo) pero que se quedó sin conectar a esta pantalla al
+// quitar el bot de Telegram (era el único sitio que la usaba). Un
+// componente propio en vez de llamar a usePartidoInfo directamente
+// dentro del .map() de gruposPartido: los hooks no se pueden llamar
+// dentro de un bucle, así que cada partido necesita su propia instancia
+// de componente para tener su propia llamada al hook.
+function MarcadorPartido({ partidoId, horaInicioMs, children }) {
+  const partido = usePartidoInfo(partidoId, horaInicioMs);
+  const terminado = partido && ESTADOS_TERMINADOS_PARTIDO.has(partido.estado);
+  return children(terminado ? partido : null);
+}
 
 const ETIQUETAS_RESULTADO = {
   pendiente: "Pendiente",
@@ -330,6 +352,12 @@ export default function ApuestaItem({
           const { local: nombreLocal, visitante: nombreVisitante } = esFormatoEquipos(grupo.evento)
             ? equiposDesdeEvento(grupo.evento)
             : { local: null, visitante: null };
+          // App de un único usuario en España (ver CLAUDE.md): se
+          // interpreta en la zona horaria del propio navegador, sin
+          // conversión explícita — igual de válido que asumir
+          // directamente Europe/Madrid.
+          const horaInicioMs =
+            grupo.fecha && grupo.hora ? new Date(`${grupo.fecha}T${grupo.hora}:00`).getTime() : null;
 
           // Lista de mercados de este partido: cada uno cicla su propia
           // pastilla — el resultado del partido (color del borde/tira de
@@ -451,17 +479,29 @@ export default function ApuestaItem({
           const partidoDivisible = tieneEscudoLocal && tieneEscudoVisitante && nombreLocal;
           const abierto = esCombinada && gruposAbiertos.has(grupo.indiceLider);
           const cabecera = (
+            <MarcadorPartido partidoId={grupo.partidoId} horaInicioMs={horaInicioMs}>
+              {(marcador) => (
             <div className="flex items-start gap-2">
               <div className="flex-1 min-w-0 space-y-1">
                 {partidoDivisible ? (
                   <>
                     <div className="flex items-center gap-2">
                       <img src={escudoUrl(grupo.equipoLocalId, grupo.escudoLocal)} alt="" className="w-7 h-7 shrink-0 object-contain" />
-                      <span className="text-sm font-semibold text-ink truncate">{nombreLocal}</span>
+                      <span className="w-28 shrink-0 text-sm font-semibold text-ink truncate">{nombreLocal}</span>
+                      {marcador && (
+                        <span className="w-7 shrink-0 text-center font-mono text-sm font-bold text-ink bg-surface border border-line rounded-md py-0.5">
+                          {marcador.golesLocal}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <img src={escudoUrl(grupo.equipoVisitanteId, grupo.escudoVisitante)} alt="" className="w-7 h-7 shrink-0 object-contain" />
-                      <span className="text-sm font-semibold text-ink truncate">{nombreVisitante}</span>
+                      <span className="w-28 shrink-0 text-sm font-semibold text-ink truncate">{nombreVisitante}</span>
+                      {marcador && (
+                        <span className="w-7 shrink-0 text-center font-mono text-sm font-bold text-ink bg-surface border border-line rounded-md py-0.5">
+                          {marcador.golesVisitante}
+                        </span>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -511,6 +551,8 @@ export default function ApuestaItem({
                 )}
               </div>
             </div>
+              )}
+            </MarcadorPartido>
           );
 
           // Combinada (2+ partidos): la cabecera de arriba es un botón que

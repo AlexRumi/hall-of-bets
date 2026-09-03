@@ -5040,3 +5040,28 @@ separadas, probando cada una antes de pasar a la siguiente.
   en Europe/Madrid a partir de `kickoffUtc` (`fechaHoraMadrid()` en
   `api/_lib/goalApi.js`), usado tanto en `api/partidos.js` como en
   `api/partido.js`.
+
+- **Marcador final reconectado en el ticket de la apuesta** (2026-09-03,
+  petición directa): `usePartidoInfo.js`/`api/partido.js` (caché
+  permanente en `resultados_partidos`, margen de 2,5h tras el inicio)
+  ya existían desde antes de quitar el bot de Telegram, pero se
+  quedaron sin ningún sitio que los llamara — era el único consumidor.
+  Reconectado en `ApuestaItem.jsx` vía un componente `MarcadorPartido`
+  (los hooks no se pueden llamar dentro del `.map()` de los partidos de
+  la apuesta, así que cada partido tiene su propia instancia). El
+  marcador se enseña junto a cada escudo, en su propio recuadro,
+  alineado en vertical (columna de nombre a ancho fijo).
+  - **Bug real encontrado de paso**: GOAL API reutiliza los números de
+    su propio campo interno `apiId` como alias de `/fixtures/:id` —
+    comprobado a mano que pedir el id numérico de una apuesta de ANTES
+    de la migración (formato API-Football) puede "acertar" por pura
+    coincidencia un partido de GOAL sin ninguna relación con el real, y
+    devolver su resultado como si fuera el bueno, sin ningún error (el
+    propio mensaje de error de GOAL cuando no coincide ya avisa de
+    esto: "Ids issued by another football data provider are not
+    recognised here"). Arreglado en dos capas: `usePartidoInfo.js` ya
+    no pregunta nada si el id no es un string (los de GOAL son cuids;
+    los de antes de la migración son números), y `api/partido.js`
+    rechaza cualquier id puramente numérico antes de llamar a GOAL, por
+    si algún otro sitio llamara a este endpoint en el futuro sin pasar
+    por ese hook.

@@ -22,6 +22,21 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Bug real (2026-09-03): los ids de GOAL son cuids alfanuméricos; un id
+  // puramente numérico solo puede venir de una apuesta guardada ANTES de
+  // la migración (fixture de API-Football). GOAL API reutiliza esos
+  // mismos números como su propio campo interno "apiId" — comprobado a
+  // mano que un id así puede "acertar" por pura coincidencia un partido
+  // de GOAL sin relación ninguna con el real, y devolver su resultado
+  // como si fuera el bueno. Mejor no preguntar nada que arriesgarse a
+  // devolver un marcador falso (frontend ya filtra esto también, en
+  // usePartidoInfo.js, pero conviene que este endpoint no dependa solo
+  // de que el frontend lo haga bien).
+  if (/^\d+$/.test(id)) {
+    res.status(200).json({ partido: null });
+    return;
+  }
+
   // Límite propio antes de gastar cuota real (ver _lib/limitadorGoalApi.js).
   if (!(await permiteLlamadaGoalApi())) {
     res.status(200).json({ partido: null });
