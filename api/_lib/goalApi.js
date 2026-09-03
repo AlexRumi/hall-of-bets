@@ -85,6 +85,34 @@ export const LIGAS = {
   "cmr77dwyu00ourx06onlk5cms": { pais: "Uruguay", competicion: "Primera División" },
 };
 
+// GOAL API da "matchDate"/"matchTime" en UTC (comprobado a mano:
+// coinciden exactamente con la hora de "kickoffUtc") — a diferencia de
+// API-Football, a quien se le podía pedir directamente en hora de
+// España con "timezone=Europe/Madrid". Sin esto, la hora que ve el
+// usuario iría 1-2h por detrás de la real (según CET/CEST). Se
+// reconstruye fecha/hora en Europe/Madrid a partir de "kickoffUtc", el
+// único campo fiable.
+const FORMATO_FECHA_MADRID = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const FORMATO_HORA_MADRID = new Intl.DateTimeFormat("es-ES", {
+  timeZone: "Europe/Madrid",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+export function fechaHoraMadrid(kickoffUtc) {
+  const fechaUtc = new Date(kickoffUtc);
+  return {
+    fecha: FORMATO_FECHA_MADRID.format(fechaUtc),
+    hora: FORMATO_HORA_MADRID.format(fechaUtc),
+  };
+}
+
 // Traduce el "matchStatus" de GOAL API a los mismos códigos cortos que
 // ya usaba API-Football (NS/1H/FT...) — así el frontend (PanelPartidos.jsx,
 // usePartidoInfo.js, ESTADOS_TERMINADOS_PARTIDO en utils/apuestas.js) no

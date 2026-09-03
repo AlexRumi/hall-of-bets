@@ -14,7 +14,7 @@
 // Se filtran estas competiciones (LIGAS, en api/_lib/goalApi.js); el
 // resto de partidos del mundo que devuelve GOAL API para ese día se
 // descartan.
-import { goalFetch, LIGAS, estadoCorto } from "./_lib/goalApi.js";
+import { goalFetch, LIGAS, estadoCorto, fechaHoraMadrid } from "./_lib/goalApi.js";
 import { permiteLlamadaGoalApi } from "./_lib/limitadorGoalApi.js";
 
 export default async function handler(req, res) {
@@ -66,8 +66,7 @@ export default async function handler(req, res) {
         pais: LIGAS[p.leagueId].pais,
         competicion: LIGAS[p.leagueId].competicion,
         temporal: !!LIGAS[p.leagueId].temporal,
-        fecha: p.matchDate,
-        hora: p.matchTime,
+        ...fechaHoraMadrid(p.kickoffUtc),
         estado: estadoCorto(p.matchStatus),
         golesLocal: p.homeTeamScore != null ? Number(p.homeTeamScore) : null,
         golesVisitante: p.awayTeamScore != null ? Number(p.awayTeamScore) : null,

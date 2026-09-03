@@ -5029,3 +5029,14 @@ separadas, probando cada una antes de pasar a la siguiente.
     llamada por partido seguido), pero consume cupo diario igual que
     cualquier otra petición (comprobado con sus cabeceras
     `x-ratelimit-*`) y se prefirió dejar esta migración asentada primero.
+
+- **Bug real, hora de los partidos en UTC en vez de España** (2026-09-03,
+  encontrado justo tras la migración a GOAL API): a diferencia de
+  API-Football (a quien se le pedía la hora directamente en
+  `timezone=Europe/Madrid`), GOAL API da `matchDate`/`matchTime` en UTC
+  sin más — confirmado a mano, coinciden exactamente con `kickoffUtc`.
+  Con la migración, cada partido se enseñaba 1-2h por detrás de su hora
+  real en España (según CET/CEST). Arreglado reconstruyendo fecha/hora
+  en Europe/Madrid a partir de `kickoffUtc` (`fechaHoraMadrid()` en
+  `api/_lib/goalApi.js`), usado tanto en `api/partidos.js` como en
+  `api/partido.js`.

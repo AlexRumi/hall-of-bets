@@ -1,4 +1,4 @@
-import { goalFetch, estadoCorto } from "./_lib/goalApi.js";
+import { goalFetch, estadoCorto, fechaHoraMadrid } from "./_lib/goalApi.js";
 import { permiteLlamadaGoalApi } from "./_lib/limitadorGoalApi.js";
 
 // Serverless Function de Vercel, mismo motivo que api/partidos.js y
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=1800");
     res.status(200).json({
       partido: {
-        hora: partido.matchTime,
+        hora: fechaHoraMadrid(partido.kickoffUtc).hora,
         estado: estadoCorto(partido.matchStatus),
         golesLocal: partido.homeTeamScore != null ? Number(partido.homeTeamScore) : null,
         golesVisitante: partido.awayTeamScore != null ? Number(partido.awayTeamScore) : null,
