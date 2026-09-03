@@ -2,8 +2,8 @@
 // el gráfico solo puede enseñar un número por barra (el yield), así que
 // esta tabla completa el resto de columnas que pidió el usuario (nº
 // apuestas, stake, beneficio, % acierto) sin necesitar una gráfica por
-// cada una. Mismo patrón de tabla que ya usa CuotasDialog.jsx (filas
-// alternas con bg-paperDim, sin depender de colores de recharts).
+// cada una. Filas alternas con bg-paperDim, sin depender de colores de
+// recharts.
 export default function TablaEstadisticasMercado({ datos }) {
   if (datos.length === 0) {
     return (

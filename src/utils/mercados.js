@@ -27,14 +27,32 @@ export function equiposDesdeEvento(evento) {
 }
 
 // Escudo de equipo (mismo criterio que la bandera de país en
-// PanelPartidos.jsx: imagen en vez de emoji). API-Football sirve el
-// escudo de cada equipo en su propio servidor de imágenes público
-// (media.api-sports.io), sin api key y sin contar contra la cuota diaria
-// (verificado con curl) — basta con construir la URL a partir del id de
-// equipo que ya trae api/partidos.js. Sin id real (partidos de ejemplo,
-// ids negativos) no hay imagen que pintar.
-export function escudoUrl(equipoId) {
+// PanelPartidos.jsx: imagen en vez de emoji). Desde la migración a GOAL
+// API (2026-09-03), la URL del escudo viene ya hecha en la propia
+// respuesta de api/partidos.js ("escudoDirecto") — GOAL no usa ids
+// numéricos de equipo como API-Football, así que ya no se puede
+// reconstruir la URL a partir del id. Ese segundo parámetro es
+// opcional, y si no llega se cae al criterio antiguo (id numérico de
+// API-Football → media.api-sports.io, servidor público que sigue
+// funcionando sin depender de que la cuenta esté activa) — necesario
+// para los partidos de ejemplo, un partido escrito a mano, y cualquier
+// apuesta ya guardada ANTES de esta migración (todavía con ids
+// numéricos de API-Football en su selección).
+export function escudoUrl(equipoId, escudoDirecto) {
+  if (escudoDirecto) return escudoDirecto;
   return equipoId > 0 ? `https://media.api-sports.io/football/teams/${equipoId}.png` : null;
+}
+
+// Distingue un partido con conexión real (API-Football antes daba ids
+// numéricos positivos, GOAL API da strings tipo cuid) de uno de mentira
+// — partidos de ejemplo (PanelPartidos.jsx, ids negativos) o escrito a
+// mano (id negativo también, "-Date.now()"). Antes bastaba "id > 0"
+// porque solo existían ids numéricos; con GOAL, un id real es un
+// string, así que "id > 0" da siempre "false" para un partido real y
+// lo trataría por error como de mentira (perdiendo partidoId al
+// guardar la apuesta, y con él el marcador automático del ticket).
+export function esIdPartidoReal(id) {
+  return typeof id === "string" || (typeof id === "number" && id > 0);
 }
 
 // A diferencia de equiposDesdeEvento (siempre da un nombre, genérico si

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pencil, ChevronDown, Check, X, ArrowLeft, Clock } from "lucide-react";
 import { calcularBankrollPorCasa } from "../utils/movimientos";
 import { agruparSeleccionesPorPartido } from "../utils/apuestas";
-import { equiposDesdeEvento, escudoUrl } from "../utils/mercados";
+import { equiposDesdeEvento, escudoUrl, esIdPartidoReal } from "../utils/mercados";
 import CampoCasa from "./CampoCasa";
 import SelectorFecha from "./SelectorFecha";
 import PanelPartidos from "./PanelPartidos";
@@ -65,6 +65,8 @@ function bloquesDesdeApuestaV3(apuestaInicial) {
       fecha: grupo.fecha ?? null,
       equipoLocalId: grupo.equipoLocalId ?? null,
       equipoVisitanteId: grupo.equipoVisitanteId ?? null,
+      escudoLocal: grupo.escudoLocal ?? null,
+      escudoVisitante: grupo.escudoVisitante ?? null,
     },
     cuota: String(grupo.cuota),
     stake: "",
@@ -184,7 +186,7 @@ export default function NuevaApuestaV3({
       // distintos la cuota total ya se calcula multiplicando cada
       // bloque.
       const indiceExistente = actuales.findIndex((b) =>
-        matchActivo.id > 0 && b.matchId > 0
+        esIdPartidoReal(matchActivo.id) && esIdPartidoReal(b.matchId)
           ? b.matchId === matchActivo.id
           : b.partido.evento === matchActivo.evento
       );
@@ -299,9 +301,11 @@ export default function NuevaApuestaV3({
       cuota: i === 0 ? Number(String(b.cuota).replace(",", ".")) : 1,
       pais: b.partido.pais || null,
       competicion: b.partido.competicion || null,
-      partidoId: b.partido.id > 0 ? b.partido.id : null,
+      partidoId: esIdPartidoReal(b.partido.id) ? b.partido.id : null,
       equipoLocalId: b.partido.equipoLocalId ?? null,
       equipoVisitanteId: b.partido.equipoVisitanteId ?? null,
+      escudoLocal: b.partido.escudoLocal ?? null,
+      escudoVisitante: b.partido.escudoVisitante ?? null,
       hora: b.partido.hora || null,
       fecha: b.partido.fecha || fecha || null,
       // Solo tienen valor real al editar una selección ya existente (ver
@@ -639,9 +643,9 @@ export default function NuevaApuestaV3({
               {matchActivo.sede ? ` · ${matchActivo.sede}` : ""}
             </p>
             <div className="mt-2 flex items-center justify-center gap-2">
-              {escudoUrl(matchActivo.equipoLocalId) && (
+              {escudoUrl(matchActivo.equipoLocalId, matchActivo.escudoLocal) && (
                 <img
-                  src={escudoUrl(matchActivo.equipoLocalId)}
+                  src={escudoUrl(matchActivo.equipoLocalId, matchActivo.escudoLocal)}
                   alt=""
                   className="w-8 h-8 shrink-0 object-contain"
                 />
@@ -653,9 +657,9 @@ export default function NuevaApuestaV3({
               <span className="font-display text-sm text-ink">
                 {equiposDesdeEvento(matchActivo.evento).visitante}
               </span>
-              {escudoUrl(matchActivo.equipoVisitanteId) && (
+              {escudoUrl(matchActivo.equipoVisitanteId, matchActivo.escudoVisitante) && (
                 <img
-                  src={escudoUrl(matchActivo.equipoVisitanteId)}
+                  src={escudoUrl(matchActivo.equipoVisitanteId, matchActivo.escudoVisitante)}
                   alt=""
                   className="w-8 h-8 shrink-0 object-contain"
                 />

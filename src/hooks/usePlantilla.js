@@ -19,19 +19,31 @@ const enCurso = new Map();
 
 export function usePlantilla(equipoId) {
   const [jugadores, setJugadores] = useState(() => cache.get(equipoId) ?? []);
+  // Bug real (visto al migrar a GOAL API, mismo patrón que ya se corrigió
+  // en usePartidos.js): "jugadores: []" significaba dos cosas a la vez —
+  // "todavía no ha llegado la respuesta" y "ya llegó, y de verdad no hay
+  // plantilla" — y PanelMercados.jsx no podía distinguirlas, así que
+  // enseñaba los jugadores de ejemplo (pensados para cuando no hay
+  // "vercel dev") durante el segundo o así que tarda la petición real,
+  // hasta que la respuesta de verdad los reemplazaba. "cargando" empieza
+  // en true solo si este equipo aún no estaba en caché.
+  const [cargando, setCargando] = useState(() => !!equipoId && !cache.has(equipoId));
 
   useEffect(() => {
     if (!equipoId) {
       setJugadores([]);
+      setCargando(false);
       return;
     }
 
     if (cache.has(equipoId)) {
       setJugadores(cache.get(equipoId));
+      setCargando(false);
       return;
     }
 
     let vivo = true;
+    setCargando(true);
     let promesa = enCurso.get(equipoId);
     if (!promesa) {
       promesa = fetch(`/api/jugadores?equipo=${equipoId}`)
@@ -57,7 +69,10 @@ export function usePlantilla(equipoId) {
     }
 
     promesa.then((lista) => {
-      if (vivo) setJugadores(lista);
+      if (vivo) {
+        setJugadores(lista);
+        setCargando(false);
+      }
     });
 
     return () => {
@@ -65,5 +80,5 @@ export function usePlantilla(equipoId) {
     };
   }, [equipoId]);
 
-  return jugadores;
+  return { jugadores, cargando };
 }

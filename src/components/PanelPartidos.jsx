@@ -296,8 +296,8 @@ export default function PanelPartidos({
                 <span className="flex-1 min-w-0 space-y-0.5">
                   <span className="flex items-center justify-between gap-1.5">
                     <span className="flex items-center gap-1.5 min-w-0">
-                      {escudoUrl(p.equipoLocalId) && (
-                        <img src={escudoUrl(p.equipoLocalId)} alt="" className="w-4 h-4 shrink-0 object-contain" />
+                      {escudoUrl(p.equipoLocalId, p.escudoLocal) && (
+                        <img src={escudoUrl(p.equipoLocalId, p.escudoLocal)} alt="" className="w-4 h-4 shrink-0 object-contain" />
                       )}
                       <span className="text-sm lg:text-base font-medium text-ink truncate">{local}</span>
                     </span>
@@ -307,9 +307,9 @@ export default function PanelPartidos({
                   </span>
                   <span className="flex items-center justify-between gap-1.5">
                     <span className="flex items-center gap-1.5 min-w-0">
-                      {escudoUrl(p.equipoVisitanteId) && (
+                      {escudoUrl(p.equipoVisitanteId, p.escudoVisitante) && (
                         <img
-                          src={escudoUrl(p.equipoVisitanteId)}
+                          src={escudoUrl(p.equipoVisitanteId, p.escudoVisitante)}
                           alt=""
                           className="w-4 h-4 shrink-0 object-contain"
                         />

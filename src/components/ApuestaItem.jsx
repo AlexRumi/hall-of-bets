@@ -323,8 +323,8 @@ export default function ApuestaItem({
               ? "border-lose/50"
               : "border-line";
           const promptAbierto = promptsCuota.has(grupo.indiceLider);
-          const tieneEscudoLocal = !!escudoUrl(grupo.equipoLocalId);
-          const tieneEscudoVisitante = !!escudoUrl(grupo.equipoVisitanteId);
+          const tieneEscudoLocal = !!escudoUrl(grupo.equipoLocalId, grupo.escudoLocal);
+          const tieneEscudoVisitante = !!escudoUrl(grupo.equipoVisitanteId, grupo.escudoVisitante);
           const metaTexto = [grupo.pais, grupo.competicion].filter(Boolean).join(" · ") +
             (grupo.hora ? ` · ${grupo.hora}` : "");
           const { local: nombreLocal, visitante: nombreVisitante } = esFormatoEquipos(grupo.evento)
@@ -456,18 +456,18 @@ export default function ApuestaItem({
                 {partidoDivisible ? (
                   <>
                     <div className="flex items-center gap-2">
-                      <img src={escudoUrl(grupo.equipoLocalId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                      <img src={escudoUrl(grupo.equipoLocalId, grupo.escudoLocal)} alt="" className="w-7 h-7 shrink-0 object-contain" />
                       <span className="text-sm font-semibold text-ink truncate">{nombreLocal}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <img src={escudoUrl(grupo.equipoVisitanteId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                      <img src={escudoUrl(grupo.equipoVisitanteId, grupo.escudoVisitante)} alt="" className="w-7 h-7 shrink-0 object-contain" />
                       <span className="text-sm font-semibold text-ink truncate">{nombreVisitante}</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex items-center gap-2">
                     {tieneEscudoLocal ? (
-                      <img src={escudoUrl(grupo.equipoLocalId)} alt="" className="w-7 h-7 shrink-0 object-contain" />
+                      <img src={escudoUrl(grupo.equipoLocalId, grupo.escudoLocal)} alt="" className="w-7 h-7 shrink-0 object-contain" />
                     ) : (
                       <span className="shrink-0 w-7 h-7 rounded-full bg-surface border border-line flex items-center justify-center text-sm">
                         {EMOJI_DEPORTE[apuesta.deporte] ?? EMOJI_DEPORTE.Otro}

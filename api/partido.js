@@ -1,46 +1,36 @@
-import { permiteLlamadaApiFootball } from "./_lib/limitadorApiFootball.js";
+import { goalFetch, estadoCorto } from "./_lib/goalApi.js";
+import { permiteLlamadaGoalApi } from "./_lib/limitadorGoalApi.js";
 
 // Serverless Function de Vercel, mismo motivo que api/partidos.js y
-// api/jugadores.js: la key de API-Football es secreta y aquí sí se puede
-// usar sin exponerla. Da la hora/estado/resultado de UN partido concreto
-// (por su id, ya guardado en cada selección elegida desde el buscador —
-// ver ConstructorPartido.jsx), para pintarlo en la esquina del detalle de
-// la apuesta (ApuestaItem.jsx), estilo "ticket" de casa de apuestas.
+// api/jugadores.js. Da la hora/estado/resultado de UN partido concreto
+// (por su id, ya guardado en cada selección elegida desde el buscador),
+// para pintarlo en la esquina del detalle de la apuesta
+// (ApuestaItem.jsx), estilo "ticket" de casa de apuestas.
 //
-// A diferencia de api/partidos.js (que pide por fecha, y el plan gratuito
-// solo deja consultar un rango corto alrededor de hoy), pedir por id
-// directamente NO tiene esa restricción — comprobado a mano el
-// 2026-08-10: un partido de dos días antes del rango permitido respondió
-// sin "errors.plan". Así que esto funciona para cualquier apuesta con
-// partido conectado, sea de la fecha que sea (mientras API-Football siga
-// teniendo el partido en su base de datos).
+// Migrado de API-Football a GOAL API el 2026-09-03 (ver api/partidos.js
+// y CHANGELOG.md). Código anterior conservado en
+// api/_lib/proveedorApiFootball/partido.js. Mismo contrato de
+// respuesta ({ partido }) que antes — GOAL API no tiene la restricción
+// de rango de fechas que sí tenía el plan gratuito de API-Football para
+// pedir por id, así que esto sigue funcionando para cualquier apuesta
+// con partido conectado, sea de la fecha que sea.
 export default async function handler(req, res) {
   const { id } = req.query;
 
-  if (!id || !/^\d+$/.test(id)) {
-    res.status(400).json({ error: "Falta el parámetro id (numérico)" });
+  if (!id) {
+    res.status(400).json({ error: "Falta el parámetro id (id de GOAL API)" });
     return;
   }
 
-  // Límite propio antes de gastar cuota real (ver _lib/limitadorApiFootball.js).
-  if (!(await permiteLlamadaApiFootball())) {
+  // Límite propio antes de gastar cuota real (ver _lib/limitadorGoalApi.js).
+  if (!(await permiteLlamadaGoalApi())) {
     res.status(200).json({ partido: null });
     return;
   }
 
   try {
-    const respuesta = await fetch(
-      `https://v3.football.api-sports.io/fixtures?id=${id}&timezone=Europe/Madrid`,
-      { headers: { "x-apisports-key": process.env.API_FOOTBALL_KEY } }
-    );
-
-    if (!respuesta.ok) {
-      res.status(502).json({ error: "No se pudo consultar API-Football" });
-      return;
-    }
-
-    const datos = await respuesta.json();
-    const partido = datos.response?.[0];
+    const datos = await goalFetch(`/fixtures/${id}`);
+    const partido = datos.data;
 
     if (!partido) {
       res.status(200).json({ partido: null });
@@ -48,19 +38,20 @@ export default async function handler(req, res) {
     }
 
     // usePartidoInfo.js ya solo pide una vez por partido y visita (sin
-    // "en directo", se descartó por cuota) — esta caché es solo para que
-    // recargar la página o abrir el detalle en otra pestaña poco después
-    // no cuente como una petición nueva a API-Football.
+    // "en directo") — esta caché es solo para que recargar la página o
+    // abrir el detalle en otra pestaña poco después no cuente como una
+    // petición nueva.
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=1800");
     res.status(200).json({
       partido: {
-        hora: partido.fixture.date.slice(11, 16),
-        estado: partido.fixture.status.short,
-        golesLocal: partido.goals.home,
-        golesVisitante: partido.goals.away,
+        hora: partido.matchTime,
+        estado: estadoCorto(partido.matchStatus),
+        golesLocal: partido.homeTeamScore != null ? Number(partido.homeTeamScore) : null,
+        golesVisitante: partido.awayTeamScore != null ? Number(partido.awayTeamScore) : null,
       },
     });
-  } catch {
-    res.status(502).json({ error: "No se pudo consultar API-Football" });
+  } catch (error) {
+    console.error("api/partido: error no identificado de GOAL API", error);
+    res.status(200).json({ partido: null });
   }
 }

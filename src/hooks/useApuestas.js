@@ -104,6 +104,12 @@ export function useApuestas(userId) {
           // plantilla al editarla después (nunca llegó a guardarse el id).
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+          // Bug real (2026-09-03, migración a GOAL API): mismo motivo que
+          // el de arriba con los ids de equipo — esta lista blanca
+          // tampoco llevaba los escudos, así que se perdían al crear la
+          // apuesta y el ticket caía siempre al icono de repuesto.
+          escudoLocal: seleccion.escudoLocal ?? null,
+          escudoVisitante: seleccion.escudoVisitante ?? null,
           hora: seleccion.hora ?? null,
           fecha: seleccion.fecha ?? null,
           golesLocalManual: seleccion.golesLocalManual ?? null,
@@ -175,6 +181,12 @@ export function useApuestas(userId) {
           // solo el sello decorativo, era un fallo real.
           equipoLocalId: seleccion.equipoLocalId ?? null,
           equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+          // Bug real (2026-09-03, migración a GOAL API): mismo motivo que
+          // el de arriba con los ids de equipo — esta lista blanca
+          // tampoco llevaba los escudos, así que se perdían al editar la
+          // apuesta y el ticket caía siempre al icono de repuesto.
+          escudoLocal: seleccion.escudoLocal ?? null,
+          escudoVisitante: seleccion.escudoVisitante ?? null,
           hora: seleccion.hora ?? null,
           fecha: seleccion.fecha ?? null,
           golesLocalManual: seleccion.golesLocalManual ?? null,

@@ -4939,3 +4939,93 @@ separadas, probando cada una antes de pasar a la siguiente.
   vacío sin explicación visible). Si algún día se ve algo así sin motivo
   aparente, ese log es el primer sitio donde mirar antes de sospechar de
   otra cosa.
+
+- **Migración de API-Football a GOAL API** (2026-09-03, petición
+  directa): la cuenta de API-Football seguía suspendida desde el
+  2026-09-02 sin fecha de reactivación. Antes de migrar se vetó a fondo
+  GOAL API con el usuario en la misma conversación: las 45 competiciones
+  conectadas hoy se comprobaron una a una contra su base de datos real
+  (`GET /leagues?search=...`, verificando país y descartando ediciones
+  femeninas/juveniles/de filial que compartían nombre parecido —
+  p. ej. "Allsvenskan" no es "Damallsvenskan", "A-League Men" no es
+  "A-League Women"), se probó una ráfaga real de 8 peticiones casi
+  simultáneas (sin ningún bloqueo, a diferencia de lo que le pasó a
+  API-Football) y se confirmó vía sus cabeceras `ratelimit-*` un margen
+  real de ~200 peticiones/minuto y 1000/día (frente a las 10/min y
+  100/día del plan gratuito de API-Football).
+  - El código de API-Football **no se borró**: se movió tal cual, sin
+    resumir ni un comentario, a `api/_lib/proveedorApiFootball/`
+    (`partidos.js`, `jugadores.js`, `partido.js`) — Vercel no despliega
+    como ruta nada dentro de una carpeta que empiece por `_`, así que
+    queda "en pausa", sin enlazar a ningún endpoint activo. Petición
+    explícita: por si la cuenta se reactiva algún día y se quiere volver
+    a usar, sola o combinada con GOAL API. `api/_lib/limitadorApiFootball.js`
+    y la tabla `limitador_api_football` tampoco se tocaron, por el mismo
+    motivo.
+  - Endpoints activos reescritos (`api/partidos.js`, `api/jugadores.js`,
+    `api/partido.js`): mismo contrato de entrada/salida que antes
+    (mismos parámetros, mismas claves de respuesta), así que
+    `usePartidos.js`, `usePlantilla.js` y `usePartidoInfo.js` no
+    necesitaron ningún cambio. Por dentro, tres diferencias reales de
+    GOAL API frente a API-Football:
+    - **Filtro de fecha distinto**: `date=` no filtra nada en GOAL API
+      (comprobado a mano, igual que `country=` o `search=` con tildes) —
+      el único filtro de fecha exacta que sí funciona es `from=X&to=X`.
+      Como tampoco filtra por liga, hay que pedir TODOS los partidos del
+      mundo de ese día (~150-200, pagina en `api/partidos.js`) y filtrar
+      por `LIGAS` (ahora en `api/_lib/goalApi.js`) igual que antes.
+    - **Ids como strings, no números**: los ids de partido/equipo de
+      GOAL API son cuids (`"cmr7m55u..."`), no enteros. Esto rompía en
+      silencio dos sitios que asumían "id real = número positivo"
+      (`b.partido.id > 0` en `NuevaApuestaV3.jsx`, usado tanto para
+      decidir si fusionar selecciones del mismo partido como para
+      decidir si guardar `partidoId` al crear la apuesta) — de no
+      arreglarse, toda apuesta nueva con un partido real de GOAL habría
+      guardado `partidoId: null`, perdiendo el marcador automático del
+      ticket sin ningún error visible. Se centralizó el criterio en
+      `esIdPartidoReal()` (`utils/mercados.js`): real si es string
+      (GOAL) o número positivo (API-Football, partidas ya guardadas
+      antes de esta migración).
+    - **Escudos ya como URL completa** (`teamHomeBadge`/`teamAwayBadge`
+      en la respuesta de GOAL), a diferencia de API-Football, que daba
+      un id numérico para reconstruir la URL contra
+      `media.api-sports.io`. `escudoUrl()` (`utils/mercados.js`) ahora
+      acepta un segundo parámetro opcional con esa URL directa, y solo
+      si no llega cae al criterio antiguo — necesario para partidos de
+      ejemplo, partido escrito a mano, y cualquier apuesta ya guardada
+      ANTES de esta migración (todavía con ids numéricos de
+      API-Football, que siguen resolviendo bien porque ese CDN es
+      público y no depende de la cuenta). Los dos campos nuevos
+      (`escudoLocal`/`escudoVisitante`) se propagan desde
+      `api/partidos.js` hasta la selección guardada
+      (`agruparSeleccionesPorPartido` en `utils/apuestas.js`) para que
+      el ticket de una apuesta ya resuelta también los tenga.
+  - **Limitador propio nuevo y más simple** (`api/_lib/limitadorGoalApi.js`,
+    tabla `limitador_goal_api`): el problema original con API-Football
+    era la ráfaga por minuto, ya descartado como riesgo real con GOAL
+    (prueba de 8 llamadas simultáneas sin bloqueo). Lo único que
+    importa aquí es no acercarse a las 1000 peticiones/día por un bug
+    futuro parecido — un contador diario atómico (`SELECT ... FOR
+    UPDATE`), sin ventana por minuto ni espaciado artificial (habría
+    sido copiar una solución pensada para el problema de otro
+    proveedor).
+  - **Esquema de Supabase**: `resultados_partidos.partido_id` y
+    `plantillas_equipos.equipo_id` pasaron de `bigint`/`int` a `text`
+    (`alter column ... using ...::text`, sin pérdida de datos) para
+    aceptar los ids-string de GOAL API — los valores numéricos ya
+    guardados de API-Football conviven sin problema en una columna
+    `text`.
+  - **Cuotas de mercado eliminadas por completo**, decisión aparte pero
+    en el mismo cambio: `api/cuotas.js`, `CuotasDialog.jsx` y
+    `useCuotas.js` se borraron (nadie los importaba ya — código
+    huérfano, `CuotasDialog` no lo renderizaba ninguna pantalla). No
+    dependía de qué proveedor se usara: el usuario mete la cuota a mano
+    y GOAL API tampoco ofrece cuotas de mercado en su plan gratuito.
+  - Descartado explícitamente por ahora, para no mezclarlo con esta
+    migración: mostrar el marcador en directo de una apuesta mientras
+    dura el partido. Es técnicamente viable con GOAL API (`GET
+    /fixtures/live` trae TODOS los partidos en vivo en una sola llamada,
+    filtrable por equipo/liga en el propio código — no hace falta una
+    llamada por partido seguido), pero consume cupo diario igual que
+    cualquier otra petición (comprobado con sus cabeceras
+    `x-ratelimit-*`) y se prefirió dejar esta migración asentada primero.

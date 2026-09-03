@@ -242,9 +242,9 @@ export default function TicketFlotante({
                         </button>
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-1.5">
-                            {escudoUrl(b.partido.equipoLocalId) && (
+                            {escudoUrl(b.partido.equipoLocalId, b.partido.escudoLocal) && (
                               <img
-                                src={escudoUrl(b.partido.equipoLocalId)}
+                                src={escudoUrl(b.partido.equipoLocalId, b.partido.escudoLocal)}
                                 alt=""
                                 className="w-5 h-5 shrink-0 object-contain"
                               />
@@ -252,9 +252,9 @@ export default function TicketFlotante({
                             <span className="text-sm text-ink truncate">{equipos.local}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            {escudoUrl(b.partido.equipoVisitanteId) && (
+                            {escudoUrl(b.partido.equipoVisitanteId, b.partido.escudoVisitante) && (
                               <img
-                                src={escudoUrl(b.partido.equipoVisitanteId)}
+                                src={escudoUrl(b.partido.equipoVisitanteId, b.partido.escudoVisitante)}
                                 alt=""
                                 className="w-5 h-5 shrink-0 object-contain"
                               />

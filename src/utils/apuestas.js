@@ -81,6 +81,11 @@ export function agruparSeleccionesPorPartido(selecciones) {
         // se creó eligiendo un partido del buscador después de esa fase.
         equipoLocalId: seleccion.equipoLocalId ?? null,
         equipoVisitanteId: seleccion.equipoVisitanteId ?? null,
+        // Escudo ya como URL completa (GOAL API, desde el 2026-09-03) —
+        // ausente en apuestas guardadas ANTES de la migración, que caen
+        // al criterio antiguo dentro de escudoUrl() (utils/mercados.js).
+        escudoLocal: seleccion.escudoLocal ?? null,
+        escudoVisitante: seleccion.escudoVisitante ?? null,
         // Hora de inicio (HH:MM, hora de España) y fecha propia de ESTE
         // partido — no la de toda la apuesta, que en una combinada de
         // varios días no coincide con cada uno. Solo presentes si la

@@ -380,3 +380,58 @@ begin
 end;
 $$;
 
+
+-- Migración a GOAL API (2026-09-03, ver CHANGELOG.md): la cuenta de
+-- API-Football sigue sin fecha de reactivación, y GOAL API cubre hoy las
+-- mismas 45 competiciones con mucho más margen de peticiones. Su código se
+-- deja EN PAUSA (movido a api/_lib/proveedorApiFootball/, no borrado), así
+-- que limitador_api_football y su función NO se tocan aquí — si la cuenta
+-- se reactivara algún día, ese código los sigue necesitando tal cual.
+--
+-- Dos columnas que hasta ahora asumían ids numéricos de API-Football
+-- deben aceptar también los ids-string (formato cuid) de GOAL API. Los
+-- valores ya guardados se convierten a su representación en texto sin
+-- perder nada — y si algún día API-Football volviera a usarse a la vez
+-- que GOAL, sus ids numéricos conviven sin problema en una columna text.
+alter table public.resultados_partidos alter column partido_id type text using partido_id::text;
+alter table public.plantillas_equipos alter column equipo_id type text using equipo_id::text;
+
+-- Limitador propio para GOAL API — distinto en diseño al de API-Football
+-- (ver api/_lib/limitadorGoalApi.js): allí el problema real era la ráfaga
+-- por minuto; con GOAL, comprobado a mano que 8 peticiones simultáneas no
+-- tienen ningún problema (~200/min de margen real), así que lo único que
+-- importa aquí es no acercarse a las 1000 peticiones/día por un bug
+-- futuro. Un contador diario simple, no por minuto.
+create table public.limitador_goal_api (
+  dia date primary key,
+  llamadas int not null default 0
+);
+alter table public.limitador_goal_api enable row level security;
+
+create or replace function reservar_llamada_goal_api(p_limite_diario int)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_llamadas int;
+  v_permitido boolean;
+begin
+  insert into public.limitador_goal_api (dia, llamadas)
+  values (current_date, 0)
+  on conflict (dia) do nothing;
+
+  select llamadas into v_llamadas
+  from public.limitador_goal_api
+  where dia = current_date
+  for update;
+
+  if v_llamadas < p_limite_diario then
+    v_permitido := true;
+    update public.limitador_goal_api set llamadas = v_llamadas + 1 where dia = current_date;
+  else
+    v_permitido := false;
+  end if;
+
+  return v_permitido;
+end;
+$$;

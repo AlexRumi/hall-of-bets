@@ -333,14 +333,21 @@ function TarjetaJugadorMercado({
   // jugador por partido, eso eran hasta 12 peticiones de la MISMA
   // plantilla con solo abrir "Mercados", nunca al usuario tocar nada.
   const [seHaAbierto, setSeHaAbierto] = useState(false);
-  const jugadoresLocalApi = usePlantilla(
+  const plantillaLocal = usePlantilla(
     seHaAbierto && equipoElegido === "local" ? partido.equipoLocalId : null
   );
-  const jugadoresVisitanteApi = usePlantilla(
+  const plantillaVisitante = usePlantilla(
     seHaAbierto && equipoElegido === "visitante" ? partido.equipoVisitanteId : null
   );
-  const jugadoresApi = equipoElegido === "local" ? jugadoresLocalApi : jugadoresVisitanteApi;
-  const usandoDemo = jugadoresApi.length === 0;
+  const { jugadores: jugadoresApi, cargando: cargandoPlantilla } =
+    equipoElegido === "local" ? plantillaLocal : plantillaVisitante;
+  // Mientras "cargandoPlantilla" es true todavía no se sabe si habrá
+  // plantilla real o no — enseñar ya los jugadores de ejemplo aquí sería
+  // el mismo "flash" que ya se corrigió en PanelPartidos.jsx (bug real,
+  // visto al migrar a GOAL API: durante el segundo o así que tarda la
+  // petición real se veían los de ejemplo antes de que llegara la
+  // respuesta de verdad).
+  const usandoDemo = !cargandoPlantilla && jugadoresApi.length === 0;
   const jugadoresSinFiltrar = usandoDemo ? JUGADORES_DEMO[equipoElegido] : jugadoresApi;
   const jugadores = filtrarPorPosicion(jugadoresSinFiltrar, soloPorteros, posicionFiltro);
   const filas = verMas ? jugadores : jugadores.slice(0, FILAS_INICIALES_JUGADOR);
@@ -741,14 +748,14 @@ export default function PanelMercados({ partido, equipos, pendientes, onTogglePe
           {partido.jornada ? ` · ${partido.jornada}` : ""}
         </p>
         <div className="mt-3 flex items-center justify-center gap-3 flex-wrap">
-          {escudoUrl(partido.equipoLocalId) && (
-            <img src={escudoUrl(partido.equipoLocalId)} alt="" className="w-11 h-11 shrink-0 object-contain" />
+          {escudoUrl(partido.equipoLocalId, partido.escudoLocal) && (
+            <img src={escudoUrl(partido.equipoLocalId, partido.escudoLocal)} alt="" className="w-11 h-11 shrink-0 object-contain" />
           )}
           <h3 className="font-display text-lg text-ink text-center">{equipos.local}</h3>
           <span className="font-display text-sm font-bold text-gold shrink-0">VS</span>
           <h3 className="font-display text-lg text-ink text-center">{equipos.visitante}</h3>
-          {escudoUrl(partido.equipoVisitanteId) && (
-            <img src={escudoUrl(partido.equipoVisitanteId)} alt="" className="w-11 h-11 shrink-0 object-contain" />
+          {escudoUrl(partido.equipoVisitanteId, partido.escudoVisitante) && (
+            <img src={escudoUrl(partido.equipoVisitanteId, partido.escudoVisitante)} alt="" className="w-11 h-11 shrink-0 object-contain" />
           )}
         </div>
         <div className="mt-3 flex justify-center">
