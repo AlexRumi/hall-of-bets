@@ -5079,3 +5079,20 @@ separadas, probando cada una antes de pasar a la siguiente.
   saltar directo a cualquier día, móvil con una tira deslizable con el
   dedo (scroll-snap) en vez de la rejilla fija de 7 que solo cabían
   antes — hoy se centra sola al abrir la pantalla.
+
+- **Ligas conectadas: RFEF, femenino y selecciones añadidas; Japón/Corea
+  del Sur/Australia/Uruguay quitadas** (2026-09-04, petición pendiente
+  desde antes de la migración — ver `ligas-pendientes-reactivacion.md`,
+  condicionada originalmente a que se reactivara API-Football, resuelta
+  aquí directamente contra GOAL API con el mismo método de verificación
+  de siempre). Añadidas: Primera/Segunda/Tercera RFEF y Primera División
+  Femenina (España); UEFA Nations League, Clasificación Eurocopa,
+  Clasificación Mundial (Europa), Eurocopa, Copa del Mundo y Champions
+  League Femenina (Competición Europea/Mundial); Clasificación Mundial
+  CONMEBOL (Sudamérica). No existe como competición separada una
+  "clasificación de la Copa América" — los 10 equipos de CONMEBOL entran
+  directos, no hay nada que añadir ahí. Quitadas las 4 menos usadas de
+  las 12 añadidas el 2026-08-31 (Japón, Corea del Sur, Australia,
+  Uruguay). Verificado en local que las nuevas traen partidos reales
+  (Segunda RFEF: 125 partidos el sábado; Primera Femenina: partido el
+  domingo).

@@ -48,14 +48,12 @@ const CODIGOS_BANDERA = {
   Alemania: "de",
   "Arabia Saudí": "sa",
   Argentina: "ar",
-  Australia: "au",
   Austria: "at",
   Bélgica: "be",
   Brasil: "br",
   Chile: "cl",
   Colombia: "co",
   "Competición Europea": "eu",
-  "Corea del Sur": "kr",
   Croacia: "hr",
   Dinamarca: "dk",
   Escocia: "gb-sct",
@@ -66,7 +64,6 @@ const CODIGOS_BANDERA = {
   Holanda: "nl",
   Inglaterra: "gb-eng",
   Italia: "it",
-  Japón: "jp",
   México: "mx",
   Noruega: "no",
   Polonia: "pl",
@@ -75,7 +72,6 @@ const CODIGOS_BANDERA = {
   Suecia: "se",
   Suiza: "ch",
   Turquía: "tr",
-  Uruguay: "uy",
 };
 
 function agruparPorPaisLiga(partidos) {
@@ -103,12 +99,30 @@ function agruparPorPaisLiga(partidos) {
 // países con más de una competición conectada. El resto (una sola liga)
 // no necesita entrada aquí: sin ella, esa única competición ya sale bien.
 const ORDEN_COMPETICIONES_POR_PAIS = {
-  España: ["La Liga", "Segunda División", "Copa del Rey"],
+  España: [
+    "La Liga",
+    "Segunda División",
+    "Primera RFEF",
+    "Segunda RFEF",
+    "Tercera RFEF",
+    "Copa del Rey",
+    "Primera División Femenina",
+  ],
   Inglaterra: ["Premier League", "Championship", "FA Cup", "EFL Cup"],
   Alemania: ["Bundesliga", "2. Bundesliga", "DFB Pokal"],
   Italia: ["Serie A", "Serie B", "Coppa Italia"],
   Francia: ["Ligue 1", "Ligue 2", "Coupe de France"],
-  "Competición Europea": ["Champions League", "Europa League", "Conference League"],
+  "Competición Europea": [
+    "Champions League",
+    "Europa League",
+    "Conference League",
+    "Champions League Femenina",
+    "Nations League",
+    "Clasificación Eurocopa",
+    "Clasificación Mundial",
+    "Eurocopa",
+    "Supercopa de Europa",
+  ],
 };
 
 // (nivel, país, posición de la competición dentro del país) por grupo —
