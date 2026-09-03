@@ -11,6 +11,13 @@
 // otra en una tira horizontal (ver Novedades.jsx) — viven en public/novedades/.
 export const NOVEDADES = [
   {
+    id: "nuevo-proveedor-goal-api",
+    fecha: "2026-09-03",
+    titulo: "Nuevo proveedor de datos de partidos",
+    descripcion:
+      "El buscador de partidos, los escudos y las plantillas de equipo ahora vienen de un proveedor distinto (GOAL API) — el anterior llevaba unos días sin poder usarse. No cambia nada en cómo se usa la app: sigue funcionando exactamente igual que antes. De cara al futuro, este cambio deja la puerta abierta a poder añadir más adelante el marcador en directo de una apuesta mientras dura el partido, algo que no era viable con el proveedor anterior.",
+  },
+  {
     id: "partido-a-mano",
     fecha: "2026-09-02",
     titulo: "Registrar apuestas aunque falle el buscador de partidos",
